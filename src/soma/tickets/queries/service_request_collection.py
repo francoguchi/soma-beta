@@ -27,6 +27,8 @@ class ServiceRequestCollectionItem:
     updated_at_utc: int
     summary: str | None
     status: str | None
+    summary_truncated: bool
+    status_truncated: bool
 
 
 class ServiceRequestCollectionQuery:
@@ -75,13 +77,19 @@ class ServiceRequestCollectionQuery:
                     raise IntegrityFailure("Service Request summary points to invalid evidence")
                 if row[9] is not None and row[10] != "status":
                     raise IntegrityFailure("Service Request status points to invalid evidence")
+                full_summary = str(row[8]) if row[7] == "usable" and row[8] is not None else None
+                full_status = str(row[12]) if row[11] == "usable" and row[12] is not None else None
+                # Read DTOs have a strict byte budget even when an imported
+                # observation contains a very long value. Surface clipping.
                 items.append(ServiceRequestCollectionItem(
                     service_request_id=str(row[0]),
                     official_sr_no=None if row[1] is None else str(row[1]),
                     local_sr_no=None if row[2] is None else str(row[2]),
                     revision=int(row[3]), updated_at_utc=int(row[4]),
-                    summary=str(row[8]) if row[7] == "usable" and row[8] is not None else None,
-                    status=str(row[12]) if row[11] == "usable" and row[12] is not None else None,
+                    summary=None if full_summary is None else full_summary[:512],
+                    status=None if full_status is None else full_status[:96],
+                    summary_truncated=full_summary is not None and len(full_summary) > 512,
+                    status_truncated=full_status is not None and len(full_status) > 96,
                 ))
             has_more = len(rows) > limit
             last = items[-1] if has_more and items else None
