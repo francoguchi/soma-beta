@@ -45,12 +45,12 @@ function Application() {
     navigation.current?.navigate(next);
   };
   return <><div ref={application}><SomaShell path={visiblePath} settingsOpen={settingsOpen} dirty={dirty} navigate={navigate}>
-    {visibleRoute?.surface === 'sr_workbench' && route.recordId ? <TicketWorkbench key={path} id={route.recordId} type="service_request" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
-      visibleRoute?.surface === 'rfc_workbench' && route.recordId ? <TicketWorkbench key={path} id={route.recordId} type="rfc" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
+    {visibleRoute?.surface === 'sr_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="service_request" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
+      visibleRoute?.surface === 'rfc_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="rfc" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
       visibleRoute?.surface === 'objectives' ? <ObjectiveWorkspace navigate={navigate} restored={restored} onReturnState={captureReturnState}/> :
       visibleRoute?.surface === 'infrastructure' ? <InfrastructureWorkspace restored={restored} onReturnState={captureReturnState}/> :
       visibleRoute?.surface === 'inventory' ? <InventoryWorkspace restored={restored} onReturnState={captureReturnState}/> :
-      visibleRoute?.surface === 'objective_detail' && route.recordId ? <ObjectiveDetail key={path} id={route.recordId}/> :
+      visibleRoute?.surface === 'objective_detail' && visibleRoute.recordId ? <ObjectiveDetail key={visiblePath} id={visibleRoute.recordId}/> :
       <p role="status">{visibleRoute ? 'This workspace binding is under implementation.' : 'Page not found.'}</p>}
   </SomaShell></div>{settingsOpen && <SettingsDialog application={application}
     expanded={referenceOpen && route?.surface === 'settings'}
