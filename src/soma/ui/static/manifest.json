@@ -1,12 +1,12 @@
 {
   "files": {
-    "assets/index-B8oH6lSn.js": {
-      "bytes": 338441,
-      "sha256": "6a9883338ac0ae9608025009f7958135c9b201b7ac9a7fee9166cc69c293ac61"
+    "assets/index-CQ8SlsAj.css": {
+      "bytes": 23429,
+      "sha256": "12c2c84c9df0bade3af7cc0ffa8648962c04c4f1fefbb11ce3653dda7bd6c1ac"
     },
-    "assets/index-BljlBQsP.css": {
-      "bytes": 22863,
-      "sha256": "c3b707647db39018680e53e74b7dff1ab3e3efa27b5b5daafff785285a5efcb8"
+    "assets/index-WuhIRt4L.js": {
+      "bytes": 339312,
+      "sha256": "5b21d6a907e32bd2715363793ecd50dda8c73dffff31cf94361581714153b089"
     },
     "brand/soma-lockup.svg": {
       "bytes": 7674,
@@ -18,7 +18,7 @@
     },
     "index.html": {
       "bytes": 445,
-      "sha256": "ff2b76c875aa2554c49b1322529c32ba2d04ac3b734df91d2edf32b69464d500"
+      "sha256": "cb77ebd6cb8032a2fbfd2b55fcd23c849d939f364fc55d5214705569046070b9"
     }
   },
   "schema": "SOMA_UI_STATIC_ASSETS_V1",
@@ -34,7 +34,7 @@
     "app/ReferenceSettings.tsx": "6573dfce5ae34c9767b27650d497e6dbf5979bc1413d6ebf343415bdd5e5b9c7",
     "app/RfcLifecycle.tsx": "f3d3e206b8e9e4f8435bc6877df6091c9c86530a38db135e8db9fe863a05b4ba",
     "app/ServiceRequestContext.tsx": "c880ca1f12cdcdd5483e3a2338b6e0636d540129f4636ae1d77ea28a2f3df050",
-    "app/ServiceRequestRegister.tsx": "2e37e0ded0f89a4485b09ef20ce84034ddd09e684bd0916fff04f09aa19d2658",
+    "app/ServiceRequestRegister.tsx": "9154ed7f2f29adc3c89ea62a794126ed8c5cdc0433d879f0ac50c7d88631cd07",
     "app/SettingsWorkspace.tsx": "43c34df8a22fc96b3879c32664f6bc1e636291b2fe2bfb8a284cf52717811002",
     "app/SlaCatalogSettings.tsx": "41406d9629fed58d3655890ca86e3b6ad970bc12b9b2a160809a8c4128fe43fd",
     "app/TicketCollection.tsx": "5597df0e4b6cbe3debf0f5fe598d4b33cdb9a32cd011bcec68742b7abea09b8d",
@@ -76,9 +76,10 @@
     "public/brand/soma-mark.svg": "0cf73b1b96f15973c5c4066e1b9cc47e11218e5e2af2a5b6afe58f437fa4320a",
     "state/appearance.ts": "1d202ba5b71d387260845286fc3353690d01d60ddfcb8c62f1b69d5924a47783",
     "state/sr-identity.ts": "21a5076500948cf32140a208ab23f285cc3e5c1baf6b58636352efa1ac307b86",
+    "state/sr-page-history.ts": "872996a05b190b9ff8dd8710fae2360c7397a69ce3a72f7a4f6b11033962d3bd",
     "state/ui-store.ts": "f024ff594fa54c8e2565bc68f889c8c465a8907d61fae2eac686cf2f61cb3074",
     "state/workspace-navigation.ts": "ef9f331dfe08e9c1e26679997bf9cc4372e90a5904a5249d738192d40f00b87c",
-    "styles/soma.css": "0c358a88b0aa1029a7bd611edd0e172ec74eff455c6635aa808c5c9cf980550d",
+    "styles/soma.css": "e35c3a79e3d9cd9c90cbba0d1b021463eaa245378b7f30418d0a5f313a6d52c9",
     "tsconfig.json": "3dd02e0633049ebb6630a5bd25e9af0769392a595641ec1768efbfc92d5a0b50",
     "vite.config.mjs": "7a6ed5d66720c8c4b416d604bb3e7615fe2a8b978de3729111b7b7e4e30ea091",
     "working-copy/client.ts": "95b98c223b48a6b9d7e9bda80cabf0e892797e07d0db3f2aab59d495a6ef1089"
