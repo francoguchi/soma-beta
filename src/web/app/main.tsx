@@ -24,14 +24,25 @@ function Application() {
   const previousWorkspace = useRef(settingsPath(location.pathname) ? '/overview' : location.pathname);
   const [dirty, setDirty] = useState(false); const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [restored, setRestored] = useState<ReturnState | null>(null); const dirtyRef = useRef(false);
-  const returnState = useRef<(() => ReturnState | null) | null>(null); const navigation = useRef<RouteNavigation | null>(null);
+  const workReturn = useRef<(() => ReturnState | null) | null>(null);
+  const settingsReturn = useRef<(() => ReturnState | null) | null>(null);
+  const currentPath = useRef(location.pathname);
+  const navigation = useRef<RouteNavigation | null>(null);
   const updateDirty = useCallback((value: boolean) => {dirtyRef.current = value; setDirty(value);}, []);
-  const captureReturnState = useCallback((capture: () => ReturnState | null) => {returnState.current = capture;}, []);
+  const captureReturnState = useCallback((capture: () => ReturnState | null) => {workReturn.current = capture;}, []);
+  const captureSettingsReturnState = useCallback((capture: () => ReturnState | null) => {settingsReturn.current = capture;}, []);
   const application = useRef<HTMLDivElement>(null); const fallback = useCallback(() => document.getElementById('main-content'), []);
   useEffect(() => {
     const controller = new RouteNavigation(location.pathname, {replace: (state, next) => history.replaceState(state, '', next),
       push: (state, next) => history.pushState(state, '', next), go: delta => history.go(delta)}, () => dirtyRef.current,
-      () => returnState.current?.() ?? null, (next, state) => {returnState.current = null; setRestored(state); setPath(next);}, setPendingPath);
+      () => (settingsPath(currentPath.current) ? settingsReturn.current?.() : workReturn.current?.()) ?? null,
+      (next, state) => {
+        const previous = currentPath.current;
+        currentPath.current = next;
+        if (!settingsPath(previous) && !settingsPath(next)) workReturn.current = null;
+        settingsReturn.current = null;
+        setRestored(state); setPath(next);
+      }, setPendingPath);
     navigation.current = controller; setPath(location.pathname);
     const change = (event: PopStateEvent) => controller.pop(location.pathname, event.state);
     window.addEventListener('popstate', change); return () => {navigation.current = null; window.removeEventListener('popstate', change);};
@@ -62,7 +73,7 @@ function Application() {
             event.preventDefault();setReferenceOpen(false);navigate(href);}}>{label}</a>)}
     </nav>
     <div className="soma-v2-settings-body" data-scroll-owner="y">
-      <SettingsWorkspace key={path} path={path} restored={restored} onReturnState={captureReturnState}>
+      <SettingsWorkspace key={path} path={path} restored={restored} onReturnState={captureSettingsReturnState}>
         {route?.surface === 'appearance_settings' ? <AppearanceSettings/> :
          route?.surface === 'communication_settings' ? <CommunicationSettings/> :
          referenceOpen ? <><div className="soma-v2-settings-inlinehead">
