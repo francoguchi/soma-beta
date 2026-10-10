@@ -13,10 +13,15 @@ import {SlaCatalogSettings} from './SlaCatalogSettings';
 import {CommunicationSettings} from './CommunicationSettings';
 import {ObjectiveSettings} from './ObjectiveSettings';
 import {SettingsWorkspace} from './SettingsWorkspace';
+import {SettingsDialog} from '../components/SettingsDialog';
 import '../styles/soma.css';
+
+const settingsPath = (value: string) => ['/settings','/settings/appearance','/settings/communications'].includes(value);
 
 function Application() {
   const [path, setPath] = useState(location.pathname);
+  const [referenceOpen, setReferenceOpen] = useState(false);
+  const previousWorkspace = useRef(settingsPath(location.pathname) ? '/overview' : location.pathname);
   const [dirty, setDirty] = useState(false); const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [restored, setRestored] = useState<ReturnState | null>(null); const dirtyRef = useRef(false);
   const returnState = useRef<(() => ReturnState | null) | null>(null); const navigation = useRef<RouteNavigation | null>(null);
@@ -32,22 +37,46 @@ function Application() {
     window.addEventListener('popstate', change); return () => {navigation.current = null; window.removeEventListener('popstate', change);};
   }, []);
   const route = resolveRoute(path);
+  const settingsOpen = settingsPath(path);
+  if (!settingsOpen) previousWorkspace.current = path;
+  const visiblePath = settingsOpen ? previousWorkspace.current : path;
+  const visibleRoute = resolveRoute(visiblePath);
   const navigate = (next: string): void => {
     navigation.current?.navigate(next);
   };
-  return <><div ref={application}><SomaShell path={path} dirty={dirty} navigate={navigate}>
-    {route?.surface === 'sr_workbench' && route.recordId ? <TicketWorkbench key={path} id={route.recordId} type="service_request" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
-      route?.surface === 'rfc_workbench' && route.recordId ? <TicketWorkbench key={path} id={route.recordId} type="rfc" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
-      route?.surface === 'objectives' ? <ObjectiveWorkspace navigate={navigate} restored={restored} onReturnState={captureReturnState}/> :
-      route?.surface === 'infrastructure' ? <InfrastructureWorkspace restored={restored} onReturnState={captureReturnState}/> :
-      route?.surface === 'inventory' ? <InventoryWorkspace restored={restored} onReturnState={captureReturnState}/> :
-      route?.surface === 'objective_detail' && route.recordId ? <ObjectiveDetail key={path} id={route.recordId}/> :
-      route && ['settings','appearance_settings','communication_settings'].includes(route.surface) ? <SettingsWorkspace key={path} path={path} restored={restored} onReturnState={captureReturnState}>
-        {route.surface==='appearance_settings'?<AppearanceSettings/>:route.surface==='communication_settings'?<CommunicationSettings/>:<><h2>Presentation preferences</h2><a data-focus-token="settings:appearance" href="/settings/appearance" onClick={event => {if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {event.preventDefault(); navigate('/settings/appearance');}}}>Appearance preferences</a>
-        <p><a href="/settings/communications" onClick={event=>{if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey){event.preventDefault();navigate('/settings/communications');}}}>Communication processing and housekeeping</a></p>
-        <ObjectiveSettings/><ReferenceSettings/><SlaCatalogSettings/></>}</SettingsWorkspace> :
-      <p role="status">{route ? 'This workspace binding is under implementation.' : 'Page not found.'}</p>}
-  </SomaShell></div>{pendingPath && <Modal title="Leave unsaved changes?" application={application} fallback={fallback} close={() => navigation.current?.cancel()}>
+  return <><div ref={application}><SomaShell path={visiblePath} settingsOpen={settingsOpen} dirty={dirty} navigate={navigate}>
+    {visibleRoute?.surface === 'sr_workbench' && route.recordId ? <TicketWorkbench key={path} id={route.recordId} type="service_request" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
+      visibleRoute?.surface === 'rfc_workbench' && route.recordId ? <TicketWorkbench key={path} id={route.recordId} type="rfc" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
+      visibleRoute?.surface === 'objectives' ? <ObjectiveWorkspace navigate={navigate} restored={restored} onReturnState={captureReturnState}/> :
+      visibleRoute?.surface === 'infrastructure' ? <InfrastructureWorkspace restored={restored} onReturnState={captureReturnState}/> :
+      visibleRoute?.surface === 'inventory' ? <InventoryWorkspace restored={restored} onReturnState={captureReturnState}/> :
+      visibleRoute?.surface === 'objective_detail' && route.recordId ? <ObjectiveDetail key={path} id={route.recordId}/> :
+      <p role="status">{visibleRoute ? 'This workspace binding is under implementation.' : 'Page not found.'}</p>}
+  </SomaShell></div>{settingsOpen && <SettingsDialog application={application}
+    expanded={referenceOpen && route?.surface === 'settings'}
+    onClose={() => {setReferenceOpen(false); navigate(previousWorkspace.current);}}>
+    <nav className="soma-v2-settings-tabs" aria-label="Settings sections">
+      {([['General','/settings'],['Appearance','/settings/appearance'],['Communications','/settings/communications']] as const).map(([label,href]) =>
+        <a key={href} href={href} aria-current={path === href ? 'page' : undefined}
+          onClick={event => {if(event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)return;
+            event.preventDefault();setReferenceOpen(false);navigate(href);}}>{label}</a>)}
+    </nav>
+    <div className="soma-v2-settings-body" data-scroll-owner="y">
+      <SettingsWorkspace key={path} path={path} restored={restored} onReturnState={captureReturnState}>
+        {route?.surface === 'appearance_settings' ? <AppearanceSettings/> :
+         route?.surface === 'communication_settings' ? <CommunicationSettings/> :
+         referenceOpen ? <><div className="soma-v2-settings-inlinehead">
+           <h3>Reference Manager</h3>
+           <button type="button" onClick={() => setReferenceOpen(false)}>Back to General</button>
+         </div><p>Reference identities remain governed by their owning services.</p>
+         <ReferenceSettings/></> :
+         <><h3>General</h3>
+           <p>Adjust local operational preferences. Changes are accepted only by their owning services.</p>
+           <button type="button" onClick={() => setReferenceOpen(true)}>Open Reference Manager ↗</button>
+           <ObjectiveSettings/><SlaCatalogSettings/></>}
+      </SettingsWorkspace>
+    </div>
+  </SettingsDialog>}{pendingPath && <Modal title="Leave unsaved changes?" application={application} fallback={fallback} close={() => navigation.current?.cancel()}>
     <p>This edit flow has unsaved UI values. A recovery checkpoint does not save accepted operational state.</p>
     <button type="button" onClick={() => {updateDirty(false); navigation.current?.confirm();}}>Leave this edit flow</button>
   </Modal>}</>;
