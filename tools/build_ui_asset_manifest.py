@@ -9,6 +9,7 @@ def source_inputs():
     paths = [path for directory in ('app', 'components', 'data', 'interactions', 'layout', 'state', 'styles', 'working-copy')
              for path in sorted((web / directory).rglob('*')) if path.is_file()]
     paths += [web / name for name in ('package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.mjs', 'index.html', 'env.d.ts')]
+    paths += sorted(path for path in (web / 'public' / 'brand').glob('*.svg') if path.is_file())
     # Source text is Git-normalized UTF-8/LF; shipped assets remain exact bytes.
     return {path.relative_to(web).as_posix(): hashlib.sha256(path.read_bytes().replace(b'\r\n', b'\n')).hexdigest() for path in paths}
 
@@ -18,7 +19,8 @@ if __name__ == '__main__':
         if not path.is_file() or path.name == 'manifest.json':
             continue
         relative = path.relative_to(ROOT).as_posix()
-        if path.suffix not in {'.html', '.js', '.css'} or relative.startswith('fixtures/'):
+        allowed_brand = relative in {'brand/soma-lockup.svg', 'brand/soma-mark.svg'}
+        if (path.suffix not in {'.html', '.js', '.css'} and not allowed_brand) or relative.startswith('fixtures/'):
             raise SystemExit('Unexpected production UI resource')
         raw = path.read_bytes()
         files[relative] = {'sha256': hashlib.sha256(raw).hexdigest(), 'bytes': len(raw)}

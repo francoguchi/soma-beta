@@ -46,5 +46,5 @@ class UiAssets:
         digest = hashlib.sha256(raw).hexdigest()
         if len(raw) != expected['bytes'] or digest != expected['sha256']:
             raise IntegrityFailure('Packaged UI resource differs from its frozen asset manifest')
-        content_type = {'.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8'}
+        content_type = {'.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml'}
         return UiAsset(content_type['.' + name.rsplit('.', 1)[-1]], raw, digest)

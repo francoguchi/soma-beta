@@ -47,7 +47,7 @@ def verify_static_assets():
         raise SecurityNotReady("web asset manifest is invalid")
     for name, entry in manifest["files"].items():
         path = static / name
-        if path.resolve().parent not in (static.resolve(), (static / "assets").resolve()) or path.is_symlink():
+        if path.resolve().parent not in (static.resolve(), (static / "assets").resolve(), (static / "brand").resolve()) or path.is_symlink():
             raise SecurityNotReady("web asset path is invalid")
         data = path.read_bytes()
         if len(data) != entry["bytes"] or hashlib.sha256(data).hexdigest() != entry["sha256"]:
