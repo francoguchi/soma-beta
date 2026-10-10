@@ -84,7 +84,7 @@
  display:flex;align-items:center;gap:12px;min-height:44px;margin:0 -12px 12px;
  padding:0 12px;border-bottom:1px solid var(--line);
 }
-.soma-v2-content-head h1{font:650 14px/1.4 inherit;margin:0}
+.soma-v2-content-head h1{font-family:inherit;font-size:14px;font-weight:650;line-height:1.4;margin:0}
 .soma-v2-content-head>span{font-size:9px;color:var(--dim)}
 .soma-v2-shell>footer.soma-v2-status{
  grid-row:3;grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;
