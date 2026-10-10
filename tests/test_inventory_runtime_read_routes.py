@@ -42,6 +42,19 @@ def test_source_runtime_binds_existing_inventory_need_request_and_rma_read_owner
         with pytest.raises(ValidationError):
             domains.inventory.dispatch("GET", route, {"unaccepted_field": "no"})
 
+    for kind in ("spare_need", "spare_request", "rma"):
+        history = domains.inventory.dispatch(
+            "GET", f"/api/v1/inventory/history/{kind}/{missing}", {"limit": 25}
+        )
+        assert history is not None and history.status == 200
+        assert history.body == {"items": [], "continuation": None}
+        with pytest.raises(ValidationError):
+            domains.inventory.dispatch(
+                "GET",
+                f"/api/v1/inventory/history/{kind}/{missing}",
+                {"unaccepted_field": "no"},
+            )
+
     # Declared mutation routes remain uncomposed; no accidental write handler.
     with pytest.raises(Exception, match="not assembled"):
         domains.inventory.dispatch("POST", "/api/v1/inventory/requests", {})

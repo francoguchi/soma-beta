@@ -105,6 +105,11 @@ class DomainRoutes:
             "StockEligibilityQuery": lambda route, values: asdict(stock.stock_eligibility(**values)),
             "InventoryAttentionQuery": lambda route, values: attention.attention(**values),
             "InventoryNeedsQuery": lambda route, values: stock.list_needs(**values),
+            "InventoryHistoryQuery": lambda route, values: attention.history(
+                target_kind=route.path_parameters["target_kind"],
+                target_id=route.path_parameters["target_id"],
+                **values
+            ),
             "SpareRequestListQuery": lambda route, values: requests.list_requests(**values),
             "SpareRequestDetailQuery": lambda route, values: (
                 requests.request_detail(route.path_parameters["request_id"])
