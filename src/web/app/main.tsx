@@ -3,6 +3,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {SomaShell} from '../components/SomaShell';
 import {resolveRoute, RouteNavigation, type ReturnState} from './router';
 import {TicketWorkbench} from './TicketWorkbench';
+import {TicketCollection} from './TicketCollection';
 import {Modal} from '../components/Modal';
 import {AppearanceSettings} from '../components/AppearanceSettings';
 import {ObjectiveWorkspace, ObjectiveDetail} from './ObjectiveWorkspace';
@@ -65,7 +66,8 @@ function Application() {
     navigation.current?.navigate(next);
   };
   return <><div ref={application}><SomaShell path={visiblePath} settingsOpen={settingsOpen} dirty={dirty} navigate={navigate}>
-    {visibleRoute?.surface === 'sr_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="service_request" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
+    {visibleRoute?.surface === 'ticket_list' ? <TicketCollection navigate={navigate}/> :
+    visibleRoute?.surface === 'sr_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="service_request" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
       visibleRoute?.surface === 'rfc_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="rfc" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
       visibleRoute?.surface === 'objectives' ? <ObjectiveWorkspace navigate={navigate} restored={restored} onReturnState={captureReturnState}/> :
       visibleRoute?.surface === 'infrastructure' ? <InfrastructureWorkspace restored={restored} onReturnState={captureReturnState}/> :
