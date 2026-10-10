@@ -9,7 +9,9 @@ const row=(id,name)=>({device_reference_id:id,operational_name:name,revision:1,
 const cursor=(type,id,last)=>({version:1,query_id:'ListTicketDeviceReferences',
   sort_registry_id:'TICKET_DEVICE_REFERENCE_ID_ASC_V1',last_key_tuple:[last],
   filter_fingerprint:createHash('sha256').update(JSON.stringify({
-    schema:'SOMA_TICKET_DEVICE_REFERENCE_FILTER_V1',ticket_type:type,ticket_id:id,
+    // Match the owner's canonical JSON ordering before SHA-256; an invalid
+    // cursor must remain rejected by TicketDeviceReferences.
+    schema:'SOMA_TICKET_DEVICE_REFERENCE_FILTER_V1',ticket_id:id,ticket_type:type,
   })).digest('hex'),null_order:'not_applicable'});
 
 test('SR Devices reads bounded direct owner links with selected details and exact paging',async({page})=>{
