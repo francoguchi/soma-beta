@@ -27,6 +27,7 @@ from soma.security.runtime.installation import SourceInstallationSecurity, prepa
 from soma.security.runtime.windows import process_identity
 from soma.security.services.auth import AuthenticationService
 from soma.ui.assets import UiAssets
+from soma.ui.auth_shell import render_auth_shell
 
 
 def json_value(value):
@@ -162,19 +163,15 @@ class SourceApplication:
 
     def auth_shell(self):
         nonce = secrets.token_urlsafe(24)
-        # Startup-only composition shell; the existing LLD-10 application is served unchanged after login.
-        html = '''<!doctype html><html><head><meta charset="utf-8"><title>SOMA — sign in</title></head>
-<body><main><h1>SOMA</h1><p id="state">Checking local authentication…</p>
-<form id="auth"><label>Password <input id="password" type="password" autocomplete="current-password" required></label>
-<label id="confirmation-label" hidden>Confirm password <input id="confirmation" type="password" autocomplete="new-password"></label>
-<button type="submit" id="submit" disabled>Sign in</button></form><p id="error" role="alert"></p></main>
-<script nonce="NONCE">let configured=false; const form=document.getElementById('auth');
-fetch('/api/v1/auth/status',{credentials:'same-origin',redirect:'error'}).then(r=>r.json()).then(s=>{configured=s.configured;
-document.getElementById('state').textContent=configured?'Sign in with your SOMA password.':'First run: create a SOMA password (at least 12 characters).';
-document.getElementById('confirmation-label').hidden=configured;document.getElementById('submit').disabled=false;});
-form.addEventListener('submit',async e=>{e.preventDefault();const password=document.getElementById('password');const confirmation=document.getElementById('confirmation');
-const body=configured?{password:password.value}:{command_id:crypto.randomUUID(),password:password.value,password_confirmation:confirmation.value};
-try{const r=await fetch('/api/v1/auth/'+(configured?'login':'setup'),{method:'POST',credentials:'same-origin',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-const result=await r.json();if(!r.ok){document.getElementById('error').textContent=result.code;return;}password.value='';confirmation.value='';location.replace('/');}
-catch{document.getElementById('error').textContent='The local host could not complete authentication.';}});</script></body></html>'''.replace("NONCE", nonce)
-        return HTMLResponse(html, headers={"Cache-Control": "no-store", "Content-Security-Policy": f"default-src 'none'; script-src 'nonce-{nonce}'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'", "X-Content-Type-Options": "nosniff"})
+        # This remains Beta's server-generated, pre-authentication HTML.
+        # Credential/session authority is unchanged and never moved into React.
+        html = render_auth_shell(nonce)
+        return HTMLResponse(html, headers={
+            "Cache-Control": "no-store",
+            "Content-Security-Policy": (
+                f"default-src 'none'; script-src 'nonce-{nonce}'; style-src 'nonce-{nonce}'; "
+                "img-src 'self'; connect-src 'self'; form-action 'self'; "
+                "base-uri 'none'; frame-ancestors 'none'"
+            ),
+            "X-Content-Type-Options": "nosniff",
+        })
