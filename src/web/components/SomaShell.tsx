@@ -21,14 +21,14 @@ function Icon({name}: {name: DockIcon}) {
   return <svg className="soma-v2-icon" width="19" height="19" viewBox="0 0 24 24" aria-hidden="true" {...common}>{paths[name]}</svg>;
 }
 
-function Link({href, label, active, navigate, className}: {
-  href: string; label: string; active: boolean; navigate: (path: string) => void; className: string;
+function Link({href, label, active, navigate, className, icon}: {
+  href: string; label: string; active: boolean; navigate: (path: string) => void; className: string; icon?: ReactNode;
 }) {
-  return <a className={className} href={href} aria-current={active ? 'page' : undefined}
+  return <a className={className} href={href} aria-label={icon ? label : undefined} aria-current={active ? 'page' : undefined}
     onClick={event => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault(); navigate(href);
-    }}>{label}</a>;
+    }}>{icon ?? label}</a>;
 }
 
 export function SomaShell({path, navigate, children, warnings = [], dirty = false}: {
@@ -64,6 +64,7 @@ export function SomaShell({path, navigate, children, warnings = [], dirty = fals
       <Link className="soma-v2-header-action" href="/settings/appearance" label="Appearance"
         active={route?.surface === 'appearance_settings'} navigate={navigate}/>
       <Link className="soma-v2-settings-gear" href="/settings" label="Settings"
+        icon={<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m10 2 1 2h2l1-2 2 1-.3 2 1.5 1.5L19 6l2 2-1.5 1.5.5 2.5-.5 2.5L21 16l-2 2-1.8-.5L15.7 19l.3 2-2 1-1-2h-2l-1 2-2-1 .3-2-1.5-1.5L5 18l-2-2 1.5-1.5L4 12l.5-2.5L3 8l2-2 1.8.5L8.3 5l-.3-2 2-1Z"/></svg>}
         active={navigation.active === 'settings'} navigate={navigate}/>
     </header>
     <nav className="soma-v2-dock" aria-label="Workspaces">
