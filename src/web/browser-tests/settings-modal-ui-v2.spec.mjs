@@ -9,7 +9,9 @@ test('Settings opens as a dialog over the active workspace and closes to it',asy
   const dialog=page.getByRole('dialog',{name:'Settings'});
   await expect(dialog).toBeVisible();
   await expect(page).toHaveURL(/\/settings$/);
-  await expect(page.getByRole('navigation',{name:'Tickets navigation'})).toHaveCount(0);
+  // Settings preserves the underlying workbench; its navigation stays mounted
+  // but the application is inert while the modal is active.
+  await expect(page.locator('[inert] nav[aria-label="Tickets navigation"]')).toHaveCount(1);
   await expect(dialog.getByRole('button',{name:'Close settings'})).toBeFocused();
   await dialog.getByRole('button',{name:'Open Reference Manager'}).click();
   await expect(dialog).toHaveAttribute('data-expanded','true');
@@ -19,6 +21,7 @@ test('Settings opens as a dialog over the active workspace and closes to it',asy
   await expect(dialog).toHaveCount(0);
   await expect(page).toHaveURL(/\/tickets\/sr\//);
   await expect(page.getByRole('navigation',{name:'Tickets navigation'})).toBeVisible();
+  await expect(page.locator('[inert] nav[aria-label="Tickets navigation"]')).toHaveCount(0);
 });
 
 test('Settings deep links are dialogs; return to Overview when no previous workspace exists',async({page})=>{
