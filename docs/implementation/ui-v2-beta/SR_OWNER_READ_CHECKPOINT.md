@@ -1,5 +1,6 @@
 # UI-SR-01 — First live Tickets owner reads (UI V2)
 
+> **CURRENT HANDOVER (2026-10-10):** Read [CONTINUE.md](CONTINUE.md) first for the single-branch SHA, actual frozen-asset status, Study 29 vs Study 30 authority, tests and next action. Older build/test instructions below are historical checkpoints, not a claim that the latest frontend source has been built.\n\n
 **Branch:** `feat/beta-ui-v2` ONLY. **PR:** #80, draft. **Status:** SR identity + bounded SR register implemented; CI, operator build and browser/runtime verification pending. No schema/security/audit writes made.
 
 ## Why this slice exists
