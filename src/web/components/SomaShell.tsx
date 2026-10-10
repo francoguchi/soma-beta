@@ -58,7 +58,10 @@ export function SomaShell({path, navigate, children, warnings = [], dirty = fals
   return <div ref={shell} className="soma-shell soma-v2-shell" data-compact={compact ? 'true' : 'false'}>
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="soma-v2-header">
-      <span className="soma-v2-brand"><img src="/static/ui/brand/soma-lockup.svg" alt="SOMA"/></span>
+      <span className="soma-v2-brand">
+        <img className="soma-v2-brand-dark" src="/static/ui/brand/soma-lockup-dark.svg" alt="SOMA"/>
+        <img className="soma-v2-brand-light" src="/static/ui/brand/soma-lockup.svg" alt="SOMA"/>
+      </span>
       <span className="soma-v2-header-spacer"/>
       <span className="soma-v2-build">BETA · UI V2</span>
       <Link className="soma-v2-header-action" href="/settings/appearance" label="Appearance"

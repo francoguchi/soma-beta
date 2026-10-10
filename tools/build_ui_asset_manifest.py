@@ -19,7 +19,7 @@ if __name__ == '__main__':
         if not path.is_file() or path.name == 'manifest.json':
             continue
         relative = path.relative_to(ROOT).as_posix()
-        allowed_brand = relative in {'brand/soma-lockup.svg', 'brand/soma-mark.svg'}
+        allowed_brand = relative in {'brand/soma-lockup.svg', 'brand/soma-lockup-dark.svg', 'brand/soma-mark.svg'}
         if (path.suffix not in {'.html', '.js', '.css'} and not allowed_brand) or relative.startswith('fixtures/'):
             raise SystemExit('Unexpected production UI resource')
         raw = path.read_bytes()

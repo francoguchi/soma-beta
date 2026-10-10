@@ -29,7 +29,7 @@ def test_production_asset_hashes_and_offline_entry_match_frozen_manifest():
 
 def test_canonical_brand_assets_are_manifested_and_delivered_as_image_svg():
     assets = UiAssets()
-    for name in ('soma-mark.svg', 'soma-lockup.svg'):
+    for name in ('soma-mark.svg', 'soma-lockup.svg', 'soma-lockup-dark.svg'):
         url = '/static/ui/brand/' + name
         asset = assets.resolve('GET', url)
         assert asset is not None

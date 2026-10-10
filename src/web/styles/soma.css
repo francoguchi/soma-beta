@@ -181,6 +181,12 @@ h1 {font-size: 24px;} h2 {font-size: 20px;} h3 {font-size: 16px;} .metadata {fon
 /* Study 30 modal Settings; route-backed owner content, no second page sidebar. */
 .soma-v2-brand{display:flex;align-items:center;min-width:0;height:100%}
 .soma-v2-brand img{display:block;height:30px;width:auto;max-width:116px;object-fit:contain}
+.soma-v2-brand .soma-v2-brand-light{display:none}
+:root[data-mode="light"] .soma-v2-brand .soma-v2-brand-dark{display:none}
+:root[data-mode="light"] .soma-v2-brand .soma-v2-brand-light{display:block}
+.soma-v2-settings-owner{border:1px solid var(--border);padding:12px;margin:14px 0;background:var(--background)}
+.soma-v2-settings-owner h2{font-size:13px;margin:0 0 8px;font-weight:700}
+.soma-v2-settings-owner p{font-size:11px;line-height:1.7;color:var(--muted);margin:0 0 10px}
 .soma-v2-settings-backdrop{
   position:fixed;inset:0;z-index:40;display:grid;place-items:center;
   background:rgba(0,0,0,.73);padding:12px;

@@ -97,9 +97,13 @@ function Application() {
          </div><p>Reference identities remain governed by their owning services.</p>
          <ReferenceSettings/><SlaCatalogSettings/></> :
          <><h3>General</h3>
-           <p>Adjust local operational preferences. Changes are accepted only by their owning services.</p>
-           <button type="button" onClick={() => setReferenceOpen(true)}>Open Reference Manager ↗</button>
-           <ObjectiveSettings/><SlaCatalogSettings/></>}
+           <p>Local scheduling preferences and reference catalogs are kept separate. Only the owning services can accept changes.</p>
+           <ObjectiveSettings/>
+           <section className="soma-v2-settings-owner" aria-label="Reference and SLA catalogs">
+             <h2>Reference and SLA catalogs</h2>
+             <p>Customers, contacts, Product Lines, contracts and classification mappings are managed through their owner-backed reference views.</p>
+             <button type="button" onClick={() => setReferenceOpen(true)}>Open Reference Manager ↗</button>
+           </section></>}
       </SettingsWorkspace>
     </div>
   </SettingsDialog>}{pendingPath && <Modal title="Leave unsaved changes?" application={application} fallback={fallback} close={() => navigation.current?.cancel()}>
