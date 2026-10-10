@@ -14,6 +14,7 @@ from soma.foundation.identifiers import require_uuid4
 from soma.tickets.queries.rfcs import RfcQueryService
 from soma.tickets.queries.service_requests import ServiceRequestQueryService
 from soma.tickets.queries.working_notes import WorkingNoteQueryService
+from soma.tickets.queries.service_request_collection import ServiceRequestCollectionQuery
 
 _DETAIL = re.compile(r"^/api/v1/tickets/(service-requests|rfcs)/([^/]+)$")
 _IDENTITY = re.compile(r"^/api/v1/tickets/service-requests/by-business-id/([^/]+)$")
@@ -32,6 +33,7 @@ class TicketReadRouteAdapter:
 
     def __init__(self, factory: Any) -> None:
         self._service_requests = ServiceRequestQueryService(factory)
+        self._collection = ServiceRequestCollectionQuery(factory)
         self._rfcs = RfcQueryService(factory)
         self._notes = WorkingNoteQueryService(factory)
 
@@ -40,6 +42,15 @@ class TicketReadRouteAdapter:
         # Keep the lookup namespace disjoint from ordinary point routes.
         if path == "/api/v1/tickets/service-requests/by-business-id":
             return None
+        if path == "/api/v1/tickets/service-requests":
+            if method != "GET":
+                raise ValidationError("Service Request collection is read-only")
+            if not isinstance(values, dict) or not set(values).issubset({"limit", "cursor"}):
+                raise ValidationError("Service Request collection filters are invalid")
+            result = self._collection.list_service_requests(
+                limit=values.get("limit", 50), cursor=values.get("cursor")
+            )
+            return TicketReadResponse(200, result)
         point = _DETAIL.fullmatch(path)
         identity = _IDENTITY.fullmatch(path)
         notes = _NOTES.fullmatch(path)
