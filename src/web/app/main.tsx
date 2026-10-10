@@ -53,6 +53,7 @@ function Application() {
   const visiblePath = settingsOpen ? previousWorkspace.current : path;
   const visibleRoute = resolveRoute(visiblePath);
   const navigate = (next: string): void => {
+    if (!settingsOpen && settingsPath(next)) setReferenceOpen(false);
     navigation.current?.navigate(next);
   };
   return <><div ref={application}><SomaShell path={visiblePath} settingsOpen={settingsOpen} dirty={dirty} navigate={navigate}>
@@ -65,7 +66,7 @@ function Application() {
       <p role="status">{visibleRoute ? 'This workspace binding is under implementation.' : 'Page not found.'}</p>}
   </SomaShell></div>{settingsOpen && <SettingsDialog application={application}
     expanded={referenceOpen && route?.surface === 'settings'}
-    onClose={() => {setReferenceOpen(false); navigate(previousWorkspace.current);}}>
+    onClose={() => navigate(previousWorkspace.current)}>
     <nav className="soma-v2-settings-tabs" aria-label="Settings sections">
       {([['General','/settings'],['Appearance','/settings/appearance'],['Communications','/settings/communications']] as const).map(([label,href]) =>
         <a key={href} href={href} aria-current={path === href ? 'page' : undefined}
