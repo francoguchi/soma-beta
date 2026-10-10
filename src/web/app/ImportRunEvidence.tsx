@@ -2,6 +2,7 @@ import {useContext,useEffect,useState} from 'react';
 import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection';
 import {filterFingerprint} from '../data/query-controller';
 import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
+import {ImportProposalReview} from './ImportProposalReview';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const sha=/^[a-f0-9]{64}$/u;
 const count=(n:unknown)=>Number.isSafeInteger(n)&&Number(n)>=0;
@@ -70,6 +71,7 @@ function Evidence({runId,kind}:{runId:string;kind:Kind}) {
   const first='/api/v1/imports/runs/'+encodeURIComponent(runId)+'/'+kind+'?limit=25';
   const [history,setHistory]=useState(()=>initialOwnerPage(first));
   const [fingerprint,setFingerprint]=useState<string|null>(null);
+  const [selectedProposal,setSelectedProposal]=useState<string|null>(null);
   const generation=useContext(OwnerReturnRefresh);
   useEffect(()=>{
     let active=true;setFingerprint(null);
@@ -84,6 +86,7 @@ function Evidence({runId,kind}:{runId:string;kind:Kind}) {
     {fingerprint===null?<p role="status">Loading accepted {kind} context.</p>:
     <OwnerProjection<Page<Finding|Proposal>> key={generation} path={ownerPagePath(history)} render={raw=>{
       const page=validatePage(raw,kind,fingerprint,runId);
+      const selected=kind==='proposals'?page.items.find(item=>(item as Proposal).proposal_id===selectedProposal) as Proposal|undefined:undefined;
       return <>
         <p>{page.exact_total} {kind} in owner projection; {page.items.length} on this page.</p>
         {page.items.length===0&&<p role="status">No {kind} returned for this run.</p>}
@@ -96,19 +99,30 @@ function Evidence({runId,kind}:{runId:string;kind:Kind}) {
               <td>{f.severity}</td><td>{f.finding_code}</td><td>{f.message_text}</td></tr>;
           })():(()=>{
             const p=item as Proposal;return <tr key={p.proposal_id}>
-              <td>{p.state}</td><td>{p.proposal_kind}</td><td>{p.risk_class}</td></tr>;
+              <td>{p.state}</td>
+              <td><button type="button" className="soma-v2-sr-rowselect"
+                aria-label={'Inspect proposal '+p.proposal_id}
+                aria-pressed={selected?.proposal_id===p.proposal_id}
+                onClick={()=>setSelectedProposal(p.proposal_id)}>{p.proposal_kind}</button></td>
+              <td>{p.risk_class}</td></tr>;
           })())}</tbody>
         </table></div>
         <div className="soma-v2-sr-pager">
           <button type="button" disabled={history.page===history.first}
-            onClick={()=>setHistory(previousOwnerPage)}>Previous page</button>
+            onClick={()=>{setSelectedProposal(null);setHistory(previousOwnerPage);}}>Previous page</button>
           <span>Page {history.page+1}</span>
           <button type="button" disabled={page.next_cursor===null}
             onClick={()=>{if(!page.next_cursor)return;
               const next=first+'&cursor='+encodeURIComponent(JSON.stringify(page.next_cursor));
+              setSelectedProposal(null);
               setHistory(old=>nextOwnerPage(old,next,first+'&cursor='));
             }}>Next page</button>
         </div>
+        {kind==='proposals'&&page.items.length>0&&!selected&&
+          <p role="status">Select a proposal to inspect current review evidence; no decision is submitted.</p>}
+        {selected&&<ImportProposalReview key={selected.proposal_id} proposalId={selected.proposal_id}
+          importRunId={runId} listedRevision={selected.proposal_revision}
+          listedState={selected.state} listedFingerprint={selected.proposal_fingerprint}/>}
       </>;
     }}/>}
   </section>;
