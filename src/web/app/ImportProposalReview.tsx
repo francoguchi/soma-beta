@@ -35,7 +35,7 @@ function validate(review:Review,identity:{proposalId:string;importRunId:string;
     ||!Array.isArray(review.allowed_dispositions)
     ||review.allowed_dispositions.length>3
     ||new Set(review.allowed_dispositions).size!==review.allowed_dispositions.length
-    ||review.allowed_dispositions.some(x=>!dispositions.has(x))
+    ||review.allowed_dispositions.some((x:string)=>!dispositions.has(x))
     ||(p.state!=='pending'&&review.allowed_dispositions.length>0)
     ||(review.stale&&review.allowed_dispositions.includes('accept'))
     ||!Array.isArray(review.changes)||review.changes.length>128
