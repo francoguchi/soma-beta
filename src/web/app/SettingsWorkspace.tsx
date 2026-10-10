@@ -24,7 +24,7 @@ export function SettingsWorkspace({path,restored=null,onReturnState,children}:{p
     const panes=Array.from(root.current?.querySelectorAll<HTMLElement>('[data-return-scroll]')??[]).slice(0,12)
       .map(node=>[node.dataset.returnScroll,node.scrollTop,node.scrollLeft]);
     return {route:path,filterFingerprint:fingerprint.current.value,activeId:null,selectedId:null,memberIds:[],settings:intent,focusToken:focus.current,
-      scrollAnchor:JSON.stringify({main:document.getElementById('main-content')?.scrollTop??0,panes})};
+      scrollAnchor:JSON.stringify({main:(root.current?.closest<HTMLElement>('.soma-v2-settings-body') ?? document.getElementById('main-content'))?.scrollTop??0,panes})};
   });},[intent,path,onReturnState]);
   useLayoutEffect(()=>{
     const node=root.current;if(!node||!restoredIntent||!restored)return;
@@ -39,10 +39,10 @@ export function SettingsWorkspace({path,restored=null,onReturnState,children}:{p
       if(Array.from(node.querySelectorAll('[role="status"]')).some(element=>element.textContent?.startsWith('Loading accepted')))return;
       if(restored.focusToken){const control=Array.from(node.querySelectorAll<HTMLElement>('[data-focus-token]')).find(element=>element.dataset.focusToken===restored.focusToken
         &&element.getClientRects().length>0&&!element.matches(':disabled'));
-        (control??document.getElementById('main-content'))?.focus({preventScroll:true});
+        (control??(root.current?.closest<HTMLElement>('.soma-v2-settings-body') ?? document.getElementById('main-content')))?.focus({preventScroll:true});
         if(!control&&!explained){explained=true;setNotice('The previous Settings control is unavailable; focus returned to Settings.');return;}
       }
-      if(positions){const main=document.getElementById('main-content');if(main)main.scrollTop=positions.main;
+      if(positions){const main=(root.current?.closest<HTMLElement>('.soma-v2-settings-body') ?? document.getElementById('main-content'));if(main)main.scrollTop=positions.main;
         for(const [token,top,left] of positions.panes){const pane=Array.from(node.querySelectorAll<HTMLElement>('[data-return-scroll]')).find(element=>element.dataset.returnScroll===token);
           if(pane){pane.scrollTop=top;pane.scrollLeft=left;}}
       }stop();
