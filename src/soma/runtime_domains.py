@@ -13,6 +13,7 @@ from soma.reference.api.routes_reference import ReferenceRouteAdapter, REFERENCE
 from soma.reference.queries.references import ReferenceQueries
 from soma.reference.application.profile_service import LocalUserProfileService
 from soma.ui.composition import build_ui_runtime
+from soma.tickets.api.routes_ui_read import TicketReadRouteAdapter
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,7 @@ class DomainRoutes:
     def __init__(self, factory, security):
         self.factory, self.security = factory, security
         self.ui = build_ui_runtime(factory, revision_reader=UncomposedRevisionReader(), session_security=security)
+        self.tickets = TicketReadRouteAdapter(factory)
         queries = InfrastructureQueries(InfrastructureService(factory))
         from soma.infrastructure.queries import candidates, details, explorer, history, workbooks
         names = set().union(*(owner.QUERY_NAMES for owner in (candidates, details, explorer, history, workbooks)))
@@ -154,7 +156,7 @@ class DomainRoutes:
             return self.ui.routes.dispatch(method, path, request=request, decoded=values)
         context = self.security.validate_request(request, mutation=method != "GET")
         communications = self.communications.routes(actor_kind="local_user", actor_id=context.actor_id)
-        for adapter in (self.infrastructure, self.reference, self.inventory, self.sla, self.objective_routes, communications):
+        for adapter in (self.tickets, self.infrastructure, self.reference, self.inventory, self.sla, self.objective_routes, communications):
             try:
                 result = adapter.dispatch(method, path, values)
             except TypeError:
