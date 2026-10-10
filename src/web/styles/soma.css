@@ -280,3 +280,37 @@ h1 {font-size: 24px;} h2 {font-size: 20px;} h3 {font-size: 16px;} .metadata {fon
 .soma-v2-ticket-collection-scope{color:var(--dim,#929da7);padding:12px 0;font-size:10px;max-width:780px;line-height:1.7}
 @media(max-width:540px){.soma-v2-ticket-search-controls{flex-direction:column;align-items:stretch}.soma-v2-ticket-search-controls input{width:100%}.soma-v2-ticket-match-grid{grid-template-columns:95px minmax(0,1fr)}}
 @media(forced-colors:active){.soma-v2-ticket-search-controls button,.soma-v2-ticket-match button{border:1px solid ButtonText;color:ButtonText;background:ButtonFace}}
+
+
+/* UI-SR-02: owner-backed, bounded Service Request register (Study 30 direction). */
+.soma-v2-ticket-collection{max-width:none}
+.soma-v2-sr-register{min-width:0;display:flex;flex-direction:column;gap:0;color:var(--text,#e6eaee)}
+.soma-v2-sr-register-header{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:53px;border-bottom:1px solid var(--line,#363c43)}
+.soma-v2-sr-register-header h2{font-size:13px;font-weight:700;margin:0 0 3px}
+.soma-v2-sr-register-header p{font-size:10px;color:var(--dim,#929da7);margin:0}
+.soma-v2-sr-owner-tag{flex:none;letter-spacing:.05em;font-size:9px;color:var(--current,#9abbe0)}
+.soma-v2-sr-register-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px;color:var(--secondary,#b2bbc4);font-size:10px}
+.soma-v2-sr-table-viewport{min-width:0;max-width:100%;overflow:auto;overscroll-behavior:contain;border:1px solid var(--line,#363c43)}
+.soma-v2-sr-table{border-collapse:collapse;width:100%;min-width:700px;background:var(--surface,#111518);font-size:11px;text-align:left}
+.soma-v2-sr-table thead{background:var(--surface2,#161b1f)}
+.soma-v2-sr-table :is(th,td){padding:9px 10px;border-bottom:1px solid var(--line-soft,#262d33);vertical-align:top}
+.soma-v2-sr-table th{font-size:9px;white-space:nowrap;font-weight:600;color:var(--secondary,#b2bbc4);letter-spacing:.04em}
+.soma-v2-sr-table td{color:var(--text,#e6eaee);max-width:380px;overflow-wrap:anywhere}
+.soma-v2-sr-table tbody tr:hover{background:var(--surface2,#161b1f)}
+.soma-v2-sr-table tbody tr[data-selected="true"]{background:var(--current-bg,#1b2a3b)}
+.soma-v2-sr-table button{font:inherit;border-radius:0;cursor:pointer}
+.soma-v2-sr-rowselect{color:var(--current,#9abbe0);background:transparent;border:0;padding:0;text-align:left;text-decoration:underline;text-decoration-color:transparent}
+.soma-v2-sr-rowselect:focus-visible,.soma-v2-sr-rowselect:hover{text-decoration-color:currentColor}
+.soma-v2-sr-open{background:transparent;color:var(--secondary,#b2bbc4);border:1px solid var(--line,#363c43);padding:4px 9px}
+.soma-v2-sr-open:hover{background:var(--current-bg,#1b2a3b);color:var(--text,#e6eaee)}
+.soma-v2-sr-pager{display:flex;justify-content:flex-end;gap:7px;padding:9px 0}
+.soma-v2-sr-pager button,.soma-v2-sr-details-title button{font:inherit;color:var(--text,#e6eaee);background:var(--surface2,#161b1f);border:1px solid var(--line,#363c43);padding:6px 10px;cursor:pointer;border-radius:0}
+.soma-v2-sr-pager button:disabled{opacity:.45;cursor:default}
+.soma-v2-sr-details{background:var(--surface,#111518);border:1px solid var(--line,#363c43);margin-top:10px;min-width:0}
+.soma-v2-sr-details-title{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;padding:7px 12px;border-bottom:1px solid var(--line,#363c43)}
+.soma-v2-sr-details-title strong{font-size:10px;color:var(--current,#9abbe0)}
+.soma-v2-sr-details-grid{display:grid;grid-template-columns:minmax(90px,140px) minmax(0,1fr);gap:7px 16px;padding:11px 12px;font-size:11px}
+.soma-v2-sr-details-grid>span:nth-child(odd){color:var(--dim,#929da7)}
+.soma-v2-sr-details-grid>*{overflow-wrap:anywhere}
+@media(max-width:570px){.soma-v2-sr-owner-tag{display:none}.soma-v2-sr-details-title{flex-wrap:wrap}.soma-v2-sr-register-meta{flex-wrap:wrap}}
+@media(forced-colors:active){.soma-v2-sr-table tbody tr[data-selected="true"]{outline:1px solid Highlight;outline-offset:-1px}.soma-v2-sr-rowselect{color:LinkText}}
