@@ -94,13 +94,14 @@ class SourceApplication:
             if request.url.query and path.startswith("/api/v1/runtime/"):
                 raise ValidationError("runtime control has no query parameters")
             if path.startswith("/api/"):
-                body = b""
+                body = bytearray()
+                body_limit = 4096 if path.startswith(("/api/v1/runtime/", "/api/v1/auth/")) else 262144
                 async for chunk in request.stream():
-                    body += chunk
                     # Domain-specific owners apply their stricter accepted bound.
-                    if len(body) > (4096 if path.startswith(("/api/v1/runtime/", "/api/v1/auth/")) else 262144):
+                    if len(body) + len(chunk) > body_limit:
                         raise ValidationError("request exceeds its byte bound")
-                decoded = loads_strict_bytes(body, max_bytes=len(body)) if body else {}
+                    body.extend(chunk)
+                decoded = loads_strict_bytes(bytes(body), max_bytes=body_limit) if body else {}
                 if request.method not in {"GET", "HEAD"} and body and request.headers.get("content-type", "").split(";", 1)[0] != "application/json":
                     raise ValidationError("request requires JSON content type")
                 if path in {"/api/v1/runtime/health", "/api/v1/runtime/shutdown"}:

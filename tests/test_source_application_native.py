@@ -61,6 +61,41 @@ def test_reset_provisioning_rollback_and_validated_orphan_replacement(tmp_path, 
             app.host.shutdown(grace_seconds=10)
 
 
+def test_setup_replay_conflict_and_configured_rejection_skip_argon2(tmp_path, monkeypatch):
+    pytest.importorskip("sqlcipher3")
+    files = WindowsAclProvider()
+    root = tmp_path / "instance"
+    files.ensure_owner_only_directory(root)
+    app = SourceApplication(root)
+    try:
+        app.host.start()
+        body = {"command_id": new_uuid4(), "password": "local native password",
+                "password_confirmation": "local native password"}
+        first, _ = app.auth.setup(body)
+        def unnecessary_hash(*_args):
+            pytest.fail("a committed/configured setup repeated Argon2 work")
+        monkeypatch.setattr(app.auth.passwords, "hash", unnecessary_hash)
+        replay, _ = app.auth.setup(body)
+        assert replay["actor_id"] == first["actor_id"]
+        for fields, code in (
+            ({"password": "different native password", "password_confirmation": "different native password"}, "IDEMPOTENCY_CONFLICT"),
+            ({"command_id": new_uuid4()}, "AUTH_ALREADY_CONFIGURED"),
+            ({"password_confirmation": "different native password"}, "AUTH_PASSWORD_POLICY"),
+        ):
+            with pytest.raises(SomaError) as error:
+                app.auth.setup({**body, **fields})
+            assert error.value.code == code
+        connection = app.factory.open_authoritative(read_only=True)
+        try:
+            assert connection.execute("SELECT COUNT(*) FROM command_receipts WHERE command_type='SetupLocalAdmin'").fetchone() == (1,)
+            assert connection.execute("SELECT COUNT(*) FROM audit_events WHERE action_type='security.local_admin_configured'").fetchone() == (1,)
+        finally:
+            connection.close()
+    finally:
+        if app.host.state in {"READY", "QUIESCING", "LISTENING_NOT_READY"}:
+            app.host.shutdown(grace_seconds=10)
+
+
 def request(origin, method, path, body=None, *, cookie=None, headers=None):
     connection = http.client.HTTPConnection("127.0.0.1", int(origin.rsplit(":", 1)[1]), timeout=5)
     actual = {"Origin": origin, **(headers or {})}

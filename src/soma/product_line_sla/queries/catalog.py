@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from ._cursor import cursor_envelope as _cursor
+from ._cursor import cursor_envelope as _cursor, select_keyset_page
 
 from dataclasses import dataclass
+from heapq import nsmallest
 from typing import Any
 
 from soma.foundation.errors import SomaError, ValidationError
@@ -55,7 +56,7 @@ def _cursor_key(
     if not isinstance(value, dict) or set(value) != _CURSOR_FIELDS:
         raise ValidationError("catalog cursor fields are invalid")
     if (
-        value["version"] != 1
+        type(value["version"]) is not int or value["version"] != 1
         or value["query_id"] != query_id
         or value["sort_registry_id"] != sort_id
         or value["filter_fingerprint"] != fingerprint
@@ -99,46 +100,35 @@ class ProductLineSlaCatalogQueryService:
             fingerprint=fingerprint,
             size=2,
         )
+        if key is not None and any(not isinstance(item, str) for item in key):
+            raise ValidationError("Product Line cursor key is invalid")
+        key_tuple = None if key is None else tuple(key)
+        where, parameters = ("", ()) if state is None else (" WHERE lifecycle_state=?", (state,))
         with ReadSnapshot(self._factory) as snapshot:
-            if state is None:
-                rows = snapshot.connection.execute(
-                    "SELECT product_line_id,name,lifecycle_state,revision FROM product_lines"
-                ).fetchall()
-            else:
-                rows = snapshot.connection.execute(
-                    "SELECT product_line_id,name,lifecycle_state,revision FROM product_lines "
-                    "WHERE lifecycle_state=?",
-                    (state,),
-                ).fetchall()
-        values = [
-            {
-                "product_line_id": str(row[0]),
-                "name": str(row[1]),
-                "lifecycle_state": str(row[2]),
-                "revision": int(row[3]),
-            }
-            for row in rows
-        ]
-        values.sort(key=lambda item: (_product_name_key(str(item["name"])), str(item["product_line_id"])))
-        exact_count = len(values)
-        if key is not None:
-            if any(not isinstance(item, str) for item in key):
-                raise ValidationError("Product Line cursor key is invalid")
-            key_tuple = (str(key[0]), str(key[1]))
-            values = [
-                item
-                for item in values
-                if (_product_name_key(str(item["name"])), str(item["product_line_id"])) > key_tuple
-            ]
-        selected = values[: page_limit + 1]
-        page = selected[:page_limit]
+            exact_count = int(snapshot.connection.execute(
+                "SELECT COUNT(*) FROM product_lines" + where, parameters).fetchone()[0])
+            rows = snapshot.connection.execute(
+                "SELECT product_line_id,name,lifecycle_state,revision FROM product_lines" + where, parameters)
+
+            def candidates():
+                # The accepted Unicode presentation key is not SQLite NOCASE.
+                # Stream rows and retain only page+lookahead, normalizing once.
+                for row in rows:
+                    presentation_key = (_product_name_key(str(row[1])), str(row[0]))
+                    if key_tuple is None or presentation_key > key_tuple:
+                        yield presentation_key, row
+
+            selected = nsmallest(page_limit + 1, candidates(), key=lambda item: item[0])
+        page = [{"product_line_id": str(row[0]), "name": str(row[1]),
+                 "lifecycle_state": str(row[2]), "revision": int(row[3])}
+                for _, row in selected[:page_limit]]
         next_cursor = None
         if len(selected) > page_limit and page:
             last = page[-1]
             next_cursor = _cursor(
                 query_id="ListProductLines",
                 sort_id="PRODUCT_LINE_PRESENTATION_ASC_V1",
-                last_key=[_product_name_key(str(last["name"])), str(last["product_line_id"])],
+                last_key=list(selected[len(page) - 1][0]),
                 filter_fingerprint=fingerprint,
             )
         return CatalogPage(tuple(page), next_cursor, exact_count)
@@ -176,13 +166,13 @@ class ProductLineSlaCatalogQueryService:
         if state is not None:
             clauses.append("lifecycle_state=?")
             params.append(state)
-        where = "" if not clauses else " WHERE " + " AND ".join(clauses)
+        if key is not None and any(not isinstance(item, str) for item in key):
+            raise ValidationError("Contract cursor key is invalid")
         with ReadSnapshot(self._factory) as snapshot:
-            rows = snapshot.connection.execute(
-                "SELECT contract_id,customer_org_id,name,contract_reference,lifecycle_state,revision "
-                f"FROM contracts{where} ORDER BY customer_org_id,contract_reference,contract_id",
-                tuple(params),
-            ).fetchall()
+            rows, exact_count = select_keyset_page(snapshot.connection,
+                columns="contract_id,customer_org_id,name,contract_reference,lifecycle_state,revision",
+                source="contracts", clauses=clauses, parameters=params,
+                order=("customer_org_id", "contract_reference", "contract_id"), key=key, limit=page_limit)
         values = [
             {
                 "contract_id": str(row[0]),
@@ -194,21 +184,6 @@ class ProductLineSlaCatalogQueryService:
             }
             for row in rows
         ]
-        exact_count = len(values)
-        if key is not None:
-            if any(not isinstance(item, str) for item in key):
-                raise ValidationError("Contract cursor key is invalid")
-            key_tuple = tuple(str(item) for item in key)
-            values = [
-                item
-                for item in values
-                if (
-                    str(item["customer_org_id"]),
-                    str(item["contract_reference"]),
-                    str(item["contract_id"]),
-                )
-                > key_tuple
-            ]
         selected = values[: page_limit + 1]
         page = selected[:page_limit]
         next_cursor = None
@@ -271,19 +246,19 @@ class ProductLineSlaCatalogQueryService:
         if state is not None:
             clauses.append("c.lifecycle_state=?")
             params.append(state)
-        where = "" if not clauses else " WHERE " + " AND ".join(clauses)
+        if key is not None and any(not isinstance(item, str) for item in key):
+            raise ValidationError("CPL cursor key is invalid")
         with ReadSnapshot(self._factory) as snapshot:
-            rows = snapshot.connection.execute(
-                "SELECT c.contract_product_line_id,c.contract_id,c.product_line_id,c.lifecycle_state,"
+            rows, exact_count = select_keyset_page(snapshot.connection,
+                columns="c.contract_product_line_id,c.contract_id,c.product_line_id,c.lifecycle_state,"
                 "c.current_policy_revision_id,c.revision,ct.customer_org_id,ct.contract_reference,p.name,"
-                "pr.revision_ordinal,pr.policy_name,pr.template_source "
-                "FROM contract_product_lines c "
+                "pr.revision_ordinal,pr.policy_name,pr.template_source",
+                source="contract_product_lines c "
                 "JOIN contracts ct ON ct.contract_id=c.contract_id "
                 "JOIN product_lines p ON p.product_line_id=c.product_line_id "
-                "LEFT JOIN sla_policy_revisions pr ON pr.policy_revision_id=c.current_policy_revision_id "
-                f"{where} ORDER BY c.contract_id,c.product_line_id,c.contract_product_line_id",
-                tuple(params),
-            ).fetchall()
+                "LEFT JOIN sla_policy_revisions pr ON pr.policy_revision_id=c.current_policy_revision_id",
+                clauses=clauses, parameters=params,
+                order=("c.contract_id", "c.product_line_id", "c.contract_product_line_id"), key=key, limit=page_limit)
         values = [
             {
                 "contract_product_line_id": str(row[0]),
@@ -301,21 +276,6 @@ class ProductLineSlaCatalogQueryService:
             }
             for row in rows
         ]
-        exact_count = len(values)
-        if key is not None:
-            if any(not isinstance(item, str) for item in key):
-                raise ValidationError("CPL cursor key is invalid")
-            key_tuple = tuple(str(item) for item in key)
-            values = [
-                item
-                for item in values
-                if (
-                    str(item["contract_id"]),
-                    str(item["product_line_id"]),
-                    str(item["contract_product_line_id"]),
-                )
-                > key_tuple
-            ]
         selected = values[: page_limit + 1]
         page = selected[:page_limit]
         next_cursor = None
@@ -352,18 +312,18 @@ class ProductLineSlaCatalogQueryService:
             fingerprint=fingerprint,
             size=2,
         )
+        if key is not None and (type(key[0]) is not int or not isinstance(key[1], str)):
+            raise ValidationError("Policy history cursor key is invalid")
         with ReadSnapshot(self._factory) as snapshot:
             if snapshot.connection.execute(
                 "SELECT 1 FROM contract_product_lines WHERE contract_product_line_id=?",
                 (cpl_id,),
             ).fetchone() is None:
                 raise SomaError("SLA_CATALOG_NOT_FOUND", "Contract Product Line does not exist")
-            revisions = snapshot.connection.execute(
-                "SELECT policy_revision_id,revision_ordinal,policy_name,template_source,created_at_utc,"
-                "created_command_id FROM sla_policy_revisions WHERE contract_product_line_id=? "
-                "ORDER BY revision_ordinal DESC,policy_revision_id DESC",
-                (cpl_id,),
-            ).fetchall()
+            revisions, exact_count = select_keyset_page(snapshot.connection,
+                columns="policy_revision_id,revision_ordinal,policy_name,template_source,created_at_utc,created_command_id",
+                source="sla_policy_revisions", clauses=("contract_product_line_id=?",), parameters=(cpl_id,),
+                order=("revision_ordinal", "policy_revision_id"), key=key, descending=True, limit=page_limit)
             values: list[dict[str, object]] = []
             for row in revisions:
                 policy_id = str(row[0])
@@ -399,16 +359,6 @@ class ProductLineSlaCatalogQueryService:
                         ),
                     }
                 )
-        exact_count = len(values)
-        if key is not None:
-            if type(key[0]) is not int or not isinstance(key[1], str):
-                raise ValidationError("Policy history cursor key is invalid")
-            cursor_tuple = (int(key[0]), str(key[1]))
-            values = [
-                item
-                for item in values
-                if (int(item["revision_ordinal"]), str(item["policy_revision_id"])) < cursor_tuple
-            ]
         selected = values[: page_limit + 1]
         page = selected[:page_limit]
         next_cursor = None

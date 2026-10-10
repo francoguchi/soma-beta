@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ._cursor import cursor_envelope as _cursor
+from ._cursor import cursor_envelope as _cursor, select_keyset_page
 
 from dataclasses import asdict, dataclass
 
@@ -58,7 +58,7 @@ def _cursor_key(
     if not isinstance(value, dict) or set(value) != _CURSOR_FIELDS:
         raise ValidationError("report cursor fields are invalid")
     if (
-        value["version"] != 1
+        type(value["version"]) is not int or value["version"] != 1
         or value["query_id"] != query_id
         or value["sort_registry_id"] != sort_id
         or value["filter_fingerprint"] != fingerprint
@@ -131,29 +131,19 @@ class ProductLineSlaReportQueryService:
         if created_to_utc is not None:
             clauses.append("created_at_utc<=?")
             params.append(created_to_utc)
-        where = "" if not clauses else " WHERE " + " AND ".join(clauses)
+        if key is not None and (type(key[0]) is not int or not isinstance(key[1], str)):
+            raise ValidationError("report attempt cursor key is invalid")
         with ReadSnapshot(self._factory) as snapshot:
-            ids = snapshot.connection.execute(
-                f"SELECT report_attempt_id FROM sla_report_attempts{where} "
-                "ORDER BY created_at_utc DESC,report_attempt_id DESC",
-                tuple(params),
-            ).fetchall()
+            ids, exact_count = select_keyset_page(snapshot.connection,
+                columns="report_attempt_id", source="sla_report_attempts",
+                clauses=clauses, parameters=params, order=("created_at_utc", "report_attempt_id"),
+                key=key, descending=True, limit=page_limit)
             values = [
                 report_attempt_response(
                     ReportRepository.get_attempt(snapshot.connection, str(row[0]))
                     or (_ for _ in ()).throw(SomaError("SLA_REPORT_ATTEMPT_STATE", "report attempt disappeared"))
                 )
                 for row in ids
-            ]
-        exact_count = len(values)
-        if key is not None:
-            if type(key[0]) is not int or not isinstance(key[1], str):
-                raise ValidationError("report attempt cursor key is invalid")
-            cursor_tuple = (int(key[0]), str(key[1]))
-            values = [
-                item
-                for item in values
-                if (int(item["created_at_utc"]), str(item["report_attempt_id"])) < cursor_tuple
             ]
         selected = values[: page_limit + 1]
         page = selected[:page_limit]
@@ -220,21 +210,22 @@ class ProductLineSlaReportQueryService:
             fingerprint=fingerprint,
             size=1,
         )
+        if key is not None and type(key[0]) is not int:
+            raise ValidationError("report member cursor key is invalid")
         with ReadSnapshot(self._factory) as snapshot:
             attempt = ReportRepository.get_attempt(snapshot.connection, report_id)
             if attempt is None:
                 raise SomaError("SLA_CATALOG_NOT_FOUND", "report attempt does not exist")
             if attempt.state != "completed" and not allow_in_progress_diagnostic:
                 raise SomaError("SLA_REPORT_ATTEMPT_STATE", "report member evidence is not completed")
-            rows = snapshot.connection.execute(
-                "SELECT report_member_snapshot_id,member_ordinal,service_request_id,customer_org_id,contract_id,"
+            rows, exact_count = select_keyset_page(snapshot.connection,
+                columns="report_member_snapshot_id,member_ordinal,service_request_id,customer_org_id,contract_id,"
                 "contract_product_line_id,policy_revision_id,classification_event_id,severity,report_date_utc,"
                 "status_class,endpoint_utc,suspension_num,suspension_den,elapsed_num,elapsed_den,"
                 "calculation_state,sla_input_token,source_report_date_evidence_id,source_status_evidence_id,"
-                "source_suspension_evidence_id,display_values_json "
-                "FROM sla_report_member_snapshots WHERE report_attempt_id=? ORDER BY member_ordinal",
-                (report_id,),
-            ).fetchall()
+                "source_suspension_evidence_id,display_values_json",
+                source="sla_report_member_snapshots", clauses=("report_attempt_id=?",),
+                parameters=(report_id,), order=("member_ordinal",), key=key, limit=page_limit)
             values: list[dict[str, object]] = []
             for row in rows:
                 member_id = str(row[0])
@@ -278,11 +269,6 @@ class ProductLineSlaReportQueryService:
                         ),
                     }
                 )
-        exact_count = len(values)
-        if key is not None:
-            if type(key[0]) is not int:
-                raise ValidationError("report member cursor key is invalid")
-            values = [item for item in values if int(item["member_ordinal"]) > int(key[0])]
         selected = values[: page_limit + 1]
         page = selected[:page_limit]
         next_cursor = None
@@ -314,17 +300,18 @@ class ProductLineSlaReportQueryService:
             fingerprint=fingerprint,
             size=1,
         )
+        if key is not None and type(key[0]) is not int:
+            raise ValidationError("report cohort cursor key is invalid")
         with ReadSnapshot(self._factory) as snapshot:
             if ReportRepository.get_attempt(snapshot.connection, report_id) is None:
                 raise SomaError("SLA_CATALOG_NOT_FOUND", "report attempt does not exist")
-            rows = snapshot.connection.execute(
-                "SELECT report_cohort_snapshot_id,cohort_ordinal,calendar_month,customer_org_id,contract_id,"
+            rows, exact_count = select_keyset_page(snapshot.connection,
+                columns="report_cohort_snapshot_id,cohort_ordinal,calendar_month,customer_org_id,contract_id,"
                 "contract_product_line_id,policy_revision_id,policy_tier_id,severity,denominator,"
                 "terminal_met_count,terminal_exceeded_count,active_within_count,active_exceeded_count,"
-                "state,is_final,input_fingerprint FROM sla_report_cohort_snapshots "
-                "WHERE report_attempt_id=? ORDER BY cohort_ordinal",
-                (report_id,),
-            ).fetchall()
+                "state,is_final,input_fingerprint",
+                source="sla_report_cohort_snapshots", clauses=("report_attempt_id=?",),
+                parameters=(report_id,), order=("cohort_ordinal",), key=key, limit=page_limit)
         values = [
             {
                 "report_cohort_snapshot_id": str(row[0]),
@@ -347,11 +334,6 @@ class ProductLineSlaReportQueryService:
             }
             for row in rows
         ]
-        exact_count = len(values)
-        if key is not None:
-            if type(key[0]) is not int:
-                raise ValidationError("report cohort cursor key is invalid")
-            values = [item for item in values if int(item["cohort_ordinal"]) > int(key[0])]
         selected = values[: page_limit + 1]
         page = selected[:page_limit]
         next_cursor = None

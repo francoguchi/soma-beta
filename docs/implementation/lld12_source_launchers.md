@@ -1,5 +1,29 @@
 # Trusted source launchers: local development handoff
 
+## Source dependency security update, 2026-10-10
+
+Current source setup uses
+`docs/implementation/lld12_sqlcipher_development_2026-10-10.json` and the separate
+`dist/source-development/openssl-3.6.5/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl`.
+The binding remains 0.6.2 and official SQLCipher core remains 4.17.0. Only the
+statically linked OpenSSL patch level changes to 3.6.5. Setup verifies the exact
+new wheel hash, and runtime prerequisites verify the keyed crypto provider
+version, so the earlier 3.6.0 wheel cannot silently satisfy the current setup.
+The original wheel and historical JSON evidence are preserved. This is a Windows
+CPython 3.14 source-development update, not an installer/release certification.
+Build provenance and candidate limitations are recorded in
+`lld12_native_security_candidate_2026-10-10.json`; final execution evidence is in
+`execution_audit_2026-10-10.json` and its accompanying report.
+
+The accepted V2 authentication refinement protects future setup receipts using a
+separate CurrentUser-DPAPI authentication fingerprint key. Existing V1 receipts
+and passwords are preserved; the earlier receipts retain their documented
+decrypted-database guessing exposure. See
+`docs/reconciliation/LLD12_AUTH_REQUEST_FINGERPRINT_PROPOSAL_V2.md` for exact
+accepted behavior, compatibility, key-loss and historical-risk policy.
+
+## Historical 2026-10-02 handoff
+
 Date: 2026-10-02. Local working-tree work only; no commit, push, branch, PR,
 merge, tag or publication. Development evidence, not release certification.
 

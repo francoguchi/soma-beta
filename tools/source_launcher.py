@@ -84,10 +84,10 @@ def validate_environment(root: Path, *, run=subprocess.run) -> Path:
 
 
 def development_wheel(root):
-    evidence_path = root / "docs/implementation/lld12_sqlcipher_development.json"
+    evidence_path = root / "docs/implementation/lld12_sqlcipher_development_2026-10-10.json"
     try:
         evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
-        wheel = root / "dist/source-development/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl"
+        wheel = root / "dist/source-development/openssl-3.6.5/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl"
         check_path(wheel)
         if evidence["schema"] != "SOMA-LOCAL-SQLCIPHER-DEVELOPMENT-V1" or evidence["wheel"]["path"] != wheel.relative_to(root).as_posix():
             raise ValueError
@@ -103,11 +103,11 @@ def validate_runtime_environment(root, interpreter, *, run=subprocess.run):
                  "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('sqlcipher3') else 1)"],
                 cwd=root, capture_output=True, text=True, timeout=10, check=False, **hidden_probe_options())
     if probe.returncode:
-        raise PrerequisiteError("SQLCipher driver sqlcipher3 is missing. Run soma_setup.bat; setup requires the hash-verified local wheel at dist/source-development/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl. See docs/implementation/lld12_source_launchers.md.")
+        raise PrerequisiteError("SQLCipher driver sqlcipher3 is missing. Run soma_setup.bat; setup requires the hash-verified local wheel at dist/source-development/openssl-3.6.5/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl. See docs/implementation/lld12_source_launchers.md.")
     # Ephemeral keyed memory probe, never a plaintext/live database substitute.
-    code = "import secrets,sqlcipher3; from soma.security.crypto.sqlcipher_provider import SqlCipherConnectionSecurityProvider as P; c=sqlcipher3.connect(':memory:'); p=P(None); p.key_connection(c,secrets.token_bytes(32)); p.verify_cipher_connection(c); c.close()"
+    code = "import secrets,sqlcipher3; from soma.security.crypto.sqlcipher_provider import SqlCipherConnectionSecurityProvider as P; c=sqlcipher3.connect(':memory:'); p=P(None); p.key_connection(c,secrets.token_bytes(32)); p.verify_cipher_connection(c); assert c.execute('PRAGMA cipher_provider_version').fetchone() == ('OpenSSL 3.6.5 29 Sep 2026',); c.close()"
     for arguments, message in (
-        ([str(interpreter), "-I", "-c", code], "SQLCipher 4.17.0/profile verification failed. Run soma_setup.bat and review its diagnostics."),
+        ([str(interpreter), "-I", "-c", code], "SQLCipher 4.17.0/profile verification failed (OpenSSL 3.6.5 required). Run soma_setup.bat and review its diagnostics."),
         ([str(interpreter), "-I", "-c", "import runpy,sys; sys.path.insert(0,sys.argv[1]); runpy.run_path(sys.argv[2],run_name='__main__')", str(root / "tools"), str(root / "tools/verify_ui_build.py")], "Frozen web-assets verification failed. Run tools/verify_ui_build.py for build diagnostics."),
     ):
         result = run(arguments, cwd=root, capture_output=True, text=True, timeout=30, check=False, **hidden_probe_options())

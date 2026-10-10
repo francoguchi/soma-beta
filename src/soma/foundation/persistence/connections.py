@@ -183,11 +183,9 @@ class _TrackedConnection:
         connection = object.__getattribute__(self, "_connection")
         metrics = object.__getattribute__(self, "_metrics")
         was_in_transaction = bool(getattr(connection, "in_transaction", False))
-        try:
-            connection.close()
-        finally:
-            object.__setattr__(self, "_closed", True)
-            metrics._closed(was_in_transaction=was_in_transaction)
+        connection.close()
+        object.__setattr__(self, "_closed", True)
+        metrics._closed(was_in_transaction=was_in_transaction)
 
     def __enter__(self):
         return self

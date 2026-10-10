@@ -11,8 +11,9 @@ from soma.foundation.errors import SecurityNotReady
 from soma.foundation.identifiers import require_uuid4
 from soma.security.runtime.windows import api, local_free
 
-_MAGICS = {"live_data_dek": b"SOMA-DPAPI-KEY-V1\0", "run_control": b"SOMA-DPAPI-RUN-V1\0", "admin_password_reset": b"SOMA-DPAPI-RESET-V1\0"}
-_PURPOSES = {"live_data_dek": 32, "run_control": 32, "admin_password_reset": 32}
+_MAGICS = {"live_data_dek": b"SOMA-DPAPI-KEY-V1\0", "run_control": b"SOMA-DPAPI-RUN-V1\0", "admin_password_reset": b"SOMA-DPAPI-RESET-V1\0",
+           "auth_command_fingerprint": b"SOMA-DPAPI-AUTH-FINGERPRINT-V2\0"}
+_PURPOSES = {"live_data_dek": 32, "run_control": 32, "admin_password_reset": 32, "auth_command_fingerprint": 32}
 _MAX_BLOB = 65536
 
 

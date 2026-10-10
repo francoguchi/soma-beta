@@ -1,0 +1,193 @@
+{
+  "schema": "SOMA_NATIVE_SECURITY_CANDIDATE_V1",
+  "status": "verified isolated development candidate; not installed or accepted as the launcher pin",
+  "release_certification": false,
+  "design_pin": "9a0e891127a771251afccca1a281b7ef7dde9e5f",
+  "platform": "Windows x64 / CPython 3.14.7 / MSVC 19.44.35229 / SDK 10.0.26100.0",
+  "openssl": {
+    "version": "3.6.5",
+    "tag": "openssl-3.6.5",
+    "commit": "c8bd5a57108599ac650bbae77fcabe3109dab2e8",
+    "repository": "https://github.com/openssl/openssl.git",
+    "static": true,
+    "libcrypto_sha256": "9b303f211706c435283f399fe7a0c4c60f672274319a3670a747be6f73e0edaf"
+  },
+  "binding": {
+    "version": "0.6.2",
+    "accepted_commit": "14fc2632676b20011e0bba64fdda49763a2dd2ec",
+    "setup_py_sha256": "a3225f406071b9c77d79a2319333ca18c2651d99eaf301193439121e1bbf3edb",
+    "source_files": [
+      {
+        "path": "src/blob.c",
+        "sha256": "7d49a4c12e8d94935d69bde7bf04f899f7fceff2b01cf4d4479fc60946c0685b"
+      },
+      {
+        "path": "src/blob.h",
+        "sha256": "d014d7c18993b995295ce35ea076deb6fc97e54930b1aebcf97eb76323239581"
+      },
+      {
+        "path": "src/cache.c",
+        "sha256": "f8a9bfad80874320ecb160e87f40aaaf00014948c42311fd0002c936cf9b5c3b"
+      },
+      {
+        "path": "src/cache.h",
+        "sha256": "89e1748570c1b00d4b4127ebe2a6b641481c9c832f052f3c0efe72156b319db5"
+      },
+      {
+        "path": "src/connection.c",
+        "sha256": "6c7598c9c0b6ea74da5e8989e638c1bd3770c098928c4c1aecc354a2c836a87e"
+      },
+      {
+        "path": "src/connection.h",
+        "sha256": "9a9678cf990f482267a070034f852dfc3c79292a6119a77df8833254d887f7fc"
+      },
+      {
+        "path": "src/cursor.c",
+        "sha256": "0eb026135cd9b9cd4c49443489ab792c98c70c08efcb695b48d268f7e000e67e"
+      },
+      {
+        "path": "src/cursor.h",
+        "sha256": "ba2f10e01b27238790cbdf375bd9924fb8cbdaffd5f9768975622bdbb642a3ad"
+      },
+      {
+        "path": "src/microprotocols.c",
+        "sha256": "daef4812b76ceefa2406f932a6032c6c66180216a39c7b642f1a4fb500224892"
+      },
+      {
+        "path": "src/microprotocols.h",
+        "sha256": "f0ad6a360e0dfada6b258fea781792fbe83e43c93175014e802e8c444fa6c257"
+      },
+      {
+        "path": "src/module.c",
+        "sha256": "eefa22bc5df1e4c3446c22161bbbeedc1c3a691cf4a884bffb4a3558367ebc49"
+      },
+      {
+        "path": "src/module.h",
+        "sha256": "37eac660698e7eb63e67ceff1d62b113b63ffae005df640f5dcc742dc4ad44fb"
+      },
+      {
+        "path": "src/prepare_protocol.c",
+        "sha256": "025a1e66152cc44932c18233fdb68fde9a736d993ab9a6104da001fc7dfacc75"
+      },
+      {
+        "path": "src/prepare_protocol.h",
+        "sha256": "2fdf83a8d1663ffa229bb4ac463016555593eca4a1f4246a553ab5e3966c0730"
+      },
+      {
+        "path": "src/row.c",
+        "sha256": "c88d55e53416b19feb50bf03e488ea5536197d8aace1554c68d7bccbfbb2d0a5"
+      },
+      {
+        "path": "src/row.h",
+        "sha256": "402c1cce2b07a93c6d582d25b8edf01f5e1fdd37196cd090757d3b085bed0014"
+      },
+      {
+        "path": "src/statement.c",
+        "sha256": "4b64095ebab94912c606c3fed5b78dc33f2f02b3dabd30bc40dafe733f24caba"
+      },
+      {
+        "path": "src/statement.h",
+        "sha256": "a2425ae5401f8c85ecc3f34a76e85844823a9081c04e3d59049feb133a237f28"
+      },
+      {
+        "path": "src/util.c",
+        "sha256": "14af11d84f2cfce35b29f3810a3259e1abe20e5f5040f405058e25b22c002364"
+      },
+      {
+        "path": "src/util.h",
+        "sha256": "9fd3172e1d73314fd3c7f258037addf36b94db29611ffa8eadc3c5f71aca92c7"
+      },
+      {
+        "path": "sqlcipher3/__init__.py",
+        "sha256": "b4c99a84c5d7c364f4a59a3134c79a9b0c42ff896330492e9985e25aaaedb2aa"
+      },
+      {
+        "path": "sqlcipher3/dbapi2.py",
+        "sha256": "4fdb3381d8bae00cc90ef3890dbcb9a7c273ef955a5133f112749d22e6b50b5d"
+      },
+      {
+        "path": "vendor/sqlite3.c",
+        "sha256": "6cefa3b1fa91b90bff07f3d7b1911d81b7c2616aa7d89e7092716a40a14e8545"
+      },
+      {
+        "path": "vendor/sqlite3.h",
+        "sha256": "b43f231e215c77500c10a11e61eaef8d75629f4c51dd021e862136d9bcf95c26"
+      },
+      {
+        "path": "vendor/sqlite3ext.h",
+        "sha256": "a3ca6e430c8e97edf8cbd66867ac178ab179a41d85c04cad48889a8b84806dcd"
+      },
+      {
+        "path": "vendor/update",
+        "sha256": "7f4361e6cfbcf6c34513e8323b20e308b3de9b66745fc3b076f62a8e61b4b3e4"
+      }
+    ]
+  },
+  "sqlcipher": {
+    "version": "4.17.0",
+    "accepted_commit": "810db22f575ee7cf94ea96a3e91622b5fcece3dc",
+    "generated": {
+      "sqlite3.c": "6cefa3b1fa91b90bff07f3d7b1911d81b7c2616aa7d89e7092716a40a14e8545",
+      "sqlite3.h": "b43f231e215c77500c10a11e61eaef8d75629f4c51dd021e862136d9bcf95c26",
+      "sqlite3ext.h": "a3ca6e430c8e97edf8cbd66867ac178ab179a41d85c04cad48889a8b84806dcd"
+    }
+  },
+  "build": {
+    "target": "VC-WIN64A",
+    "options": [
+      "no-shared",
+      "no-zlib",
+      "no-tests",
+      "no-unit-test",
+      "no-fips",
+      "no-md2",
+      "threads",
+      "--release",
+      "--libdir=lib"
+    ],
+    "runtime": "/MD for static library, applications and legacy DSO",
+    "runtime_adjustments": "Cached recipe runtime substitution in Configurations/10-main.conf plus explicit /MD in generated Makefile DSO_CFLAGS; only legacy-dso-legacyprov.obj invalidated/recompiled after initial DLL link failure. No cryptographic/binding/core source edits.",
+    "binding_options": "Unchanged captured setup.py macros and libraries; offline --no-deps --no-build-isolation via SOMA_LOCAL_CONAN_GRAPH pointing only to candidate install directory.",
+    "build_exit": 0,
+    "wheel_exit": 0,
+    "openssl_tests_executed": false
+  },
+  "wheel": {
+    "path": "tmp/native-security-candidate/wheel/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl",
+    "sha256": "4e1a8b5a580b94a015b50c566092db6178a095d0d206371e133155e164517c3c",
+    "bytes": 2544358
+  },
+  "verification": {
+    "crypto_provider": "OpenSSL 3.6.5 29 Sep 2026",
+    "cipher_version": "4.17.0 community",
+    "focused_native_cases_passed": 6,
+    "focused_native_exit": 0,
+    "encrypted_migrations": 19,
+    "wrong_key_rejected": true,
+    "existing_synthetic_database_readable": true,
+    "existing_database_and_dpapi_key_bytes_unchanged": true,
+    "application_wheel_live_browser_login": true,
+    "react_mounted": true,
+    "authenticated_read_paths": 18,
+    "startup_seconds_under_probe": 2.527,
+    "isolated_host_gracefully_stopped": true,
+    "no_openssl_dll_import": true
+  },
+  "preserved_installed_artifact": {
+    "path": "dist/source-development/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl",
+    "sha256": "ae151e020ce45b60aac8be3fc8628ae4a7894b2c543fbfb5bc1f4047db22618f",
+    "bytes": 2567220
+  },
+  "limits": [
+    "No installation, launcher pin change, accepted artifact overwrite or user database operation.",
+    "This manual isolated candidate is not the hash-locked CI/release artifact.",
+    "OpenSSL upstream test suite, Windows CPython 3.13, Ubuntu and clean-user release matrix were not executed for this candidate.",
+    "Full repository suite evidence in execution_audit_2026-10-10.json uses the installed accepted driver; only the stated focused native cases/live probe use this candidate."
+  ],
+  "logs": [
+    "tmp/native-security-candidate/openssl-final.log",
+    "tmp/native-security-candidate/binding-build.log",
+    "tmp/native-security-candidate/tests-final.log",
+    "tmp/native-security-candidate/live.log"
+  ]
+}

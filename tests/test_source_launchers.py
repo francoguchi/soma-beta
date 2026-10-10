@@ -1,5 +1,6 @@
 """Source environment and fail-closed adapter tests; native lifecycle is separate."""
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -16,6 +17,42 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("source_launcher", ROOT / "tools/source_launcher.py")
 launcher = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(launcher)
+
+
+@pytest.mark.parametrize("damage", ["hash", "path", "schema", "missing"])
+def test_patched_development_wheel_pin_rejects_changed_or_old_artifacts(tmp_path, damage):
+    relative = "dist/source-development/openssl-3.6.5/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl"
+    wheel = tmp_path / relative
+    wheel.parent.mkdir(parents=True)
+    wheel.write_bytes(b"isolated artifact fixture")
+    evidence = tmp_path / "docs/implementation/lld12_sqlcipher_development_2026-10-10.json"
+    evidence.parent.mkdir(parents=True)
+    manifest = {"schema": "SOMA-LOCAL-SQLCIPHER-DEVELOPMENT-V1",
+                "wheel": {"path": relative, "sha256": hashlib.sha256(wheel.read_bytes()).hexdigest()}}
+    evidence.write_text(json.dumps(manifest))
+    assert launcher.development_wheel(tmp_path) == wheel
+    if damage == "hash":
+        wheel.write_bytes(b"unapproved different build")
+    elif damage == "missing":
+        evidence.unlink()
+    else:
+        if damage == "path":
+            manifest["wheel"]["path"] = "dist/source-development/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl"
+        else:
+            manifest["schema"] = "UNKNOWN"
+        evidence.write_text(json.dumps(manifest))
+    with pytest.raises(launcher.PrerequisiteError, match="hash-verified"):
+        launcher.development_wheel(tmp_path)
+
+
+def test_runtime_probe_requires_patched_native_provider(tmp_path):
+    calls = []
+    def run(arguments, **_kwargs):
+        calls.append(arguments)
+        return SimpleNamespace(returncode=0)
+    launcher.validate_runtime_environment(tmp_path, tmp_path / "python.exe", run=run)
+    assert "PRAGMA cipher_provider_version" in calls[1][-1]
+    assert "OpenSSL 3.6.5 29 Sep 2026" in calls[1][-1]
 
 
 class Environment:

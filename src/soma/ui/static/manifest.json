@@ -1,12 +1,12 @@
 {
   "files": {
-    "assets/index-B1kvrGYe.js": {
-      "bytes": 370144,
-      "sha256": "a0a7d39c534c43486298c965e58b05a453d35e0b20fcf9c6c05010e3003eba4d"
-    },
     "assets/index-CnDOfRIZ.css": {
       "bytes": 26324,
       "sha256": "153f9a40472c969e58c1d9b784014c02b6a6103a9642159612994f95c9eb8bd8"
+    },
+    "assets/index-boqePOln.js": {
+      "bytes": 399846,
+      "sha256": "906b5922b25415221f62d8c315629a96642190b0f384a56e3433fb4c77911704"
     },
     "brand/soma-lockup-dark.svg": {
       "bytes": 7669,
@@ -22,7 +22,7 @@
     },
     "index.html": {
       "bytes": 445,
-      "sha256": "5a5242b71b0e3b123b97ec3ab14876054e3e67c1b962fa50d9f57192fe994042"
+      "sha256": "e6df08749429fd688ce414f59703b5d96b4b9d2fef9b7bd5355c9cc0f6135fa3"
     }
   },
   "schema": "SOMA_UI_STATIC_ASSETS_V1",
@@ -30,7 +30,8 @@
   "source_sha256": {
     "app/CommunicationSettings.tsx": "ff8fcd4c10528e0f98ebbd57b02d0602a05c8a2bf66fe5723bd44e2dd1631f68",
     "app/GroupingProposalList.tsx": "0dd374d7aaee70c1a7c7b24455a1d9b9b64cd1150abe5169d079025b2c48964d",
-    "app/ImportSourceMonitor.tsx": "c5429233c81decba04dea1c9aae2d14143423e2b6863ee613432002a910f8ab9",
+    "app/ImportRunEvidence.tsx": "0d2feb25d403f3fa4107301cdb97f6b22bbe6089da9cef8dec505ee100d1a8d4",
+    "app/ImportSourceMonitor.tsx": "6910b6b520ee27fa14c341b678f6289c95b873eac46a188bf0d4a124fda3cb5e",
     "app/InfrastructureWorkbookActivity.tsx": "f64a01f021fec58133cbab82daad3efd0ed2fc100fe5cf91121be7c4feb723e4",
     "app/InfrastructureWorkspace.tsx": "611a6ef92f0a4ece253853b711bfc15728fdab20611cf79509b9d2103d0c0493",
     "app/InventoryWorkspace.tsx": "5b41543a126b14322307dd832ea5aff5d406627fca7edd8d53e224128bad9ccc",
@@ -38,17 +39,21 @@
     "app/ObjectiveWorkspace.tsx": "d509f919058822b349bb014a6567fa827923fae8871513ef6617cfc1847e6b80",
     "app/OverviewWorkspace.tsx": "d9f1dee295aa94561c8b50a8106c2b28f6854878efdf6f72734416ba3f7e103c",
     "app/ReferenceSettings.tsx": "6573dfce5ae34c9767b27650d497e6dbf5979bc1413d6ebf343415bdd5e5b9c7",
+    "app/RfcBranchDevices.tsx": "ac164791b590a817ba1886898621dec40a330fc2c0ac43ac6c786fbf51961e70",
     "app/RfcLifecycle.tsx": "f3d3e206b8e9e4f8435bc6877df6091c9c86530a38db135e8db9fe863a05b4ba",
     "app/RfcRegister.tsx": "5590897abc3b88d1aa1aab05361ab9a209b4665a28d103382baa2c9a691aad8a",
-    "app/RfcRelations.tsx": "9f5c841699e40690dbfd678f479f8e76bed51cc05e75f4768c418f9c78dd44b1",
+    "app/RfcRelations.tsx": "e6f31e452c15dd94351a82a703e47e1bfd8590146c9299247df8fb4de825f493",
     "app/ServiceRequestContext.tsx": "c880ca1f12cdcdd5483e3a2338b6e0636d540129f4636ae1d77ea28a2f3df050",
     "app/ServiceRequestRegister.tsx": "4e8843a2fdc66bf5b137fe7d7ecef9940e0d58bc6ce601975617681d633d9132",
     "app/SettingsWorkspace.tsx": "43c34df8a22fc96b3879c32664f6bc1e636291b2fe2bfb8a284cf52717811002",
     "app/SlaCatalogSettings.tsx": "122b177d6adc16ca59d8c5aa72b188301776bd8f6498e82dc2dd37f5360a1217",
     "app/TicketCollection.tsx": "5597df0e4b6cbe3debf0f5fe598d4b33cdb9a32cd011bcec68742b7abea09b8d",
     "app/TicketCommunications.tsx": "79c34eddbd5f86333a3e3bd31ab981e18045cf38e4c18fbf7a4a71f79300cc58",
+    "app/TicketDeviceReferences.tsx": "bf9eb9d41d7dc1e00c998b076e3e3243bfa335868751ab821620f29a3a3c317c",
     "app/TicketRfcLinks.tsx": "8c89f599ce49b9ef3a920f73bccd24e4a09964204505117c18e467f59712763b",
-    "app/TicketWorkbench.tsx": "498ea8e9e920447d1eea1bbeb2326065cc40f9a4a71454cb49f6e378cc7f7f5c",
+    "app/TicketTaskEvidence.tsx": "5236ee4e738a36f288e68d9373fc5b72a0c089efcf896a0175630fd9d2872f3a",
+    "app/TicketTasks.tsx": "fea5efff92b622a280eb3bd0e95137d39fa8a108438ab906f20ce09395e5e593",
+    "app/TicketWorkbench.tsx": "67f3f2b44688c03a8254e46908da02e8fa3f6dd676b0d6817dea04feb85e0671",
     "app/main.tsx": "5e39fb7da2a498bb5d594ada74199097d74826120f4da8c001c341c8dbe76c50",
     "app/router.ts": "072699d330dc289ee4cd19241f8babf877edeb4b17c4d8812943a6d1cfc819de",
     "app/settings-intent.ts": "a40187f8f188593d4f6dd036020b2b1a9ad2bd48ea03f0a487feb1509b011e37",
@@ -66,10 +71,10 @@
     "components/SomaShell.tsx": "3adc910eaba5b2cf3e590d1efc574efb581565683202f35e7e10711ebab02dcd",
     "components/TaskAuthorityFacts.tsx": "6ed62f07c0e93e5895597bbc63c5e4fb4e08e8191d7f14ee115fe87257ed6400",
     "components/UndoOpportunity.tsx": "e17525d9772d1cb2a11dfce9c4c36d149ba22b23e26a59bb4e21ee2b62312e9f",
-    "components/WorkbenchShell.tsx": "a01179e3f6bc48ff07b4a098c5e9ceb20a6741094aa05081d9ac7f62ce584028",
+    "components/WorkbenchShell.tsx": "09738eef3b0639eb246282294da3f060ed23c1cdca7410c2ceb6a6a40b7c85fb",
     "data/communications-contracts.ts": "6f1b7c33bf87852cfd8a8622b07d9d082580b7e8453bedb378403094a93a67c3",
     "data/http.ts": "24e10cc09b9ebc323a0807a936772f33b6262d462035dece048974d9efe9037b",
-    "data/query-controller.ts": "973167c10dd935093c7865f53ee4e73d7a741e43fb4e0e559cd41e45962e0fee",
+    "data/query-controller.ts": "450796a1cb55da9b81792c7e08615afe4aa71c435b365fbfe5c55d593d67af2b",
     "env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
     "index.html": "7f54639df3efbea75ded5e2981602affb1a4667e82fcc1a5deed0ef9fbc43b77",
     "interactions/HoldButton.tsx": "182e288318b7f2eb9842c37d512100709b4c79fd9508b2ba2e04252503f9d437",

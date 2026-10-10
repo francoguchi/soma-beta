@@ -72,6 +72,27 @@ def test_fk_index_coverage_rejects_missing_or_dropped_index() -> None:
         connection.close()
 
 
+def test_fk_index_structure_is_read_once_per_invocation_and_never_cached_across_schema_changes():
+    from collections import Counter
+    connection = _connection()
+    statements = []
+    connection.set_trace_callback(statements.append)
+    try:
+        connection.execute("CREATE TABLE parent(id TEXT PRIMARY KEY)")
+        connection.execute("CREATE TABLE child(a TEXT REFERENCES parent(id),b TEXT REFERENCES parent(id))")
+        connection.execute("CREATE INDEX ix_child_a ON child(a)")
+        connection.execute("CREATE INDEX ix_child_b ON child(b)")
+        verify_foreign_key_index_coverage(connection, exceptions=())
+        reads = Counter(sql for sql in statements if sql.startswith("PRAGMA index_xinfo"))
+        assert reads and max(reads.values()) == 1
+        statements.clear()
+        connection.execute("DROP INDEX ix_child_a")
+        _assert_schema_mismatch(connection)
+        assert any(sql.startswith("PRAGMA index_xinfo") for sql in statements)
+    finally:
+        connection.close()
+
+
 @pytest.mark.parametrize(
     "index_sql",
     [

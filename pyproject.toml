@@ -22,7 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-  "pytest>=8.3,<9",
+  "pytest==9.0.3",
   "pytest-cov>=6,<7",
 ]
 
@@ -38,7 +38,7 @@ where = ["src"]
 "soma.migrations" = ["*.sql", "manifest.json"]
 "soma.infrastructure.contracts" = ["registry.json"]
 "soma.communications.contracts" = ["registry.json"]
-"soma.ui" = ["registry.json", "static/*", "static/assets/*"]
+"soma.ui" = ["registry.json", "static/*", "static/assets/*", "static/brand/*.svg"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

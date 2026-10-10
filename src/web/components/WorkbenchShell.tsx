@@ -1,4 +1,4 @@
-import {useEffect, useId, useRef, useSyncExternalStore, type ReactNode} from 'react';
+import {useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode} from 'react';
 import {useContainerWidth} from '../layout/responsive';
 import {UiStore} from '../state/ui-store';
 export const srTabs = ['Overview', 'Devices', 'Spare Parts', 'RFCs', 'Tasks', 'Notes'] as const;
@@ -10,6 +10,11 @@ export function WorkbenchShell({store, tabs, renderTab, communications, domainDr
   const container = useRef<HTMLDivElement>(null); const width = useContainerWidth(container); const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const prefix = useId();
   const tab = tabs.includes(state.tab) ? state.tab : tabs[0] ?? 'Overview'; const split = width >= 1040;
+  const [mounted, setMounted] = useState(() => ({store, tabs: new Set([tab])}));
+  useEffect(() => {
+    setMounted(previous => previous.store === store && previous.tabs.has(tab) ? previous :
+      {store, tabs: new Set([...(previous.store === store ? previous.tabs : []), tab])});
+  }, [store, tab]);
   useEffect(() => {onDirtyChange?.(state.dirty); return () => onDirtyChange?.(false);}, [state.dirty, onDirtyChange]);
   return <div ref={container} className="workbench" data-layout={split ? 'split' : 'switcher'}>
     <div className="working-status">{domainDraft && <span>Domain Draft — accepted state</span>}{state.dirty && <span>Unsaved UI changes</span>}</div>
@@ -26,7 +31,7 @@ export function WorkbenchShell({store, tabs, renderTab, communications, domainDr
             if (next) {store.dispatch({tab: next}); document.getElementById(prefix + '-tab-' + next.replaceAll(' ', '-'))?.focus();}
           }}>{name}</button>)}</div>
         {tabs.map(name => <div key={name} role="tabpanel" id={prefix + '-panel-' + name.replaceAll(' ', '-')} aria-labelledby={prefix + '-tab-' + name.replaceAll(' ', '-')}
-          hidden={name !== tab}>{renderTab(name)}</div>)}
+          hidden={name !== tab}>{(name === tab || mounted.store === store && mounted.tabs.has(name)) && renderTab(name)}</div>)}
       </section>
       <aside aria-label="Communications" hidden={!split && state.pane !== 'communications'} className="communication-pane" data-scroll-owner="y">{communications}</aside>
     </div>

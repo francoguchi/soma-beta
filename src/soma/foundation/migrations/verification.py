@@ -412,8 +412,8 @@ def _index_supports_fk_lookup(
     fk_columns: tuple[str, ...],
     partial: bool,
     nullable_columns: frozenset[str],
+    key_columns: tuple[str | None, ...],
 ) -> bool:
-    key_columns = _index_key_columns(connection, index_name)
     if len(key_columns) < len(fk_columns):
         return False
     if tuple(key_columns[: len(fk_columns)]) != fk_columns:
@@ -502,6 +502,9 @@ def verify_foreign_key_index_coverage(
         ).fetchall()
     ]
     for table_name in table_names:
+        foreign_keys = _fk_groups(connection, table_name)
+        if not foreign_keys:
+            continue
         nullable_columns = _nullable_columns(connection, table_name)
         index_rows = connection.execute(
             f"PRAGMA index_list({_quote_identifier(table_name)})"
@@ -510,18 +513,22 @@ def verify_foreign_key_index_coverage(
             (str(row[1]), bool(int(row[4])))
             for row in index_rows
         )
-        for fk_id, fk_columns in _fk_groups(connection, table_name):
+        # This invocation reads one fixed schema under migration/host ownership
+        # or a read snapshot. Reuse index structure only within this table;
+        # subsequent verification calls must observe schema changes afresh.
+        index_columns: dict[str, tuple[str | None, ...]] = {}
+        def supports_index(index_name, partial, fk_columns):
+            if index_name not in index_columns:
+                index_columns[index_name] = _index_key_columns(connection, index_name)
+            return _index_supports_fk_lookup(connection, table_name=table_name,
+                index_name=index_name, fk_columns=fk_columns, partial=partial,
+                nullable_columns=nullable_columns, key_columns=index_columns[index_name])
+
+        for fk_id, fk_columns in foreign_keys:
             key = (table_name, fk_id)
             observed_fk_keys.add(key)
             if any(
-                _index_supports_fk_lookup(
-                    connection,
-                    table_name=table_name,
-                    index_name=index_name,
-                    fk_columns=fk_columns,
-                    partial=partial,
-                    nullable_columns=nullable_columns,
-                )
+                supports_index(index_name, partial, fk_columns)
                 for index_name, partial in indexes
             ):
                 covered_by_index.add(key)

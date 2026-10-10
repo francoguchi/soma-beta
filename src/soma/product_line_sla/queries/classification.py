@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ._cursor import cursor_envelope as _cursor
+from ._cursor import cursor_envelope as _cursor, select_keyset_page
 
 from dataclasses import dataclass
 
@@ -57,7 +57,7 @@ def _cursor_key(
     if not isinstance(value, dict) or set(value) != _CURSOR_FIELDS:
         raise ValidationError("classification cursor fields are invalid")
     if (
-        value["version"] != 1
+        type(value["version"]) is not int or value["version"] != 1
         or value["query_id"] != query_id
         or value["sort_registry_id"] != sort_id
         or value["filter_fingerprint"] != fingerprint
@@ -122,15 +122,12 @@ class ProductLineSlaClassificationQueryService:
         if active is not None:
             clauses.append("active=?")
             params.append(1 if active else 0)
-        where = "" if not clauses else " WHERE " + " AND ".join(clauses)
         with ReadSnapshot(self._factory) as snapshot:
-            rows = snapshot.connection.execute(
-                "SELECT mapping_id,mapping_key_type,normalized_key,customer_org_id,"
-                "contract_product_line_id,active,revision,created_at_utc,opened_command_id,closed_command_id "
-                f"FROM sla_classification_mappings{where} "
-                "ORDER BY customer_org_id,mapping_key_type,normalized_key,mapping_id",
-                tuple(params),
-            ).fetchall()
+            rows, exact_count = select_keyset_page(snapshot.connection,
+                columns="mapping_id,mapping_key_type,normalized_key,customer_org_id,"
+                "contract_product_line_id,active,revision,created_at_utc,opened_command_id,closed_command_id",
+                source="sla_classification_mappings", clauses=clauses, parameters=params,
+                order=("customer_org_id", "mapping_key_type", "normalized_key", "mapping_id"), key=key, limit=page_limit)
         values = tuple(
             {
                 "mapping_id": str(row[0]),
@@ -146,21 +143,7 @@ class ProductLineSlaClassificationQueryService:
             }
             for row in rows
         )
-        exact_count = len(values)
         filtered = list(values)
-        if key is not None:
-            key_tuple = tuple(str(item) for item in key)
-            filtered = [
-                item
-                for item in filtered
-                if (
-                    str(item["customer_org_id"]),
-                    str(item["mapping_key_type"]),
-                    str(item["normalized_key"]),
-                    str(item["mapping_id"]),
-                )
-                > key_tuple
-            ]
         selected = filtered[: page_limit + 1]
         page = selected[:page_limit]
         next_cursor = None
@@ -302,19 +285,20 @@ class ProductLineSlaClassificationQueryService:
             fingerprint=fingerprint,
             size=2,
         )
+        if key is not None and (not key[0].isascii() or not key[0].isdigit()):
+            raise ValidationError("classification history cursor time is invalid")
         with ReadSnapshot(self._factory) as snapshot:
             if snapshot.connection.execute(
                 "SELECT 1 FROM service_requests WHERE service_request_id=?",
                 (sr_id,),
             ).fetchone() is None:
                 raise SomaError("SLA_CATALOG_NOT_FOUND", "Service Request does not exist")
-            rows = snapshot.connection.execute(
-                "SELECT classification_event_id,event_kind,prior_contract_product_line_id,"
-                "new_contract_product_line_id,origin,mapping_id,reason_code,recorded_at_utc,command_id "
-                "FROM sr_classification_events WHERE service_request_id=? "
-                "ORDER BY recorded_at_utc DESC,classification_event_id DESC",
-                (sr_id,),
-            ).fetchall()
+            rows, exact_count = select_keyset_page(snapshot.connection,
+                columns="classification_event_id,event_kind,prior_contract_product_line_id,"
+                "new_contract_product_line_id,origin,mapping_id,reason_code,recorded_at_utc,command_id",
+                source="sr_classification_events", clauses=("service_request_id=?",), parameters=(sr_id,),
+                order=("recorded_at_utc", "classification_event_id"),
+                key=None if key is None else (int(key[0]), key[1]), descending=True, limit=page_limit)
         values = [
             {
                 "classification_event_id": str(row[0]),
@@ -329,16 +313,6 @@ class ProductLineSlaClassificationQueryService:
             }
             for row in rows
         ]
-        exact_count = len(values)
-        if key is not None:
-            if not key[0].isdigit():
-                raise ValidationError("classification history cursor time is invalid")
-            cursor_tuple = (int(key[0]), str(key[1]))
-            values = [
-                item
-                for item in values
-                if (int(item["recorded_at_utc"]), str(item["classification_event_id"])) < cursor_tuple
-            ]
         selected = values[: page_limit + 1]
         page = selected[:page_limit]
         next_cursor = None
