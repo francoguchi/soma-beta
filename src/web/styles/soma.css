@@ -223,7 +223,7 @@ h1 {font-size: 24px;} h2 {font-size: 20px;} h3 {font-size: 16px;} .metadata {fon
 }
 .soma-v2-settings-titlebar button:hover{color:var(--text);background:var(--surface2)}
 .soma-v2-settings-tabs{
-  flex:none;display:flex;gap:3px;overflow-x:auto;border-bottom:1px solid var(--border);
+  flex:none;display:flex;flex-direction:row;align-items:stretch;gap:3px;overflow-x:auto;border-bottom:1px solid var(--border);
   padding:6px 12px 0;background:var(--surface2);
 }
 .soma-v2-settings-tabs a{
