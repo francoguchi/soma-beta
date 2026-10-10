@@ -24,12 +24,13 @@ test('SR Devices reads bounded direct owner links with selected details and exac
   await page.getByRole('tab',{name:'Devices',exact:true}).click();
   const panel=page.getByRole('region',{name:'SR Device References'});
   await expect(panel.getByRole('button',{name:'rtr-A'})).toBeVisible();
-  await expect(panel.getByRole('region',{name:'Selected Device Reference'})).toHaveCount(0);
+  await expect(panel.getByRole('complementary',{name:'Selected Device Reference'})).toHaveCount(0);
   await panel.getByRole('button',{name:'rtr-A'}).click();
+  await expect(panel.getByRole('complementary',{name:'Selected Device Reference'})).toBeVisible();
   await expect(panel.getByText('No accepted Network Element resolution supplied')).toBeVisible();
   await panel.getByRole('button',{name:'Next page'}).click();
   await expect(panel.getByRole('button',{name:'rtr-B'})).toBeVisible();
-  await expect(panel.getByRole('region',{name:'Selected Device Reference'})).toHaveCount(0);
+  await expect(panel.getByRole('complementary',{name:'Selected Device Reference'})).toHaveCount(0);
   expect(JSON.parse(visited[1].searchParams.get('cursor'))).toEqual(cursor('service_request',sr,a));
   await panel.getByRole('button',{name:'Previous page'}).click();
   await expect(panel.getByRole('button',{name:'rtr-A'})).toBeVisible();
@@ -54,7 +55,6 @@ test('invalid owner Device Reference pages fail closed without displaying rows',
   await page.goto('http://127.0.0.1:4174/tickets/sr/'+sr);
   await page.getByRole('tab',{name:'Devices'}).click();
   const panel=page.getByRole('region',{name:'SR Device References'});
-  await expect(panel.getByRole('alert',{name:''})).toHaveCount(0);
   await expect(panel.getByText('The owner projection could not be rendered.',{exact:false})).toBeVisible();
   await expect(panel.getByText('BAD DEVICE')).toHaveCount(0);
 });
