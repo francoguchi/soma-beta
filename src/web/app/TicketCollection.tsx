@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import {OwnerProjection} from '../components/OwnerProjection';
 import {isExactSrIdentity} from '../state/sr-identity';
+import {ServiceRequestRegister} from './ServiceRequestRegister';
 
 type Observation = Readonly<{value_state: string; value: unknown}>;
 type ServiceRequestPoint = Readonly<{
@@ -36,10 +37,11 @@ export function TicketCollection({navigate}: {navigate: (path: string) => void})
   const [query, setQuery] = useState<string | null>(null);
   const valid = isExactSrIdentity(input);
   return <section className="soma-v2-ticket-collection" aria-label="Service Requests">
+    <ServiceRequestRegister navigate={navigate}/>
     <div className="soma-v2-ticket-toolbar">
       <div>
         <h2>Service Requests</h2>
-        <p>Exact owner identity lookup · No live collection index is composed yet</p>
+        <p>Direct identity lookup · Exact official or local SR number</p>
       </div>
     </div>
     <form className="soma-v2-ticket-search" onSubmit={event=>{
@@ -75,8 +77,8 @@ export function TicketCollection({navigate}: {navigate: (path: string) => void})
       </div>;
     }}/>}
     <p className="soma-v2-ticket-collection-scope">
-      Full Active / All / Archived lists, counts and filters require the owning Tickets collection query.
-      This lookup neither infers a complete result set nor creates, changes or archives tickets.
+      Direct identity lookup opens one exact owner record. Active/Archived categories remain
+      unavailable until lifecycle evidence is composed. No records are created or changed here.
     </p>
   </section>;
 }
