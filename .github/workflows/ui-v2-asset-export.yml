@@ -42,8 +42,8 @@ jobs:
           for(const name of names){
             const b = fs.readFileSync(path.join(root,name));
             const encoded=b.toString('base64');
-            process.stdout.write('SOMA_V2_EXPORT_BEGIN|' + name + '|' + b.length + '\\n');
-            for(let at=0;at<encoded.length;at+=4096)process.stdout.write('SOMA_V2_EXPORT_PART|' + encoded.slice(at,at+4096) + '\\n');
-            process.stdout.write('SOMA_V2_EXPORT_END|' + name + '\\n');
+            process.stdout.write('SOMA_V2_EXPORT_BEGIN|' + name + '|' + b.length + '\n');
+            for(let at=0;at<encoded.length;at+=4096)process.stdout.write('SOMA_V2_EXPORT_PART|' + encoded.slice(at,at+4096) + '\n');
+            process.stdout.write('SOMA_V2_EXPORT_END|' + name + '\n');
           }
           JS
