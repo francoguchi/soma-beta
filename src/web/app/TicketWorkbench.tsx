@@ -1,7 +1,7 @@
-import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useContext, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {ReturnState} from './router';
 import {WorkbenchShell, srTabs, rfcTabs} from '../components/WorkbenchShell';
-import {OwnerProjection} from '../components/OwnerProjection';
+import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection';
 import {UiStore, emptySelection} from '../state/ui-store';
 import {TicketCommunications} from './TicketCommunications';
 import {RfcLifecycle} from './RfcLifecycle';
@@ -16,11 +16,15 @@ type RfcDetail = Readonly<{rfc_id: string; rfc_no: string; revision: number; hie
   customer_org_id:string|null;direct_service_request_count: number; device_reference_count: number; subordinate_count: number; warnings: readonly string[]}>;
 type NotePage = Readonly<{items: readonly {working_note_id: string;body_text: string;revision:number;created_at_utc: number;updated_at_utc: number;created_by_local_user_profile_id: string}[];continuation: unknown | null}>;
 function Notes({path,setPath,route,ownerFingerprint}: {path:string;setPath:(path:string)=>void;route:string;ownerFingerprint:string|null}) {
+  const ownerReturnGeneration=useContext(OwnerReturnRefresh);
   // Ten maximum-size bodies including six-byte JSON escapes fit the existing
   // bounded transport. Paging preserves all owner notes without a global increase.
   if(!ownerFingerprint)return <p role="status">Loading accepted notes context.</p>;
   const input=ticketNotesQuery(path,route);if(!input||input.cursor!==null&&(input.cursor as {filter_fingerprint:string}).filter_fingerprint!==ownerFingerprint)return <><p role="alert">The previous note page does not match this ticket.</p><button type="button" onClick={()=>setPath(path.split('?')[0]+'?limit=10')}>Load first notes page</button></>;
-  return <OwnerProjection<NotePage> path={path} render={page => {
+  // Returning from Settings must not expose a stale pagination control while
+  // the new owner read is pending. Remount only the read projection, not Notes
+  // paging intent or the workbench's unsaved local state.
+  return <OwnerProjection<NotePage> key={ownerReturnGeneration} path={path} render={page => {
     const instant=(value:unknown)=>Number.isSafeInteger(value)&&Number(value)>=0&&Number(value)<=8640000000000;
     if (!Object.hasOwn(page,'continuation')||!Array.isArray(page.items)||page.items.length>10||page.items.some(note=>!noteIdentity(note.working_note_id)||!noteIdentity(note.created_by_local_user_profile_id)
       ||typeof note.body_text!=='string'||new TextEncoder().encode(note.body_text).length>65536||!Number.isSafeInteger(note.revision)||note.revision<1||!instant(note.created_at_utc)||!instant(note.updated_at_utc)||note.updated_at_utc<note.created_at_utc)

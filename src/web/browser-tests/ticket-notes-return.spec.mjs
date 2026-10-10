@@ -33,9 +33,22 @@ for(const bad of ['incomplete','foreign','missing','body','identity','chronology
   await expect(page.getByRole('alert').filter({hasText:'owner projection could not be rendered'})).toBeVisible();await expect(page.getByRole('button',{name:'Next notes'})).toHaveCount(0);
 });
 test('Removed notes continuation restores focus to the logical workbench after current owner read',async({page})=>{
-  let fresh=false;await page.route('**/api/v1/**',route=>route.fulfill({json:new URL(route.request().url()).pathname.endsWith('/notes')?{items:[row()],continuation:fresh?null:cursor('service_request')}:
-    {service_request_id:id,identity:{official_sr_no:'12345678',local_sr_no:null},revision:1,linked_root_rfc_count:0,device_reference_count:0,warnings:[]}}));
+  let fresh=false,freshReadStarted=false;
+  let releaseFresh=()=>{};
+  const freshGate=new Promise(resolve=>{releaseFresh=resolve;});
+  await page.route('**/api/v1/**',async route=>{
+    const isNotes=new URL(route.request().url()).pathname.endsWith('/notes');
+    if(isNotes&&fresh){freshReadStarted=true;await freshGate;}
+    return route.fulfill({json:isNotes?{items:[row()],continuation:fresh?null:cursor('service_request')}:
+      {service_request_id:id,identity:{official_sr_no:'12345678',local_sr_no:null},revision:1,linked_root_rfc_count:0,device_reference_count:0,warnings:[]}});
+  });
   await page.goto('http://127.0.0.1:4174/tickets/sr/'+id);await page.getByRole('tab',{name:'Notes',exact:true}).click();await page.getByRole('button',{name:'Next notes'}).focus();
   await page.getByRole('link',{name:'Settings',exact:true}).click();fresh=true;await page.goBack();
+  // While the new owner read is held, the previous page's Next control cannot
+  // remain eligible for premature focus restoration. No timing sleeps needed.
+  try {
+    await expect.poll(()=>freshReadStarted).toBe(true);
+    await expect(page.getByRole('button',{name:'Next notes'})).toHaveCount(0);
+  }finally{releaseFresh();}
   await expect(page.getByText('previous control is unavailable',{exact:false})).toBeVisible();await expect(page.locator('#main-content')).toBeFocused();
 });
