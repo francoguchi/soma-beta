@@ -83,9 +83,12 @@ export function TicketWorkbench({id, type, onDirtyChange, restored, onReturnStat
       observer=new MutationObserver(apply);
       observer.observe(node,{childList:true,subtree:true,characterData:true});
     }
-    apply();
+    // A Settings return can reuse already-rendered evidence for one commit.
+    // Delay restoration until owner readers publish their loading transition;
+    // otherwise we can focus a stale Next button that will soon disappear.
+    const frame=requestAnimationFrame(()=>{if(observer)apply();});
     for (const event of ['pointerdown','keydown','wheel','touchstart']) node.addEventListener(event,stop,{capture:true,once:true});
-    return ()=>{stop();for(const event of ['pointerdown','keydown','wheel','touchstart']) node.removeEventListener(event,stop,true);};
+    return ()=>{cancelAnimationFrame(frame);stop();for(const event of ['pointerdown','keydown','wheel','touchstart']) node.removeEventListener(event,stop,true);};
   }, [restored]);
   return <div ref={root} onFocusCapture={event=>{
     const control=event.target.closest<HTMLElement>('[data-focus-token]');
