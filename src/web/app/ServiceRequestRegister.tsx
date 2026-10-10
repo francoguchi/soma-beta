@@ -104,7 +104,14 @@ export function ServiceRequestRegister({navigate}:{navigate:(path:string)=>void}
             })}</tbody>
           </table>
         </div>
-        {page.items.length===0 && <p role="status">There are no Service Requests in this page.</p>}
+        {page.items.length===0&&(page.total_count_at_read===0?
+          <div className="soma-v2-register-empty" role="status">
+            <span className="soma-v2-register-empty-code">REGISTER / EMPTY</span>
+            <h3>No Service Requests registered</h3>
+            <p>This database has no accepted SR identities yet. The collection is connected to the owner query; no demonstration records have been inserted.</p>
+            <p>Source import actions are not yet exposed in Beta UI V2. The direct identity lookup below remains available.</p>
+          </div>:
+          <p role="status">No Service Requests on this page. Refresh from latest to revisit the current register.</p>)}
         {page.items.length>0 && !current && <p className="soma-v2-sr-selection-prompt" role="status">
           Select a Service Request to inspect its details and source context.
         </p>}

@@ -357,3 +357,13 @@ h1 {font-size: 24px;} h2 {font-size: 20px;} h3 {font-size: 16px;} .metadata {fon
 .soma-v2-overview-scope p{max-width:900px;font-size:11px;line-height:1.7;color:var(--dim,#929da7)}
 .soma-v2-overview-scope nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}
 @media(max-width:680px){.soma-v2-overview-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Real empty-owner response, not fake demonstration data. */
+.soma-v2-register-empty{max-width:740px;margin:18px 0;padding:25px 27px;
+ background:var(--surface,#111518);border:1px solid var(--line,#363c43);
+ border-left:3px solid var(--current-edge,#7da7d3);color:var(--text,#e6eaee)}
+.soma-v2-register-empty-code{font:600 10px/1.4 "Cascadia Mono",Consolas,monospace;
+ color:var(--current,#9abbe0);letter-spacing:.08em}
+.soma-v2-register-empty h3{margin:12px 0 9px;font-size:16px;font-weight:700}
+.soma-v2-register-empty p{margin:7px 0;font-size:12px;line-height:1.65;color:var(--secondary,#b2bbc4)}
+@media(max-width:600px){.soma-v2-register-empty{padding:16px}}

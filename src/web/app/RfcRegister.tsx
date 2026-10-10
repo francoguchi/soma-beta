@@ -91,7 +91,14 @@ export function RfcRegister({navigate}:{navigate:(path:string)=>void}){
               <td>{time(row.updated_at_utc)}</td></tr>)}</tbody>
           </table>
         </div>
-        {!page.items.length&&<p role="status">No RFCs in this page.</p>}
+        {!page.items.length&&(page.total_count_at_read===0?
+          <div className="soma-v2-register-empty" role="status">
+            <span className="soma-v2-register-empty-code">REGISTER / EMPTY</span>
+            <h3>No RFC identities registered</h3>
+            <p>The RFC owner currently reports no records. Source imports and creation controls are still pending UI composition; nothing is simulated.</p>
+            <p>When RFC identities are accepted by Beta, they will appear here with their canonical hierarchy and archive state.</p>
+          </div>:
+          <p role="status">No RFCs on this page. Refresh from latest to revisit the current register.</p>)}
         {page.items.length>0&&!opened&&<p className="soma-v2-sr-selection-prompt" role="status">
           Select an RFC to inspect its details and hierarchy context.</p>}
         <div className="soma-v2-sr-pager">
