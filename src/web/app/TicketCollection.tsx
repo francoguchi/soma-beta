@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {OwnerProjection} from '../components/OwnerProjection';
+import {isExactSrIdentity} from '../state/sr-identity';
 
 type Observation = Readonly<{value_state: string; value: unknown}>;
 type ServiceRequestPoint = Readonly<{
@@ -11,12 +12,7 @@ type ServiceRequestPoint = Readonly<{
   warnings: readonly string[];
 }>;
 
-const SR_IDENTITY = /^(?:[0-9]{8}|LSR-[0-9]{8})$/;
 const UUID4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-
-export function isExactSrIdentity(value: string): boolean {
-  return SR_IDENTITY.test(value);
-}
 
 function acceptedDetail(value: ServiceRequestPoint): ServiceRequestPoint {
   if (!value || !UUID4.test(value.service_request_id) ||
