@@ -22,9 +22,13 @@ export function SettingsDialog({application, onClose, children, expanded = false
     app.inert = true;
     document.documentElement.style.overflow = 'hidden';
     const close = node.querySelector<HTMLElement>('[data-settings-close]');
+    // Expanded panels may remove their invoker and strand DOM focus outside the dialog.
+    const escape=(event:KeyboardEvent)=>{if(event.key!=='Escape')return;event.preventDefault();event.stopPropagation();onClose();};
+    document.addEventListener('keydown',escape,true);
     // Return navigation may restore a descendant's exact focus before this effect runs.
     if (!node.contains(document.activeElement)) (close ?? node).focus({preventScroll: true});
     return () => {
+      document.removeEventListener('keydown',escape,true);
       app.inert = false;
       document.documentElement.style.overflow = prior;
       const previous = invoker.current;
@@ -32,6 +36,10 @@ export function SettingsDialog({application, onClose, children, expanded = false
       else document.getElementById('main-content')?.focus({preventScroll: true});
     };
   }, [application]);
+  useLayoutEffect(()=>{
+    const node=dialog.current;
+    if(node&&!node.contains(document.activeElement))node.querySelector<HTMLElement>('[data-settings-close]')?.focus({preventScroll:true});
+  },[expanded]);
   return createPortal(
     <div className="soma-v2-settings-backdrop">
       <section ref={dialog} className="soma-v2-settings-dialog" data-expanded={expanded ? 'true' : 'false'}

@@ -18,6 +18,7 @@ import {CommunicationSettings} from './CommunicationSettings';
 import {ObjectiveSettings} from './ObjectiveSettings';
 import {SettingsWorkspace} from './SettingsWorkspace';
 import {SettingsDialog} from '../components/SettingsDialog';
+import {OwnerReturnRefresh} from '../components/OwnerProjection';
 import '../styles/soma.css';
 
 const settingsPath = (value: string) => ['/settings','/settings/appearance','/settings/communications'].includes(value);
@@ -25,6 +26,7 @@ const settingsPath = (value: string) => ['/settings','/settings/appearance','/se
 function Application() {
   const [path, setPath] = useState(location.pathname);
   const [referenceOpen, setReferenceOpen] = useState(false);
+  const [ownerReturnGeneration,setOwnerReturnGeneration] = useState(0);
   const previousWorkspace = useRef(settingsPath(location.pathname) ? '/overview' : location.pathname);
   const [dirty, setDirty] = useState(false); const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [restored, setRestored] = useState<ReturnState | null>(null); const dirtyRef = useRef(false);
@@ -42,6 +44,9 @@ function Application() {
       () => (settingsPath(currentPath.current) ? settingsReturn.current?.() : workReturn.current?.()) ?? null,
       (next, state) => {
         const previous = currentPath.current;
+        // Preserve the mounted workbench on Settings entry; on exit refetch owner
+        // evidence without replacing drafts, tabs, selection or stored cursors.
+        if(settingsPath(previous)&&!settingsPath(next))setOwnerReturnGeneration(value=>value+1);
         currentPath.current = next;
         if (!settingsPath(previous) && !settingsPath(next)) workReturn.current = null;
         settingsReturn.current = null;
@@ -68,7 +73,7 @@ function Application() {
     if (!settingsOpen && settingsPath(next)) setReferenceOpen(false);
     navigation.current?.navigate(next);
   };
-  return <><div ref={application}><SomaShell path={visiblePath} settingsOpen={settingsOpen} dirty={dirty} navigate={navigate}>
+  return <OwnerReturnRefresh.Provider value={ownerReturnGeneration}><div ref={application}><SomaShell path={visiblePath} settingsOpen={settingsOpen} dirty={dirty} navigate={navigate}>
     {visibleRoute?.surface === 'ticket_list' ? <TicketCollection navigate={navigate}/> :
     visibleRoute?.surface === 'rfc_list' ? <RfcRegister navigate={navigate}/> :
     visibleRoute?.surface === 'import_monitor' ? <ImportSourceMonitor/> :
@@ -111,7 +116,7 @@ function Application() {
   </SettingsDialog>}{pendingPath && <Modal title="Leave unsaved changes?" application={application} fallback={fallback} close={() => navigation.current?.cancel()}>
     <p>This edit flow has unsaved UI values. A recovery checkpoint does not save accepted operational state.</p>
     <button type="button" onClick={() => {updateDirty(false); navigation.current?.confirm();}}>Leave this edit flow</button>
-  </Modal>}</>;
+  </Modal>}</OwnerReturnRefresh.Provider>;
 }
 const root = document.getElementById('root');
 if (!root) throw new Error('SOMA root is missing');

@@ -40,7 +40,9 @@ export function SomaShell({path, navigate, children, warnings = [], dirty = fals
   const route = resolveRoute(path);
   const navigation = navigationForSurface(route?.surface);
   const missing = unsupportedCapabilities();
-  const compact = width > 0 && width < 1360;
+  // Use the actual viewport on first render to prevent a desktop-to-compact
+  // navigation flash before ResizeObserver has measured the shell.
+  const compact = (width || window.innerWidth) < 1360;
   useEffect(() => {
     const node = shell.current;
     if (!node) return;
