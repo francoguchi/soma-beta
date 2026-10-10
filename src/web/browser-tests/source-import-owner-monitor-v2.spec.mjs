@@ -18,4 +18,7 @@ test('Source Imports uses three distinct owner statuses and empty accepted run h
   await expect(page.getByRole('button',{name:'Next page'})).toBeDisabled();
   await expect(page.getByRole('button',{name:'Previous page'})).toBeDisabled();
   await expect(page.getByRole('button',{name:'Run import'})).toHaveCount(0);
+  // The closed server-side SPA registry must also allow direct reload of this route.
+  await page.reload();
+  await expect(page.getByRole('region',{name:'Source Imports'})).toBeVisible();
 });

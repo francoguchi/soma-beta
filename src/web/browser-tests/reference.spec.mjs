@@ -26,7 +26,10 @@ test('Settings uses bounded owner reference pages and explicit detail; channel t
   await page.getByRole('button',{name:'Open Synthetic Contact'}).click();
   await expect(page.getByText('Current Customer affiliation: Unbound.')).toBeVisible();
   await expect(page.getByText('<img src=x onerror="window.syntheticInjected=true">',{exact:true})).toBeAttached();
-  expect(await page.evaluate(()=>window.syntheticInjected)).toBeUndefined();await expect(page.locator('img')).toHaveCount(0);
+  expect(await page.evaluate(()=>window.syntheticInjected)).toBeUndefined();
+  // The canonical SOMA header intentionally uses two real brand images.
+  // Source text must not create an injected image within Contact channels.
+  await expect(page.getByRole('region',{name:'Contact channels'}).locator('img')).toHaveCount(0);
   const channels=page.getByRole('region',{name:'Contact channels'});
   await channels.getByRole('checkbox',{name:'Include archived channels'}).check();await expect(channels.getByText('Lifecycle: archived')).toBeAttached();
   await channels.getByRole('button',{name:'Next page'}).click();

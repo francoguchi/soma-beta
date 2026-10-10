@@ -1,6 +1,8 @@
 import {test,expect} from '@playwright/test';
 
 test('Settings opens as a dialog over the active workspace and closes to it',async({page})=>{
+  // Verify desktop contextual sidebar explicitly; compact view has 'Tickets sections'.
+  await page.setViewportSize({width:1600,height:900});
   await page.goto('http://127.0.0.1:4174/tickets/sr/33333333-3333-4333-8333-333333333333');
   await expect(page.getByRole('navigation',{name:'Tickets navigation'})).toBeVisible();
   await page.getByRole('link',{name:'Settings',exact:true}).click();

@@ -8,8 +8,12 @@ from soma.ui.assets import UiAssets
 def test_closed_spa_and_asset_routes_never_capture_api_or_untrusted_paths():
     assets = UiAssets()
     assert assets.resolve('GET', '/tickets/sr/synthetic-id').content_type.startswith('text/html')
+    # Client navigation and the server's closed fallback must agree: direct
+    # reload/bookmark is not equivalent to React's in-app history navigation.
+    assert assets.resolve('GET', '/tickets/rfcs').content_type.startswith('text/html')
+    assert assets.resolve('GET', '/tickets/imports').content_type.startswith('text/html')
     for path in ('/api/v1/tickets', '/api/v1/no-such-route', '/static/ui/../registry.json',
-                 '/static/ui/assets/missing.js', '/tickets/sr/a%2fb', '/unknown', '/tickets/sr/a/b'):
+                 '/static/ui/assets/missing.js', '/tickets/sr/a%2fb', '/unknown', '/tickets/sr/a/b', '/tickets/rfcs/unsafe'):
         assert assets.resolve('GET', path) is None
     assert assets.resolve('POST', '/tickets') is None
 
