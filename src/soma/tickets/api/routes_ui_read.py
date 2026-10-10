@@ -16,10 +16,12 @@ from soma.tickets.queries.service_requests import ServiceRequestQueryService
 from soma.tickets.queries.working_notes import WorkingNoteQueryService
 from soma.tickets.queries.service_request_collection import ServiceRequestCollectionQuery
 from soma.tickets.queries.rfc_collection import RfcCollectionQuery
+from soma.tickets.queries.sr_rfc_links import ServiceRequestRfcLinksQuery
 
 _DETAIL = re.compile(r"^/api/v1/tickets/(service-requests|rfcs)/([^/]+)$")
 _IDENTITY = re.compile(r"^/api/v1/tickets/service-requests/by-business-id/([^/]+)$")
 _NOTES = re.compile(r"^/api/v1/tickets/(service_request|rfc)/([^/]+)/notes$")
+_SR_RFCS = re.compile(r"^/api/v1/tickets/service-requests/([^/]+)/rfcs$")
 _NOTES_ALLOWED = frozenset({"limit", "cursor"})
 
 
@@ -37,6 +39,7 @@ class TicketReadRouteAdapter:
         self._collection = ServiceRequestCollectionQuery(factory)
         self._rfcs = RfcQueryService(factory)
         self._rfc_collection = RfcCollectionQuery(factory)
+        self._sr_rfcs = ServiceRequestRfcLinksQuery(factory)
         self._notes = WorkingNoteQueryService(factory)
 
     def dispatch(self, method: str, path: str, values: dict[str, Any]) -> TicketReadResponse | None:
@@ -59,6 +62,16 @@ class TicketReadRouteAdapter:
             if not isinstance(values, dict) or not set(values).issubset({"limit", "cursor"}):
                 raise ValidationError("RFC collection filters are invalid")
             return TicketReadResponse(200, self._rfc_collection.list_rfcs(
+                limit=values.get("limit", 25), cursor=values.get("cursor")
+            ))
+        relation = _SR_RFCS.fullmatch(path)
+        if relation is not None:
+            if method != "GET":
+                raise ValidationError("SR relationships are read-only")
+            if not isinstance(values, dict) or not set(values).issubset({"limit", "cursor"}):
+                raise ValidationError("SR RFC relationship query fields are invalid")
+            return TicketReadResponse(200, self._sr_rfcs.list_linked_rfcs(
+                service_request_id=require_uuid4(relation.group(1)),
                 limit=values.get("limit", 25), cursor=values.get("cursor")
             ))
         point = _DETAIL.fullmatch(path)

@@ -69,8 +69,8 @@ function Application() {
   return <><div ref={application}><SomaShell path={visiblePath} settingsOpen={settingsOpen} dirty={dirty} navigate={navigate}>
     {visibleRoute?.surface === 'ticket_list' ? <TicketCollection navigate={navigate}/> :
     visibleRoute?.surface === 'rfc_list' ? <RfcRegister navigate={navigate}/> :
-    visibleRoute?.surface === 'sr_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="service_request" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
-      visibleRoute?.surface === 'rfc_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="rfc" onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
+    visibleRoute?.surface === 'sr_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="service_request" navigate={navigate} onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
+      visibleRoute?.surface === 'rfc_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="rfc" navigate={navigate} onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
       visibleRoute?.surface === 'objectives' ? <ObjectiveWorkspace navigate={navigate} restored={restored} onReturnState={captureReturnState}/> :
       visibleRoute?.surface === 'infrastructure' ? <InfrastructureWorkspace restored={restored} onReturnState={captureReturnState}/> :
       visibleRoute?.surface === 'inventory' ? <InventoryWorkspace restored={restored} onReturnState={captureReturnState}/> :
