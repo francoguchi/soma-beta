@@ -36,6 +36,13 @@ def test_ticket_ui_owner_read_routes_are_live_bounded_and_closed(initialized_dat
     assert rfc_detail.status == 200
     assert rfc_detail.body["rfc_id"] == rfc.rfc_id
     assert rfc_detail.body["rfc_no"] == "NC20261010000001"
+    rfc_page = adapter.dispatch("GET", "/api/v1/tickets/rfcs", {"limit": 25})
+    assert rfc_page.status == 200
+    assert rfc_page.body["total_count_at_read"] == 1
+    assert rfc_page.body["items"][0]["rfc_id"] == rfc.rfc_id
+    assert rfc_page.body["items"][0]["hierarchy_role"] == "standalone"
+    assert rfc_page.body["items"][0]["local_archive_state"] == "active"
+    assert rfc_page.body["continuation"] is None
 
     sr_notes = adapter.dispatch(
         "GET", f"/api/v1/tickets/service_request/{sr.service_request_id}/notes", {"limit": 10}
@@ -73,6 +80,11 @@ def test_ticket_ui_read_routes_never_accept_mutations_unbounded_notes_or_unknown
         ("GET", "/api/v1/tickets/service-requests/by-business-id/bad-id", {}),
         ("GET", "/api/v1/tickets/service-requests/by-business-id/12345678", {"limit": 2}),
         ("POST", "/api/v1/tickets/service-requests", {}),
+        ("POST", "/api/v1/tickets/rfcs", {}),
+        ("GET", "/api/v1/tickets/rfcs", {"limit": False}),
+        ("GET", "/api/v1/tickets/rfcs", {"limit": 101}),
+        ("GET", "/api/v1/tickets/rfcs", {"filter": "active"}),
+        ("GET", "/api/v1/tickets/rfcs", {"cursor": {"untrusted": True}}),
         ("GET", "/api/v1/tickets/service-requests", {"limit": True}),
         ("GET", "/api/v1/tickets/service-requests", {"limit": 101}),
         ("GET", "/api/v1/tickets/service-requests", {"order": "any"}),

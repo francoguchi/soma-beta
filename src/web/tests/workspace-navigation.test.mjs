@@ -7,7 +7,8 @@ import {isExactSrIdentity} from '../.test-build/state/sr-identity.js';
 const cases = [
   ['ticket_list', 'tickets', 'Service Requests'],
   ['sr_workbench', 'tickets', 'Service Requests'],
-  ['rfc_workbench', 'tickets', null],
+  ['rfc_list', 'tickets', 'RFCs'],
+  ['rfc_workbench', 'tickets', 'RFCs'],
   ['ticket_history', 'tickets', 'Ticket History'],
   ['overview', 'overview', 'Overview'],
   ['objectives', 'objectives', 'Maintenance Windows & Tasks'],

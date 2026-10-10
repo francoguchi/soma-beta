@@ -328,3 +328,8 @@ h1 {font-size: 24px;} h2 {font-size: 20px;} h3 {font-size: 16px;} .metadata {fon
   border-top:1px solid var(--line-soft,#262d33);padding:11px 12px;margin:0;
   font-size:11px;color:var(--dim,#929da7);
 }
+
+/* RFC collection adopts the same restrained, horizontal-scroll-safe register grid. */
+.soma-v2-rfc-register{display:flex;flex-direction:column;min-width:0;max-width:100%;color:var(--text,#e6eaee)}
+.soma-v2-rfc-register .soma-v2-sr-table{min-width:840px}
+.soma-v2-rfc-register .soma-v2-sr-table td:first-child{font-weight:600}

@@ -15,6 +15,7 @@ from soma.tickets.queries.rfcs import RfcQueryService
 from soma.tickets.queries.service_requests import ServiceRequestQueryService
 from soma.tickets.queries.working_notes import WorkingNoteQueryService
 from soma.tickets.queries.service_request_collection import ServiceRequestCollectionQuery
+from soma.tickets.queries.rfc_collection import RfcCollectionQuery
 
 _DETAIL = re.compile(r"^/api/v1/tickets/(service-requests|rfcs)/([^/]+)$")
 _IDENTITY = re.compile(r"^/api/v1/tickets/service-requests/by-business-id/([^/]+)$")
@@ -35,6 +36,7 @@ class TicketReadRouteAdapter:
         self._service_requests = ServiceRequestQueryService(factory)
         self._collection = ServiceRequestCollectionQuery(factory)
         self._rfcs = RfcQueryService(factory)
+        self._rfc_collection = RfcCollectionQuery(factory)
         self._notes = WorkingNoteQueryService(factory)
 
     def dispatch(self, method: str, path: str, values: dict[str, Any]) -> TicketReadResponse | None:
@@ -51,6 +53,14 @@ class TicketReadRouteAdapter:
                 limit=values.get("limit", 50), cursor=values.get("cursor")
             )
             return TicketReadResponse(200, result)
+        if path == "/api/v1/tickets/rfcs":
+            if method != "GET":
+                raise ValidationError("RFC collection is read-only")
+            if not isinstance(values, dict) or not set(values).issubset({"limit", "cursor"}):
+                raise ValidationError("RFC collection filters are invalid")
+            return TicketReadResponse(200, self._rfc_collection.list_rfcs(
+                limit=values.get("limit", 25), cursor=values.get("cursor")
+            ))
         point = _DETAIL.fullmatch(path)
         identity = _IDENTITY.fullmatch(path)
         notes = _NOTES.fullmatch(path)
