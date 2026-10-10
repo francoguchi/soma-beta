@@ -32,6 +32,9 @@ test('SR register shows paged owner identities and selected detail, without inve
   const register=page.getByRole('region',{name:'Service Request register'});
   await expect(register.getByText('Accepted source summary A')).toBeVisible();
   await expect(register.getByText('3 Service Request(s) at read')).toBeVisible();
+  await expect(register.getByText('DETAILS / 48576001')).toHaveCount(0);
+  await expect(register.getByText(/Select a Service Request to inspect/)).toBeVisible();
+  await register.getByRole('button',{name:'48576001'}).click();
   await expect(register.getByText('DETAILS / 48576001')).toBeVisible();
   await register.getByRole('button',{name:'48576002'}).click();
   await expect(register.getByText('DETAILS / 48576002')).toBeVisible();
@@ -40,6 +43,12 @@ test('SR register shows paged owner identities and selected detail, without inve
   await expect(register.getByText('Not reported').first()).toBeVisible();
   await expect(register.getByRole('button',{name:'Next page'})).toBeDisabled();
   await register.getByRole('button',{name:'Previous page'}).click();
+  await expect(register.getByText('DETAILS / 48576001')).toHaveCount(0);
+  await expect(register.getByText(/Select a Service Request to inspect/)).toBeVisible();
+  await register.getByRole('button',{name:'48576001'}).click();
   await expect(register.getByText('DETAILS / 48576001')).toBeVisible();
+  await register.getByRole('button',{name:'Refresh from latest'}).click();
+  await expect(register.getByText('DETAILS / 48576001')).toHaveCount(0);
+  await expect(register.getByText(/Select a Service Request to inspect/)).toBeVisible();
   expect(calls).toBeGreaterThanOrEqual(2);
 });
