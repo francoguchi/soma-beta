@@ -12,6 +12,7 @@ test('Settings opens as a dialog over the active workspace and closes to it',asy
   await dialog.getByRole('button',{name:'Open Reference Manager'}).click();
   await expect(dialog).toHaveAttribute('data-expanded','true');
   await expect(dialog.getByRole('heading',{name:'Reference Manager'})).toBeVisible();
+  await expect(dialog.getByRole('button',{name:'Close settings'})).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(page).toHaveURL(/\/tickets\/sr\//);

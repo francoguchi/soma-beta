@@ -32,7 +32,8 @@ test('Tickets exact identity lookup displays only an accepted owner SR and opens
 
 test('Tickets empty lookup does not pretend to be a complete collection',async({page})=>{
   await page.goto('http://127.0.0.1:4174/tickets');
-  await expect(page.getByText(/Full Active \/ All \/ Archived lists/)).toBeVisible();
+  await expect(page.getByRole('region',{name:'Service Request register'})).toBeVisible();
+  await expect(page.getByText(/This register lists all current SR identities/)).toBeVisible();
   await expect(page.getByRole('button',{name:'Find exact SR'})).toBeDisabled();
   await expect(page.getByText('EXACT MATCH · OWNER-ACCEPTED RECORD')).toHaveCount(0);
 });
