@@ -104,7 +104,16 @@ class DomainRoutes:
         self.inventory = build_route_adapter({
             "StockEligibilityQuery": lambda route, values: asdict(stock.stock_eligibility(**values)),
             "InventoryAttentionQuery": lambda route, values: attention.attention(**values),
+            "InventoryNeedsQuery": lambda route, values: stock.list_needs(**values),
             "SpareRequestListQuery": lambda route, values: requests.list_requests(**values),
+            "SpareRequestDetailQuery": lambda route, values: (
+                requests.request_detail(route.path_parameters["request_id"])
+                if not values else self._bad_query()
+            ),
+            "RmaDetailQuery": lambda route, values: (
+                requests.rma_detail(route.path_parameters["rma_id"])
+                if not values else self._bad_query()
+            ),
         })
         from soma.product_line_sla.queries.catalog import ProductLineSlaCatalogQueryService
         from soma.product_line_sla.queries.classification import ProductLineSlaClassificationQueryService
