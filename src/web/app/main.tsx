@@ -14,6 +14,7 @@ import {CommunicationSettings} from './CommunicationSettings';
 import {ObjectiveSettings} from './ObjectiveSettings';
 import {SettingsWorkspace} from './SettingsWorkspace';
 import '../styles/soma.css';
+import '../styles/ui-v2.css';
 
 function Application() {
   const [path, setPath] = useState(location.pathname);
