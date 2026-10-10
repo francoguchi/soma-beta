@@ -75,7 +75,7 @@ const display=(value:string|number|null)=>value===null?'Not supplied':String(val
 export function ImportPublishedObservations({runId,sourceFamily}:{runId:string;sourceFamily:string}){
   const [identity,setIdentity]=useState<Identity>('all');
   const [history,setHistory]=useState(()=>initialOwnerPage('/api/v1/imports/runs/'+encodeURIComponent(runId)+'/observations?limit=25'));
-  const [fingerprint,setFingerprint]=useState<string|null>(null);
+  const [fingerprint,setFingerprint]=useState<Readonly<{identity:Identity;digest:string}>|null>(null);
   const generation=useContext(OwnerReturnRefresh);
   const first='/api/v1/imports/runs/'+encodeURIComponent(runId)+'/observations?limit=25'+
     (identity==='all'?'':'&identity_state='+identity);
@@ -83,11 +83,13 @@ export function ImportPublishedObservations({runId,sourceFamily}:{runId:string;s
     let alive=true;setFingerprint(null);
     void filterFingerprint({schema:'SOMA_IMPORT_OBSERVATION_LIST_FILTER_V1',
       import_run_id:runId,identity_state:identity==='all'?null:identity})
-      .then(hash=>{if(alive)setFingerprint(hash);})
+      .then(hash=>{if(alive)setFingerprint({identity,digest:hash});})
       .catch(()=>{if(alive)setFingerprint(null);});
     return()=>{alive=false;};
   },[identity,runId]);
+  // Never validate a new filter's owner response against the previous filter's hash.
   const pagePath=ownerPagePath(history);
+  const acceptedFingerprint=fingerprint?.identity===identity?fingerprint.digest:null;
   return <section className="soma-v2-rfc-links" aria-label="Published source observations">
     <h4>Immutable published source observations</h4>
     <p>Source rows are evidence from one import run, not proof of accepted operational records.</p>
@@ -104,9 +106,9 @@ export function ImportPublishedObservations({runId,sourceFamily}:{runId:string;s
         <option value="invalid">Invalid identities</option>
       </select>
     </label>
-    {fingerprint===null?<p role="status">Preparing source observation owner filter.</p>:
+    {acceptedFingerprint===null?<p role="status">Preparing source observation owner filter.</p>:
       <OwnerProjection<Page> key={generation+':'+identity} path={pagePath} render={raw=>{
-        const page=accepted(raw,runId,sourceFamily,identity,fingerprint);
+        const page=accepted(raw,runId,sourceFamily,identity,acceptedFingerprint);
         return <>
           <p>{page.exact_total} published source observations; {page.items.length} on this page.</p>
           {page.items.length===0&&<p role="status">No published observations for this identity filter.</p>}
@@ -139,6 +141,7 @@ export function ImportPublishedObservations({runId,sourceFamily}:{runId:string;s
             <button type="button" disabled={page.next_cursor===null}
               onClick={()=>{if(!page.next_cursor)return;
                 const next=first+'&cursor='+encodeURIComponent(JSON.stringify(page.next_cursor));
+                if(next.length>4096)throw new Error('Oversized owner observation cursor');
                 setHistory(old=>nextOwnerPage(old,next,first+'&cursor='));
               }}>Next page</button>
           </div>
