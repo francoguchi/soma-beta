@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {navigationForSurface, primaryWorkspaces} from '../.test-build/state/workspace-navigation.js';
 import {RouteNavigation} from '../.test-build/app/router.js';
+import {isExactSrIdentity} from '../.test-build/app/TicketCollection.js';
 
 const cases = [
   ['ticket_list', 'tickets', 'Service Requests'],
@@ -92,4 +93,12 @@ test('dirty overlay never authorizes navigation to a different underlying worksp
   nav.navigate('/overview');
   assert.equal(shown,'/settings');
   assert.equal(pending,'/overview');
+});
+
+test('Tickets identity lookup cannot imply partial, fuzzy or ungoverned matching',()=>{
+  for(const exact of ['12345678','00000000','LSR-00000001','LSR-99999999'])
+    assert.equal(isExactSrIdentity(exact),true,exact);
+  for(const wrong of ['','1234567','123456789','LSR-1234567','LSR-123456789',
+    'lsr-12345678',' 12345678','12345678 ','SR-12345678','1234.678','1234*678','１２３４５６７８'])
+    assert.equal(isExactSrIdentity(wrong),false,wrong);
 });
