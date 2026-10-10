@@ -58,6 +58,17 @@ def test_detached_ready_reuse_idempotent_stop_and_new_run(real_launcher):
     assert control.stop(root, files).exit_code == 0
 
 
+def test_background_host_has_no_console(real_launcher):
+    root, files, children, opened = real_launcher
+    spawn = control.subprocess.Popen
+    spawn.program = ("import ctypes; k=ctypes.WinDLL('kernel32'); "
+                     "k.GetConsoleWindow.restype=ctypes.c_void_p; "
+                     "assert not k.GetConsoleWindow(), 'background host allocated a console'; " + spawn.program)
+    assert control.detached(root, files).exit_code == 0
+    assert opened
+    assert control.stop(root, files).exit_code == 0
+
+
 def test_simultaneous_launchers_converge_on_one_real_host(real_launcher):
     root, files, children, opened = real_launcher
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -89,9 +100,31 @@ def test_native_startup_crash_never_opens_unverified_instance(real_launcher, mon
         registry = root / "runtime" / "runtime.json"
         before = registry.read_bytes()
         monkeypatch.setattr(control, "canonical_source_instance", lambda: root)
-        assert control.source_action("stop").exit_code == 31
         assert control.source_action("run").exit_code == 31
         assert registry.read_bytes() == before and opened == []
+        import json
+        from soma.foundation.identifiers import new_uuid4
+        record = json.loads(before)
+        changed = dict(record, data_instance_id=new_uuid4())
+        registry.write_text(json.dumps(changed), encoding="utf-8")
+        assert control.source_action("stop").exit_code == 31
+        assert registry.exists()
+        registry.write_bytes(before)
+        credential = root / "runtime" / record["readiness_locator"]
+        protected = credential.read_bytes()
+        credential.write_bytes(b"invalid DPAPI envelope")
+        assert control.source_action("stop").exit_code == 31
+        assert registry.read_bytes() == before
+        credential.write_bytes(protected)
+        with monkeypatch.context() as scoped:
+            scoped.setattr(control, "process_is_absent", lambda pid: False)
+            assert control.source_action("stop").exit_code == 31
+            assert registry.read_bytes() == before
+        data_before = (root / "data/soma.db").read_bytes()
+        assert control.source_action("stop").exit_code == 0
+        assert not registry.exists()
+        assert (root / "data/soma.db").read_bytes() == data_before
+        assert control.source_action("stop").exit_code == 0
     else:
         assert not (root / "runtime" / "runtime.json").exists()
         orphans = {path: path.read_bytes() for path in (root / "runtime").glob("run-*.dpapi")}

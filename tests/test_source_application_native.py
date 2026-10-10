@@ -95,17 +95,18 @@ def test_live_host_packaged_assets_precede_auth_and_closed_spa_fallback(tmp_path
             if cookie:
                 assert html == (app.static / "index.html").read_bytes()
                 assert request(origin, "GET", "/objectives", cookie=cookie)[2] == html
-            for name, content_type in (
-                ("assets/index-CC0C6mm0.js", "text/javascript; charset=utf-8"),
-                ("assets/index-CoKe4wwi.css", "text/css; charset=utf-8"),
-            ):
+            assets = [(name, "text/javascript; charset=utf-8" if name.endswith(".js") else "text/css; charset=utf-8")
+                      for name in manifest if name.endswith((".js", ".css"))]
+            assert any(name.endswith(".js") for name, _ in assets)
+            assert any(name.endswith(".css") for name, _ in assets)
+            for name, content_type in assets:
                 status, headers, body = request(origin, "GET", "/static/ui/" + name, cookie=cookie)
                 assert status == 200 and headers["content-type"] == content_type
                 assert body == (app.static / name).read_bytes()
                 assert len(body) == manifest[name]["bytes"]
                 assert hashlib.sha256(body).hexdigest() == manifest[name]["sha256"]
             for path in ("/static/ui/assets/missing.js", "/static/ui/missing.css", "/unknown", "/assets/missing.js",
-                "/static/ui/assets/%69ndex-CC0C6mm0.js", "/static/ui/../registry.json"):
+                "/static/ui/" + next(name for name, _ in assets if name.endswith(".js")).replace("index-", "%69ndex-"), "/static/ui/../registry.json"):
                 status, _, body = request(origin, "GET", path, cookie=cookie)
                 assert status == 404 and body != html and b"<html" not in body.lower()
             for path in ("/api/v1/no-such-route", "/api/no-such-route"):

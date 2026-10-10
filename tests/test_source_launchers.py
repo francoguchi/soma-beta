@@ -69,6 +69,113 @@ def test_supported_python(version):
     launcher.check_python(version, "nt")
 
 
+@pytest.mark.parametrize("statuses, message, count", [
+    ([1], "driver sqlcipher3 is missing", 1),
+    ([0, 1], "SQLCipher 4.17.0/profile verification failed", 2),
+    ([0, 0, 1], "Frozen web-assets verification failed", 3),
+    ([0, 0, 0], None, 3),
+])
+def test_runtime_prerequisites_identify_failed_stage_without_raw_output(tmp_path, statuses, message, count):
+    calls = []
+    def run(arguments, **kwargs):
+        if os.name == "nt":
+            assert kwargs["creationflags"] == subprocess.CREATE_NO_WINDOW
+        calls.append(arguments)
+        return SimpleNamespace(returncode=statuses[len(calls) - 1], stderr="sensitive detail")
+    if message:
+        with pytest.raises(launcher.PrerequisiteError, match=message) as caught:
+            launcher.validate_runtime_environment(tmp_path, tmp_path / "python.exe", run=run)
+        assert "sensitive detail" not in str(caught.value)
+    else:
+        launcher.validate_runtime_environment(tmp_path, tmp_path / "python.exe", run=run)
+    assert len(calls) == count
+
+
+def test_environment_probe_does_not_create_a_console(tmp_path):
+    env = Environment(tmp_path)
+    env.create(tmp_path / ".venv")
+    launcher.validate_environment(tmp_path, run=env.run)
+    if os.name == "nt":
+        assert env.calls[0][1]["creationflags"] == subprocess.CREATE_NO_WINDOW
+    else:
+        assert "creationflags" not in env.calls[0][1]
+
+
+def test_console_reuses_verified_host_and_opens_browser(tmp_path, monkeypatch):
+    import soma.security.runtime.source_control as control
+    opened = []
+    monkeypatch.setattr(control, "canonical_source_instance", lambda: tmp_path)
+    monkeypatch.setattr(control, "WindowsAclProvider", lambda: object())
+    monkeypatch.setattr(control, "verified_instance", lambda *args, **kwargs: SimpleNamespace(registry=SimpleNamespace(origin="http://127.0.0.1:12345")))
+    monkeypatch.setattr(control, "open_verified_origin", opened.append)
+    monkeypatch.setattr(control, "foreground", lambda *args: pytest.fail("existing host must be reused"))
+    assert control.source_action("console").exit_code == 0
+    assert opened == ["http://127.0.0.1:12345"]
+
+
+def test_ready_wait_accepts_owned_prepublication_startup(tmp_path, monkeypatch):
+    import soma.security.runtime.source_control as control
+    instance = SimpleNamespace(registry=SimpleNamespace(origin="http://127.0.0.1:12345"))
+    observations = iter([None, instance])
+    opened = []
+    monkeypatch.setattr(control, "verified_instance", lambda *a, **k: next(observations))
+    monkeypatch.setattr(control, "_instance_owned", lambda *a: True)
+    monkeypatch.setattr(control.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr(control, "open_verified_origin", opened.append)
+    assert control._await_ready(tmp_path, object()).exit_code == 0
+    assert opened == [instance.registry.origin]
+
+
+def test_console_losing_start_waits_for_winning_host(tmp_path, monkeypatch):
+    import soma.security.runtime.source_control as control
+    from soma.foundation.errors import SomaError
+    monkeypatch.setattr(control, "canonical_source_instance", lambda: tmp_path)
+    monkeypatch.setattr(control, "WindowsAclProvider", lambda: object())
+    monkeypatch.setattr(control, "verified_instance", lambda *a, **k: None)
+    def losing(*a, **k):
+        raise SomaError("INSTANCE_OWNED", "concurrent host owns instance")
+    monkeypatch.setattr(control, "foreground", losing)
+    expected = control.SourceControlResult(control.SourceOutcome.OPENED, 0, "winning host")
+    monkeypatch.setattr(control, "_await_ready", lambda *a: expected)
+    assert control.source_action("console") == expected
+
+
+def test_foreground_server_failure_is_not_reported_as_success(tmp_path, monkeypatch):
+    import soma.application as application
+    import soma.security.runtime.source_control as control
+    from soma.foundation.errors import SomaError
+    closed = []
+    host = SimpleNamespace(state="READY", start=lambda: SimpleNamespace(migration_sequence=19),
+                           shutdown=lambda **k: closed.append(True))
+    fake = SimpleNamespace(host=host, server=SimpleNamespace(is_stopped=lambda: True),
+                           security=SimpleNamespace(control=SimpleNamespace(_origin="http://127.0.0.1:12345")))
+    monkeypatch.setattr(application, "SourceApplication", lambda root: fake)
+    with pytest.raises(SomaError, match="stopped unexpectedly"):
+        control.foreground(tmp_path)
+    assert closed == [True]
+
+
+def test_ui_build_uses_pinned_toolchain_and_locked_commands(tmp_path, monkeypatch):
+    import soma.security.runtime.installation as installation
+    monkeypatch.setattr(launcher.shutil, "which", lambda name: name)
+    monkeypatch.setattr(installation, "canonical_source_instance", lambda: tmp_path / "absent")
+    calls = []
+    def run(arguments, **kwargs):
+        calls.append((arguments, kwargs))
+        return SimpleNamespace(returncode=0, stdout="v24.21.0\n")
+    launcher.build_frontend(tmp_path, run=run)
+    assert calls[1][0] == ["npm.cmd", "ci", "--ignore-scripts", "--no-audit", "--no-fund"]
+    assert calls[2][0] == ["npm.cmd", "run", "build"]
+    assert calls[1][1]["cwd"] == tmp_path / "src/web"
+    with pytest.raises(launcher.PrerequisiteError, match="CI-pinned"):
+        launcher.build_frontend(tmp_path, run=lambda *a, **k: SimpleNamespace(returncode=0, stdout="v22.0.0"))
+
+
+def test_build_flag_cannot_install_during_runtime(monkeypatch):
+    monkeypatch.setattr(launcher, "check_python", lambda: None)
+    assert launcher.main(["run", "--build-ui"]) == 10
+
+
 def test_incomplete_environment_is_preserved(tmp_path):
     environment = tmp_path / ".venv"
     environment.mkdir()
@@ -183,17 +290,28 @@ def test_real_bat_adapters_propagate_missing_environment_status(tmp_path):
     shutil.copy2(ROOT / "tools/source_launcher.py", root / "tools/source_launcher.py")
     shutil.copy2(ROOT / "pyproject.toml", root / "pyproject.toml")
     shutil.copytree(ROOT / "src/soma", root / "src/soma", ignore=shutil.ignore_patterns("__pycache__"))
-    names = ["soma_run.bat", "soma_run_console.bat", "soma_stop.bat"]
+    names = ["soma_run.bat", "soma_run_console.bat", "soma_stop.bat", "soma_reset_dev.bat"]
     for name in names:
         shutil.copy2(ROOT / name, root / name)
-        result = subprocess.run(f'cmd.exe /d /s /c ""{root / name}""', cwd=tmp_path, capture_output=True, text=True, timeout=15)
+        result = subprocess.run(f'cmd.exe /d /s /c ""{root / name}" --no-pause"', cwd=tmp_path, capture_output=True, text=True, timeout=15)
         assert result.returncode == 10, result.stderr
         assert "soma_setup.bat" in result.stderr
     import venv
     venv.EnvBuilder(with_pip=False).create(root / ".venv")
     for name in names[:2]:
-        result = subprocess.run(f'cmd.exe /d /s /c ""{root / name}""', cwd=tmp_path, capture_output=True, text=True, timeout=15)
+        result = subprocess.run(f'cmd.exe /d /s /c ""{root / name}" --no-pause"', cwd=tmp_path, capture_output=True, text=True, timeout=15)
         assert result.returncode == 10, result.stderr
         assert "verification failed" in result.stderr or "soma_setup.bat" in result.stderr
     assert not (root / "runtime").exists()
     assert not (root / "data").exists()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows BAT integration")
+@pytest.mark.parametrize("name", ["soma_run.bat", "soma_run_console.bat", "soma_stop.bat", "soma_reset_dev.bat"])
+def test_run_bat_keeps_failure_visible_and_preserves_exit_code(tmp_path, name):
+    shutil.copy2(ROOT / name, tmp_path / name)
+    result = subprocess.run(f'cmd.exe /d /s /c ""{tmp_path / name}""',
+                            input="\n", capture_output=True, text=True, timeout=15)
+    assert result.returncode == 10
+    assert "exit code 10" in result.stderr + result.stdout
+    assert "Press any key" in result.stdout
