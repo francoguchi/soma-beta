@@ -22,7 +22,8 @@ export function SettingsDialog({application, onClose, children, expanded = false
     app.inert = true;
     document.documentElement.style.overflow = 'hidden';
     const close = node.querySelector<HTMLElement>('[data-settings-close]');
-    (close ?? node).focus({preventScroll: true});
+    // Return navigation may restore a descendant's exact focus before this effect runs.
+    if (!node.contains(document.activeElement)) (close ?? node).focus({preventScroll: true});
     return () => {
       app.inert = false;
       document.documentElement.style.overflow = prior;
