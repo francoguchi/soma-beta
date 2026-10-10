@@ -23,6 +23,16 @@ if __name__ == '__main__':
         if (path.suffix not in {'.html', '.js', '.css'} and not allowed_brand) or relative.startswith('fixtures/'):
             raise SystemExit('Unexpected production UI resource')
         raw = path.read_bytes()
+        if allowed_brand:
+            # Vite copies public SVGs byte-for-byte. Windows may materialize the
+            # source SVGs with CRLF, but Git stores the shipped files as LF.
+            # Canonicalize the *shipped bytes* before freezing their exact hash.
+            canonical = raw.replace(b'\r\n', b'\n')
+            if b'\r' in canonical:
+                raise SystemExit('Noncanonical SVG line ending')
+            if canonical != raw:
+                path.write_bytes(canonical)
+            raw = canonical
         files[relative] = {'sha256': hashlib.sha256(raw).hexdigest(), 'bytes': len(raw)}
     if 'index.html' not in files:
         raise SystemExit('Production UI entry is missing')

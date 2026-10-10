@@ -39,6 +39,9 @@ def test_canonical_brand_assets_are_manifested_and_delivered_as_image_svg():
         assert asset is not None
         assert asset.content_type == 'image/svg+xml'
         assert asset.body.startswith(b'<?xml version="1.0"')
+        # Production SVGs are tracked with eol=lf and must verify identically on
+        # Windows and Linux, even when Vite copied CRLF source files on Windows.
+        assert b'\r' not in asset.body
     assert assets.resolve('GET', '/static/ui/brand/unknown.svg') is None
     assert assets.resolve('GET', '/static/ui/brand/../registry.json') is None
     entry = assets.resolve('GET', '/').body.decode('utf8')
