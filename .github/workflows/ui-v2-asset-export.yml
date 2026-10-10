@@ -1,0 +1,49 @@
+name: TEMP UI V2 frozen asset export
+on:
+  pull_request:
+    branches:
+      - feat/beta-1.0-implementation
+    paths:
+      - "src/web/**"
+      - ".github/workflows/ui-v2-asset-export.yml"
+permissions:
+  contents: read
+jobs:
+  export:
+    if: github.head_ref == 'feat/beta-ui-v2'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      - name: Build offline UI and its source manifest
+        working-directory: src/web
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
+          npm run build
+      - name: Validate frozen assets
+        run: python tools/verify_ui_build.py
+      - name: Export public frozen browser bytes to logs in bounded chunks
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          const root = 'src/soma/ui/static';
+          const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
+          const names = ['index.html','manifest.json',...Object.keys(manifest.files)];
+          for(const name of names){
+            const b = fs.readFileSync(path.join(root,name));
+            const encoded=b.toString('base64');
+            process.stdout.write('SOMA_V2_EXPORT_BEGIN|' + name + '|' + b.length + '\n');
+            for(let at=0;at<encoded.length;at+=4096)process.stdout.write('SOMA_V2_EXPORT_PART|' + encoded.slice(at,at+4096) + '\n');
+            process.stdout.write('SOMA_V2_EXPORT_END|' + name + '\n');
+          }
+          JS
