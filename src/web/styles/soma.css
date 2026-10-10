@@ -314,3 +314,17 @@ h1 {font-size: 24px;} h2 {font-size: 20px;} h3 {font-size: 16px;} .metadata {fon
 .soma-v2-sr-details-grid>*{overflow-wrap:anywhere}
 @media(max-width:570px){.soma-v2-sr-owner-tag{display:none}.soma-v2-sr-details-title{flex-wrap:wrap}.soma-v2-sr-register-meta{flex-wrap:wrap}}
 @media(forced-colors:active){.soma-v2-sr-table tbody tr[data-selected="true"]{outline:1px solid Highlight;outline-offset:-1px}.soma-v2-sr-rowselect{color:LinkText}}
+
+
+/* SR register: explicit selection and bounded-history refresh affordances. */
+.soma-v2-sr-register-actions{display:flex;justify-content:flex-end;margin:8px 0 2px}
+.soma-v2-sr-register-actions button{
+  background:var(--surface2,#161b1f);color:var(--secondary,#b2bbc4);
+  border:1px solid var(--line,#363c43);border-radius:0;
+  padding:6px 10px;min-height:29px;font:inherit;font-size:10px;cursor:pointer;
+}
+.soma-v2-sr-register-actions button:hover{color:var(--text,#e6eaee);border-color:var(--current-edge,#7da7d3)}
+.soma-v2-sr-selection-prompt{
+  border-top:1px solid var(--line-soft,#262d33);padding:11px 12px;margin:0;
+  font-size:11px;color:var(--dim,#929da7);
+}
