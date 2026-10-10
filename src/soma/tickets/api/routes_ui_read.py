@@ -16,7 +16,7 @@ from soma.tickets.queries.service_requests import ServiceRequestQueryService
 from soma.tickets.queries.working_notes import WorkingNoteQueryService
 from soma.tickets.queries.service_request_collection import ServiceRequestCollectionQuery
 from soma.tickets.queries.rfc_collection import RfcCollectionQuery
-from soma.tickets.queries.sr_rfc_links import ServiceRequestRfcLinksQuery
+from soma.tickets.queries.relationships import ServiceRequestRfcQueryService
 
 _DETAIL = re.compile(r"^/api/v1/tickets/(service-requests|rfcs)/([^/]+)$")
 _IDENTITY = re.compile(r"^/api/v1/tickets/service-requests/by-business-id/([^/]+)$")
@@ -39,7 +39,7 @@ class TicketReadRouteAdapter:
         self._collection = ServiceRequestCollectionQuery(factory)
         self._rfcs = RfcQueryService(factory)
         self._rfc_collection = RfcCollectionQuery(factory)
-        self._sr_rfcs = ServiceRequestRfcLinksQuery(factory)
+        self._sr_rfcs = ServiceRequestRfcQueryService(factory)
         self._notes = WorkingNoteQueryService(factory)
 
     def dispatch(self, method: str, path: str, values: dict[str, Any]) -> TicketReadResponse | None:
@@ -70,10 +70,13 @@ class TicketReadRouteAdapter:
                 raise ValidationError("SR relationships are read-only")
             if not isinstance(values, dict) or not set(values).issubset({"limit", "cursor"}):
                 raise ValidationError("SR RFC relationship query fields are invalid")
-            return TicketReadResponse(200, self._sr_rfcs.list_linked_rfcs(
+            limit = values.get("limit", 25)
+            if type(limit) is not int or not 1 <= limit <= 25:
+                raise ValidationError("SR RFC branch HTTP page size must be 1..25")
+            return TicketReadResponse(200, self._sr_rfcs.list_branches(
                 service_request_id=require_uuid4(relation.group(1)),
-                limit=values.get("limit", 25), cursor=values.get("cursor")
-            ))
+                limit=limit, cursor=values.get("cursor")
+            ).to_response())
         point = _DETAIL.fullmatch(path)
         identity = _IDENTITY.fullmatch(path)
         notes = _NOTES.fullmatch(path)

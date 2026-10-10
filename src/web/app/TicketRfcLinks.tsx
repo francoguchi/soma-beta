@@ -4,65 +4,66 @@ import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '..
 
 const uuid4=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const rfcNo=/^NC[0-9]{14}$/;
-type RfcLink=Readonly<{
-  sr_rfc_link_id:string;rfc_id:string;rfc_no:string;local_archive_state:'active'|'archived';
-  hierarchy_role:'root'|'standalone'|'subordinate';
-  opened_at_utc:number;reason_category:string|null;
-}>;
-type LinkCursor=Readonly<{version:1;sort_registry_id:'SR_RFC_LINK_OPENED_ID_DESC_V1';
-  service_request_id:string;opened_at_utc:number;sr_rfc_link_id:string}>;
-type LinkPage=Readonly<{service_request_id:string;items:readonly RfcLink[];
-  total_count_at_read:number;sort_registry_id:'SR_RFC_LINK_OPENED_ID_DESC_V1';
-  continuation:LinkCursor|null}>;
-const instant=(n:number)=>new Intl.DateTimeFormat(undefined,{year:'numeric',month:'short',day:'2-digit'}).format(new Date(n*1000));
-function accepted(raw:LinkPage,id:string):LinkPage{
-  if(!raw||raw.service_request_id!==id||!Array.isArray(raw.items)||raw.items.length>25
-    ||!Number.isSafeInteger(raw.total_count_at_read)||raw.total_count_at_read<0
-    ||raw.sort_registry_id!=='SR_RFC_LINK_OPENED_ID_DESC_V1')throw new Error('Invalid SR RFC relationship page');
+type BranchMember=Readonly<{direct_link_id:string;root_rfc_id:string;member_rfc_id:string;role:'root'|'subordinate'}>;
+type BranchCursor=Readonly<{version:1;query_id:'GetServiceRequestRfcBranches';sort_registry_id:'SR_RFC_BRANCH_MEMBER_ORDER_V1';
+  last_key_tuple:readonly [string,number,string];filter_fingerprint:string;null_order:'not_applicable'}>;
+type BranchPage=Readonly<{items:readonly BranchMember[];continuation:BranchCursor|null}>;
+type RfcDetail=Readonly<{rfc_id:string;rfc_no:string;revision:number;hierarchy_role:string;local_archive_state:string;
+  subordinate_count:number;direct_service_request_count:number;warnings:readonly string[]}>;
+function accepted(page:BranchPage):BranchPage{
+  if(!page||!Array.isArray(page.items)||page.items.length>25)throw new Error('Invalid SR RFC branch page');
   const seen=new Set<string>();
-  for(const item of raw.items){
-    if(!item||!uuid4.test(item.sr_rfc_link_id)||seen.has(item.sr_rfc_link_id)
-      ||!uuid4.test(item.rfc_id)||!rfcNo.test(item.rfc_no)
-      ||!['active','archived'].includes(item.local_archive_state)
-      ||!['root','standalone','subordinate'].includes(item.hierarchy_role)
-      ||!Number.isSafeInteger(item.opened_at_utc)||item.opened_at_utc<0
-      ||item.reason_category!==null&&(typeof item.reason_category!=='string'||item.reason_category.length>150))
-      throw new Error('Invalid accepted SR–RFC relationship');
-    seen.add(item.sr_rfc_link_id);
+  for(const member of page.items){
+    if(!member||!uuid4.test(member.direct_link_id)||!uuid4.test(member.root_rfc_id)
+      ||!uuid4.test(member.member_rfc_id)||!['root','subordinate'].includes(member.role)
+      ||member.role==='root'&&member.root_rfc_id!==member.member_rfc_id
+      ||member.role==='subordinate'&&member.root_rfc_id===member.member_rfc_id
+      ||seen.has(member.member_rfc_id))throw new Error('Invalid SR RFC branch member');
+    seen.add(member.member_rfc_id);
   }
-  const next=raw.continuation;
-  if(next!==null&&(!next||next.version!==1||next.sort_registry_id!=='SR_RFC_LINK_OPENED_ID_DESC_V1'
-    ||next.service_request_id!==id||!Number.isSafeInteger(next.opened_at_utc)||next.opened_at_utc<0
-    ||!uuid4.test(next.sr_rfc_link_id)||!raw.items.length
-    ||raw.items.at(-1)?.sr_rfc_link_id!==next.sr_rfc_link_id
-    ||raw.items.at(-1)?.opened_at_utc!==next.opened_at_utc))throw new Error('Invalid SR–RFC owner continuation');
+  const c=page.continuation;
+  if(c!==null&&(!c||c.version!==1||c.query_id!=='GetServiceRequestRfcBranches'
+    ||c.sort_registry_id!=='SR_RFC_BRANCH_MEMBER_ORDER_V1'||c.null_order!=='not_applicable'
+    ||!Array.isArray(c.last_key_tuple)||c.last_key_tuple.length!==3
+    ||!uuid4.test(c.last_key_tuple[0])||![0,1].includes(c.last_key_tuple[1])
+    ||!uuid4.test(c.last_key_tuple[2])
+    ||typeof c.filter_fingerprint!=='string'||!/^[0-9a-f]{64}$/.test(c.filter_fingerprint)))
+    throw new Error('Invalid SR RFC owner cursor');
+  return page;
+}
+function selectedDetails(raw:RfcDetail,id:string):RfcDetail{
+  if(!raw||raw.rfc_id!==id||!rfcNo.test(raw.rfc_no)||!Number.isSafeInteger(raw.revision)||raw.revision<1
+    ||!['root','subordinate','standalone'].includes(raw.hierarchy_role)
+    ||!['active','archived'].includes(raw.local_archive_state)
+    ||!Number.isSafeInteger(raw.subordinate_count)||raw.subordinate_count<0
+    ||!Number.isSafeInteger(raw.direct_service_request_count)||raw.direct_service_request_count<0
+    ||!Array.isArray(raw.warnings))throw new Error('Invalid RFC owner details');
   return raw;
 }
+/** LLD-03 GetServiceRequestRfcBranches, not a locally inferred RFC graph. */
 export function TicketRfcLinks({id,navigate}:{id:string;navigate:(next:string)=>void}){
   const first='/api/v1/tickets/service-requests/'+encodeURIComponent(id)+'/rfcs?limit=25';
   const [history,setHistory]=useState(()=>initialOwnerPage(first));
   const [selected,setSelected]=useState<string|null>(null);
   return <section className="soma-v2-rfc-links" aria-label="Linked RFCs">
-    <h2>Related RFCs</h2>
-    <p>Accepted active SR–RFC relationships; unlinked history is not included here.</p>
-    <OwnerProjection<LinkPage> path={ownerPagePath(history)} render={value=>{
-      const page=accepted(value,id);
-      const current=selected===null?null:page.items.find(x=>x.sr_rfc_link_id===selected)??null;
+    <h2>Related RFC branches</h2>
+    <p>Accepted root links and their subordinate RFC members. Subordinates inherit through their governing root.</p>
+    <OwnerProjection<BranchPage> path={ownerPagePath(history)} render={raw=>{
+      const page=accepted(raw);
+      const chosen=selected===null?null:page.items.find(item=>item.member_rfc_id===selected)??null;
       return <>
-        <p>{page.total_count_at_read} active relationship(s) at read · page {history.page+1}</p>
         <div className="soma-v2-sr-table-viewport">
-          <table className="soma-v2-sr-table"><thead><tr><th scope="col">RFC</th><th scope="col">Hierarchy</th>
-            <th scope="col">Local archive</th><th scope="col">Linked</th></tr></thead>
-            <tbody>{page.items.map(link=><tr key={link.sr_rfc_link_id}
-              data-selected={current?.sr_rfc_link_id===link.sr_rfc_link_id?'true':'false'}>
-              <td><button type="button" className="soma-v2-sr-rowselect"
-                aria-pressed={current?.sr_rfc_link_id===link.sr_rfc_link_id}
-                onClick={()=>setSelected(link.sr_rfc_link_id)}>{link.rfc_no}</button></td>
-              <td>{link.hierarchy_role}</td><td>{link.local_archive_state}</td><td>{instant(link.opened_at_utc)}</td>
-            </tr>)}</tbody></table>
+          <table className="soma-v2-sr-table">
+            <thead><tr><th scope="col">RFC member identity</th><th scope="col">Branch role</th><th scope="col">Governing root</th></tr></thead>
+            <tbody>{page.items.map(item=><tr key={item.member_rfc_id} data-selected={chosen?.member_rfc_id===item.member_rfc_id?'true':'false'}>
+              <td><button className="soma-v2-sr-rowselect" type="button" aria-pressed={chosen?.member_rfc_id===item.member_rfc_id}
+                onClick={()=>setSelected(item.member_rfc_id)}>{item.member_rfc_id}</button></td>
+              <td>{item.role}</td><td>{item.root_rfc_id}</td>
+            </tr>)}</tbody>
+          </table>
         </div>
-        {page.items.length===0&&<p role="status">No current linked RFCs for this Service Request.</p>}
-        {page.items.length>0&&!current&&<p role="status">Select a linked RFC to inspect its relationship.</p>}
+        {page.items.length===0&&<p role="status">No linked RFC branch members for this Service Request.</p>}
+        {page.items.length>0&&!chosen&&<p role="status">Select a member to retrieve its current RFC number and details.</p>}
         <div className="soma-v2-sr-pager">
           <button type="button" disabled={history.page===history.first} onClick={()=>{
             setHistory(previousOwnerPage);setSelected(null);}}>Previous page</button>
@@ -73,17 +74,22 @@ export function TicketRfcLinks({id,navigate}:{id:string;navigate:(next:string)=>
             setSelected(null);
           }}>Next page</button>
         </div>
-        {current&&<aside className="soma-v2-sr-details" aria-label="Selected RFC relationship">
-          <div className="soma-v2-sr-details-title"><strong>LINK / {current.rfc_no}</strong>
-            <button type="button" onClick={()=>navigate('/tickets/rfc/'+encodeURIComponent(current.rfc_id))}>Open RFC workbench ↗</button>
-          </div>
-          <div className="soma-v2-sr-details-grid">
-            <span>RFC identity</span><span>{current.rfc_no}</span>
-            <span>Link reason</span><span>{current.reason_category??'Not reported'}</span>
-            <span>Link opened</span><span>{instant(current.opened_at_utc)}</span>
-            <span>Local archive</span><span>{current.local_archive_state}</span>
-          </div>
-        </aside>}
+        {chosen&&<OwnerProjection<RfcDetail> path={'/api/v1/tickets/rfcs/'+encodeURIComponent(chosen.member_rfc_id)} render={rawDetail=>{
+          const detail=selectedDetails(rawDetail,chosen.member_rfc_id);
+          return <aside className="soma-v2-sr-details" aria-label="Selected RFC relationship">
+            <div className="soma-v2-sr-details-title"><strong>RFC / {detail.rfc_no}</strong>
+              <button type="button" onClick={()=>navigate('/tickets/rfc/'+encodeURIComponent(detail.rfc_id))}>Open RFC workbench ↗</button>
+            </div>
+            <div className="soma-v2-sr-details-grid">
+              <span>Hierarchy</span><span>{detail.hierarchy_role}</span>
+              <span>Governing root</span><span>{chosen.root_rfc_id}</span>
+              <span>Local archive</span><span>{detail.local_archive_state}</span>
+              <span>Accepted revision</span><strong>{detail.revision}</strong>
+              <span>Direct SR links</span><strong>{detail.direct_service_request_count}</strong>
+              <span>Subordinates</span><strong>{detail.subordinate_count}</strong>
+            </div>
+          </aside>;
+        }}/>}
       </>;
     }}/>
   </section>;
