@@ -258,3 +258,25 @@ h1 {font-size: 24px;} h2 {font-size: 20px;} h3 {font-size: 16px;} .metadata {fon
     --border:CanvasText;--accent:Highlight;--focus:Highlight;
   }
 }
+
+
+/* UI-SR-01 — genuine exact owner-identity lookup, not a fabricated collection. */
+.soma-v2-ticket-collection{max-width:940px;color:var(--text,#e6eaee);font-size:11px}
+.soma-v2-ticket-toolbar{display:flex;align-items:center;justify-content:space-between;min-height:54px;border-bottom:1px solid var(--line,#363c43)}
+.soma-v2-ticket-toolbar h2{font-size:14px;font-weight:700;line-height:1.4;margin:0 0 4px}
+.soma-v2-ticket-toolbar p{margin:0 0 9px;color:var(--dim,#929da7);font-size:10px}
+.soma-v2-ticket-search{padding:16px 0 12px;display:grid;gap:7px;border-bottom:1px solid var(--line-soft,#262d33)}
+.soma-v2-ticket-search label{font-size:10px;color:var(--secondary,#b2bbc4)}
+.soma-v2-ticket-search-controls{display:flex;gap:7px;align-items:stretch;min-width:0}
+.soma-v2-ticket-search-controls input{width:min(100%,330px);min-width:0;background:var(--surface,#111518);border:1px solid var(--line,#363c43);padding:7px 10px;color:var(--text,#e6eaee);min-height:33px;font-family:inherit;font-size:11px;border-radius:0}
+.soma-v2-ticket-search-controls button,.soma-v2-ticket-match button{min-height:33px;padding:6px 12px;border:1px solid var(--current-edge,#80a8d0);background:var(--current-bg,#1b2a3b);color:var(--text,#e6eaee);font-family:inherit;font-size:11px;border-radius:0;cursor:pointer}
+.soma-v2-ticket-search-controls button:disabled{opacity:.5;cursor:default}
+.soma-v2-ticket-search-controls button:hover:not(:disabled),.soma-v2-ticket-match button:hover{background:var(--surface2,#161b1f)}
+.soma-v2-ticket-match{margin:14px 0;padding:14px;background:var(--surface,#111518);border:1px solid var(--line,#363c43)}
+.soma-v2-ticket-match-heading{margin-bottom:10px;font-size:10px;letter-spacing:.06em;color:var(--current,#9abbe0)}
+.soma-v2-ticket-match-grid{display:grid;grid-template-columns:140px minmax(0,1fr);gap:8px 14px;padding-bottom:14px}
+.soma-v2-ticket-match-grid span:nth-child(odd){color:var(--dim,#929da7)}
+.soma-v2-ticket-match-grid>*{overflow-wrap:anywhere;min-width:0}
+.soma-v2-ticket-collection-scope{color:var(--dim,#929da7);padding:12px 0;font-size:10px;max-width:780px;line-height:1.7}
+@media(max-width:540px){.soma-v2-ticket-search-controls{flex-direction:column;align-items:stretch}.soma-v2-ticket-search-controls input{width:100%}.soma-v2-ticket-match-grid{grid-template-columns:95px minmax(0,1fr)}}
+@media(forced-colors:active){.soma-v2-ticket-search-controls button,.soma-v2-ticket-match button{border:1px solid ButtonText;color:ButtonText;background:ButtonFace}}
