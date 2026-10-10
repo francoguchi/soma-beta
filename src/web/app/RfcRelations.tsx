@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {RfcBranchDevices} from './RfcBranchDevices';
 import {OwnerProjection} from '../components/OwnerProjection';
 import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
 
@@ -39,7 +40,7 @@ export function RfcRelated({id,navigate}:{id:string;navigate:(url:string)=>void}
         This RFC is subordinate. Its governing root cannot be inferred from its display fields.
         Inspect the accepted SR relationship context for root lineage.
       </p>;
-      return <RfcRootBranch id={id} navigate={navigate}/>;
+      return <><RfcRootBranch id={id} navigate={navigate}/><RfcBranchDevices rootId={id}/></>;
     }}/>
   </section>;
 }

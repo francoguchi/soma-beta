@@ -25,6 +25,7 @@ _IDENTITY = re.compile(r"^/api/v1/tickets/service-requests/by-business-id/([^/]+
 _RFC_IDENTITY = re.compile(r"^/api/v1/tickets/rfcs/by-business-id/([^/]+)$")
 _NOTES = re.compile(r"^/api/v1/tickets/(service_request|rfc)/([^/]+)/notes$")
 _DEVICES = re.compile(r"^/api/v1/tickets/(service_request|rfc)/([^/]+)/devices$")
+_RFC_BRANCH_DEVICES = re.compile(r"^/api/v1/tickets/rfcs/([^/]+)/branch-devices$")
 _SR_RFCS = re.compile(r"^/api/v1/tickets/service-requests/([^/]+)/rfcs$")
 _RFC_CONTEXT = re.compile(r"^/api/v1/tickets/rfcs/([^/]+)/(branch|effective-srs)$")
 _NOTES_ALLOWED = frozenset({"limit", "cursor"})
@@ -99,6 +100,22 @@ class TicketReadRouteAdapter:
                 limit=limit, cursor=cursor,
             )
             return TicketReadResponse(200, page.to_response())
+        branch_devices = _RFC_BRANCH_DEVICES.fullmatch(path)
+        if branch_devices is not None:
+            if method != "GET":
+                raise ValidationError("RFC branch Device Reference context is read-only")
+            if not isinstance(values, dict) or not set(values).issubset({"limit", "cursor"}):
+                raise ValidationError("RFC branch Device Reference fields are invalid")
+            limit = values.get("limit", 25)
+            if type(limit) is not int or not 1 <= limit <= 25:
+                raise ValidationError("RFC branch Device Reference page limit must be 1..25")
+            cursor = values.get("cursor")
+            if cursor is not None and not isinstance(cursor, dict):
+                raise ValidationError("RFC branch Device Reference cursor must be an owner object")
+            return TicketReadResponse(200, self._devices.branch_context(
+                root_rfc_id=require_uuid4(branch_devices.group(1)),
+                limit=limit, cursor=cursor,
+            ).to_response())
         rfc_context = _RFC_CONTEXT.fullmatch(path)
         if rfc_context is not None:
             if method != "GET":
