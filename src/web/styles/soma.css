@@ -333,3 +333,21 @@ h1 {font-size: 24px;} h2 {font-size: 20px;} h3 {font-size: 16px;} .metadata {fon
 .soma-v2-rfc-register{display:flex;flex-direction:column;min-width:0;max-width:100%;color:var(--text,#e6eaee)}
 .soma-v2-rfc-register .soma-v2-sr-table{min-width:840px}
 .soma-v2-rfc-register .soma-v2-sr-table td:first-child{font-weight:600}
+
+/* UI-OV-01: point-in-time owner reads; no manufactured weekly totals. */
+.soma-v2-overview{display:flex;flex-direction:column;gap:16px;min-width:0;color:var(--text,#e6eaee)}
+.soma-v2-overview-title{border-bottom:1px solid var(--line,#363c43);padding:0 0 14px}
+.soma-v2-overview-title h2{font-size:16px;margin:0 0 5px;font-weight:700}
+.soma-v2-overview-title p{font-size:10px;color:var(--dim,#929da7);margin:0}
+.soma-v2-overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.soma-v2-overview-tile{background:var(--surface,#111518);border:1px solid var(--line,#363c43);padding:15px;min-width:0}
+.soma-v2-overview-tile h3,.soma-v2-overview-scope h3{font-size:12px;margin:0 0 12px}
+.soma-v2-overview-count{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.soma-v2-overview-count strong{font:700 30px/1.1 "Cascadia Mono",Consolas,monospace;color:var(--text,#e6eaee)}
+.soma-v2-overview-count span{color:var(--dim,#929da7);font-size:10px}
+.soma-v2-overview button{min-height:30px;padding:6px 10px;cursor:pointer;font:inherit;font-size:11px;color:var(--secondary,#b2bbc4);background:var(--surface2,#161b1f);border:1px solid var(--line,#363c43);border-radius:0}
+.soma-v2-overview button:hover{color:var(--text,#e6eaee);border-color:var(--current-edge,#7da7d3)}
+.soma-v2-overview-scope{padding:14px;background:var(--surface,#111518);border:1px solid var(--line,#363c43)}
+.soma-v2-overview-scope p{max-width:900px;font-size:11px;line-height:1.7;color:var(--dim,#929da7)}
+.soma-v2-overview-scope nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}
+@media(max-width:680px){.soma-v2-overview-grid{grid-template-columns:minmax(0,1fr)}}
