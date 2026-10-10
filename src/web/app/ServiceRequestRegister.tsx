@@ -9,6 +9,8 @@ type TicketRow=Readonly<{
   updated_at_utc:number;
   summary:string|null;
   status:string|null;
+  summary_truncated:boolean;
+  status_truncated:boolean;
 }>;
 type SrCursor=Readonly<{version:1;sort_registry_id:'SR_UPDATED_ID_DESC_V1';updated_at_utc:number;service_request_id:string}>;
 type SrPage=Readonly<{
@@ -33,7 +35,9 @@ function acceptedPage(raw:SrPage):SrPage{
       !Number.isSafeInteger(row.revision) || row.revision<1 ||
       !Number.isSafeInteger(row.updated_at_utc) || row.updated_at_utc<0 ||
       (row.summary!==null && typeof row.summary!=='string') ||
-      (row.status!==null && typeof row.status!=='string')) throw new Error('Invalid SR collection row');
+      (row.status!==null && typeof row.status!=='string') ||
+      typeof row.summary_truncated!=='boolean' || typeof row.status_truncated!=='boolean' ||
+      (row.summary_truncated && row.summary===null) || (row.status_truncated && row.status===null)) throw new Error('Invalid SR collection row');
     seen.add(row.service_request_id);
   }
   const c=raw.continuation;
@@ -82,8 +86,8 @@ export function ServiceRequestRegister({navigate}:{navigate:(path:string)=>void}
                 <td><button type="button" className="soma-v2-sr-rowselect"
                   aria-pressed={active} onClick={()=>setSelected(row.service_request_id)}>
                   {row.official_sr_no??row.local_sr_no}</button></td>
-                <td>{row.status??'Not reported'}</td>
-                <td>{row.summary??'Not reported'}</td>
+                <td>{row.status??'Not reported'}{row.status_truncated?'… (truncated)':''}</td>
+                <td>{row.summary??'Not reported'}{row.summary_truncated?'… (truncated)':''}</td>
                 <td>{displayInstant(row.updated_at_utc)}</td>
                 <td><button type="button" className="soma-v2-sr-open"
                   onClick={()=>navigate('/tickets/sr/'+encodeURIComponent(row.service_request_id))}>Open</button></td>
@@ -108,8 +112,8 @@ export function ServiceRequestRegister({navigate}:{navigate:(path:string)=>void}
             <button type="button" onClick={()=>navigate('/tickets/sr/'+encodeURIComponent(current.service_request_id))}>Open workbench ↗</button></div>
           <div className="soma-v2-sr-details-grid">
             <span>Record revision</span><strong>{current.revision}</strong>
-            <span>Source status</span><span>{current.status??'Not reported'}</span>
-            <span>Summary</span><span>{current.summary??'Not reported'}</span>
+            <span>Source status</span><span>{current.status??'Not reported'}{current.status_truncated?'… (truncated)':''}</span>
+            <span>Summary</span><span>{current.summary??'Not reported'}{current.summary_truncated?'… (truncated)':''}</span>
             <span>Last updated</span><span>{displayInstant(current.updated_at_utc)}</span>
           </div>
         </aside>}
