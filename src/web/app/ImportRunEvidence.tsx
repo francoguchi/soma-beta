@@ -3,6 +3,7 @@ import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection'
 import {filterFingerprint} from '../data/query-controller';
 import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
 import {ImportProposalReview} from './ImportProposalReview';
+import {ImportPublishedObservations} from './ImportPublishedObservations';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const sha=/^[a-f0-9]{64}$/u;
 const count=(n:unknown)=>Number.isSafeInteger(n)&&Number(n)>=0;
@@ -132,6 +133,7 @@ export function ImportRunEvidence({importRunId,expectedFamily,minRevision}:{
   importRunId:string;expectedFamily:string;minRevision:number;
 }) {
   const [expanded,setExpanded]=useState(false);
+  const [observationsOpen,setObservationsOpen]=useState(false);
   const generation=useContext(OwnerReturnRefresh);
   return <aside aria-label="Selected import run" className="soma-v2-sr-details">
     <OwnerProjection<RunDetail> key={generation} path={'/api/v1/imports/runs/'+encodeURIComponent(importRunId)} render={detail=>{
@@ -167,6 +169,17 @@ export function ImportRunEvidence({importRunId,expectedFamily,minRevision}:{
           <Evidence key={importRunId+':findings'} runId={importRunId} kind="findings"/>
           <Evidence key={importRunId+':proposals'} runId={importRunId} kind="proposals"/>
         </>}
+        {['staged','waiting_review','partially_accepted','accepted','rejected',
+          'noop_pending_checkpoint','noop','recovery_required'].includes(r.run_state)?
+          <>
+            <button type="button" aria-expanded={observationsOpen}
+              onClick={()=>setObservationsOpen(value=>!value)}>
+              {observationsOpen?'Hide':'Inspect'} published source observations
+            </button>
+            {observationsOpen&&<ImportPublishedObservations key={importRunId+':observations'}
+              runId={importRunId} sourceFamily={r.source_family}/>}
+          </>:
+          <p role="status">Published source observations are unavailable at this run state.</p>}
       </>;
     }}/>
   </aside>;
