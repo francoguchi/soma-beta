@@ -1,5 +1,5 @@
 import {defineConfig} from '@playwright/test';
-export default defineConfig({testDir: './browser-tests', workers: 1, reporter: 'list', outputDir: '../../tmp/lld10-browser-results',
+export default defineConfig({testDir: './browser-tests', workers: 4, reporter: 'list', outputDir: '../../tmp/lld10-browser-results',
   use: {baseURL: 'http://127.0.0.1:4173', headless: true, timezoneId: 'UTC',
     launchOptions: {executablePath: process.env.SOMA_TEST_BROWSER || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'}},
   webServer: process.env.SOMA_TEST_EXTERNAL_SERVER === '1' ? undefined :
