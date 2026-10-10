@@ -42,14 +42,10 @@ def test_service_request_register_pages_complete_set_without_duplicates(initiali
         page = queries.list_service_requests(limit=2, cursor=page["continuation"])
     assert len(seen) == len(set(seen)) == 5
     assert set(seen) == set(identities)
-    assert seen == sorted(
-        seen,
-        key=lambda identity: (
-            queries.list_service_requests(limit=5)["items"][
-                next(i for i, item in enumerate(queries.list_service_requests(limit=5)["items"])
-                     if item["service_request_id"] == identity)
-            ]["updated_at_utc"], identity,
-        ),
+    order = queries.list_service_requests(limit=5)["items"]
+    assert seen == [item["service_request_id"] for item in order]
+    assert [(item["updated_at_utc"], item["service_request_id"]) for item in order] == sorted(
+        [(item["updated_at_utc"], item["service_request_id"]) for item in order],
         reverse=True,
     )
 
