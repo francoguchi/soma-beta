@@ -13,8 +13,9 @@ test('Settings Back restores independent owner pages, opened references, archive
     if(path===`/api/v1/reference/contacts/${contact}`)return route.fulfill({json:{reference_type:'contact',reference_id:contact,revision:fresh?2:1,lifecycle_state:'active',projection:{name:'Synthetic Contact',current_affiliation:null,active_channel_count:20}}});
     if(path===`/api/v1/reference/customer-organizations/${customer}`)return route.fulfill({json:{reference_type:'customer_organization',reference_id:customer,revision:1,lifecycle_state:'active',projection:{name:'Synthetic Customer',current_account_code:null,account_code_history_count:0}}});
     if(path==='/api/v1/reference/contacts'||path==='/api/v1/reference/customer-organizations'){const isContact=path.endsWith('/contacts');return route.fulfill({json:{items:[{reference_type:isContact?'contact':'customer_organization',reference_id:isContact?contact:customer,display_name:isContact?'Synthetic Contact':'Synthetic Customer',lifecycle_state:'active',revision:1}],continuation:null}});}
-    if(path==='/api/v1/product-lines')return route.fulfill({json:{items:[{product_line_id:product,name:fresh?'Fresh Product':'Initial Product',lifecycle_state:'active',revision:fresh?2:1}],continuation:productCursor}});
-    return route.fulfill({json:{items:[],continuation:null}});
+    if(path==='/api/v1/product-lines')return route.fulfill({json:{items:[{product_line_id:product,name:fresh?'Fresh Product':'Initial Product',lifecycle_state:'active',revision:fresh?2:1}],next_cursor:productCursor,exact_count:1}});
+    return route.fulfill({json:['/api/v1/contracts','/api/v1/contract-product-lines','/api/v1/sla/classification-mappings'].includes(path)
+      ?{items:[],next_cursor:null,exact_count:0}:{items:[],continuation:null}});
   });
   await page.setViewportSize({width:480,height:600});await page.goto('http://127.0.0.1:4174/settings');
   await page.getByRole('button',{name:'Open Reference Manager'}).click();
@@ -38,8 +39,13 @@ test('Settings Back restores independent owner pages, opened references, archive
 
 test('Settings Back explains a missing paging control and restores focus to Settings',async({page})=>{
   let fresh=false;
-  await page.route('**/api/v1/**',route=>{const path=new URL(route.request().url()).pathname;return route.fulfill({json:{items:path==='/api/v1/product-lines'?[{product_line_id:product,name:'Synthetic Product',lifecycle_state:'active',revision:1}]:[],continuation:path==='/api/v1/product-lines'&&!fresh?productCursor:null}});});
-  await page.goto('http://127.0.0.1:4174/settings');await page.getByRole('region',{name:'Product Lines',exact:true}).getByRole('button',{name:'Next page'}).focus();
+  await page.route('**/api/v1/**',route=>{const path=new URL(route.request().url()).pathname;return route.fulfill({json:{
+    items:path==='/api/v1/product-lines'?[{product_line_id:product,name:'Synthetic Product',lifecycle_state:'active',revision:1}]:[],
+    next_cursor:path==='/api/v1/product-lines'&&!fresh?productCursor:null,exact_count:path==='/api/v1/product-lines'?1:0,
+    continuation:null}});});
+  await page.goto('http://127.0.0.1:4174/settings');
+  await page.getByRole('button',{name:'Open Reference Manager'}).click();
+  await page.getByRole('region',{name:'Product Lines',exact:true}).getByRole('button',{name:'Next page'}).focus();
   await page.getByRole('dialog',{name:'Settings'}).getByRole('button',{name:'Close settings'}).click();fresh=true;await page.goBack();
   await expect(page.getByRole('status').filter({hasText:'previous Settings control is unavailable'})).toBeVisible();
   await expect(page.locator('.soma-v2-settings-body')).toBeFocused();
@@ -72,10 +78,15 @@ test('Appearance Back restores logical focus after querying changed accepted pre
 });
 
 test('Settings rejects an unclosed owner continuation before exposing paging or return navigation',async({page})=>{
-  await page.route('**/api/v1/**',route=>{const path=new URL(route.request().url()).pathname;return route.fulfill({json:{items:path==='/api/v1/product-lines'?[{product_line_id:product,name:'Synthetic Product',lifecycle_state:'active',revision:1}]:[],continuation:path==='/api/v1/product-lines'?{...productCursor,last_key_tuple:['truncated']}:null}});});
-  await page.goto('http://127.0.0.1:4174/settings');const products=page.getByRole('region',{name:'Product Lines',exact:true});
+  await page.route('**/api/v1/**',route=>{const path=new URL(route.request().url()).pathname;return route.fulfill({json:{
+    items:path==='/api/v1/product-lines'?[{product_line_id:product,name:'Synthetic Product',lifecycle_state:'active',revision:1}]:[],
+    next_cursor:path==='/api/v1/product-lines'?{...productCursor,last_key_tuple:['truncated']}:null,
+    exact_count:path==='/api/v1/product-lines'?1:0,continuation:null}});});
+  await page.goto('http://127.0.0.1:4174/settings');
+  await page.getByRole('button',{name:'Open Reference Manager'}).click();
+  const products=page.getByRole('region',{name:'Product Lines',exact:true});
   await expect(products.getByRole('alert')).toContainText('owner projection could not be rendered');await expect(products.getByRole('button',{name:'Next page'})).toHaveCount(0);
-  await expect(page.getByRole('region',{name:'Customer Contracts',exact:true}).getByText('0 owner catalog records',{exact:false})).toBeVisible();
+  await expect(page.getByRole('region',{name:'Customer Contracts',exact:true}).getByText('0 accepted records at read',{exact:false})).toBeVisible();
 });
 
 test('Settings rejects malformed owner identity before exposing an Open action',async({page})=>{
