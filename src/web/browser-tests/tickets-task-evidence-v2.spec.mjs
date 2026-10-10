@@ -1,4 +1,8 @@
 import {test,expect} from '@playwright/test';
+
+// Retain a browser trace only on failure. Startup of the frozen static host
+// must be diagnosed separately from a rejected Task attention owner response.
+test.use({trace:'retain-on-failure'});
 const sr='11111111-1111-4111-8111-111111111111';
 const rfc='22222222-2222-4222-8222-222222222222';
 const task='33333333-3333-4333-8333-333333333333';
@@ -44,6 +48,13 @@ test('Selected Task evidence remains lazy, read-only and honors actual SR relati
 });
 
 test('Malformed Task attention proof remains unavailable instead of showing untrusted content',async({page})=>{
+  const bootstrapErrors=[];
+  page.on('pageerror',error=>bootstrapErrors.push('runtime: '+error.message));
+  page.on('requestfailed',request=>bootstrapErrors.push('request: '+request.url()+'; '+(request.failure()?.errorText??'unknown')));
+  page.on('response',response=>{
+    if(response.status()>=400&&new URL(response.url()).host==='127.0.0.1:4174')
+      bootstrapErrors.push('HTTP '+response.status()+': '+response.url());
+  });
   await page.route('**/api/v1/tasks?*',route=>route.fulfill({json:{
     items:[rootRow],continuation:null,exact_total:1,
   }}));
@@ -55,8 +66,18 @@ test('Malformed Task attention proof remains unavailable instead of showing untr
     items:[{kind:'historical',item_id:id,revision:1,created_at_utc:1,
       input_fingerprint:'not-a-hash'}],continuation:null,exact_total:1,
   }}));
-  await page.goto('http://127.0.0.1:4174/tickets/rfc/'+rfc);
-  await page.getByRole('tab',{name:'Tasks'}).click();
+  const navigation=await page.goto('http://127.0.0.1:4174/tickets/rfc/'+rfc);
+  expect(navigation?.status(), 'The frozen RFC workbench URL must return HTTP 200').toBe(200);
+  try {
+    await expect(page.getByRole('tablist',{name:'Record sections'})).toBeVisible({timeout:10000});
+  }catch(error){
+    const root=await page.locator('#root').innerText().catch(()=>'<root unavailable>');
+    throw new Error('RFC workbench bootstrap did not mount before Task attention test; '+
+      'route='+page.url()+'; root='+root.slice(0,800)+
+      '; browser/HTTP failures='+JSON.stringify(bootstrapErrors.slice(0,12))+
+      '; original='+String(error));
+  }
+  await page.getByRole('tab',{name:'Tasks',exact:true}).click();
   const panel=page.getByRole('region',{name:'RFC Tasks'});
   await panel.getByRole('button',{name:'Evidence Task'}).click();
   await panel.getByRole('button',{name:'Inspect Task relationships and attention'}).click();
