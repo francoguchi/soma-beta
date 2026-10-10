@@ -18,11 +18,13 @@ from soma.tickets.queries.service_request_collection import ServiceRequestCollec
 from soma.tickets.queries.rfc_collection import RfcCollectionQuery
 from soma.tickets.queries.relationships import ServiceRequestRfcQueryService
 from soma.tickets.queries.rfc_branches import RfcBranchQueryService
+from soma.tickets.queries.device_references import TicketDeviceReferenceQueryService
 
 _DETAIL = re.compile(r"^/api/v1/tickets/(service-requests|rfcs)/([^/]+)$")
 _IDENTITY = re.compile(r"^/api/v1/tickets/service-requests/by-business-id/([^/]+)$")
 _RFC_IDENTITY = re.compile(r"^/api/v1/tickets/rfcs/by-business-id/([^/]+)$")
 _NOTES = re.compile(r"^/api/v1/tickets/(service_request|rfc)/([^/]+)/notes$")
+_DEVICES = re.compile(r"^/api/v1/tickets/(service_request|rfc)/([^/]+)/devices$")
 _SR_RFCS = re.compile(r"^/api/v1/tickets/service-requests/([^/]+)/rfcs$")
 _RFC_CONTEXT = re.compile(r"^/api/v1/tickets/rfcs/([^/]+)/(branch|effective-srs)$")
 _NOTES_ALLOWED = frozenset({"limit", "cursor"})
@@ -45,6 +47,7 @@ class TicketReadRouteAdapter:
         self._sr_rfcs = ServiceRequestRfcQueryService(factory)
         self._rfc_branch = RfcBranchQueryService(factory)
         self._notes = WorkingNoteQueryService(factory)
+        self._devices = TicketDeviceReferenceQueryService(factory)
 
     def dispatch(self, method: str, path: str, values: dict[str, Any]) -> TicketReadResponse | None:
         # A missing business identifier is not a Service Request UUID.
@@ -78,6 +81,24 @@ class TicketReadRouteAdapter:
             if re.fullmatch(r"NC[0-9]{14}", value) is None:
                 raise ValidationError("RFC number requires NC followed by fourteen ASCII digits")
             return TicketReadResponse(200, asdict(self._rfcs.get(rfc_no=value)))
+        devices = _DEVICES.fullmatch(path)
+        if devices is not None:
+            if method != "GET":
+                raise ValidationError("Device Reference read is not a mutation command")
+            if not isinstance(values, dict) or not set(values).issubset({"limit", "cursor"}):
+                raise ValidationError("Device Reference query fields are invalid")
+            limit = values.get("limit", 25)
+            if type(limit) is not int or not 1 <= limit <= 25:
+                raise ValidationError("Ticket Device Reference HTTP page size must be 1..25")
+            cursor = values.get("cursor")
+            if cursor is not None and not isinstance(cursor, dict):
+                raise ValidationError("Device Reference cursor must be an owner-defined object")
+            ticket_type, raw_id = devices.groups()
+            page = self._devices.list_for_ticket(
+                ticket_type=ticket_type, ticket_id=require_uuid4(raw_id),
+                limit=limit, cursor=cursor,
+            )
+            return TicketReadResponse(200, page.to_response())
         rfc_context = _RFC_CONTEXT.fullmatch(path)
         if rfc_context is not None:
             if method != "GET":

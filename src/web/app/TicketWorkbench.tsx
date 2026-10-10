@@ -10,6 +10,7 @@ import {ticketNotesQuery,nextTicketNotesQuery,noteIdentity} from './ticket-notes
 import {ServiceRequestContext,type ServiceRequestContextFacts} from './ServiceRequestContext';
 import {TicketRfcLinks} from './TicketRfcLinks';
 import {RfcRelated,RfcServiceRequests} from './RfcRelations';
+import {TicketDeviceReferences} from './TicketDeviceReferences';
 type SrDetail = ServiceRequestContextFacts&Readonly<{service_request_id: string; identity: {official_sr_no: string | null; local_sr_no: string | null}; revision: number;
   linked_root_rfc_count: number; device_reference_count: number; warnings: readonly string[]}>;
 type RfcDetail = Readonly<{rfc_id: string; rfc_no: string; revision: number; hierarchy_role: string; local_archive_state: string;
@@ -99,9 +100,10 @@ export function TicketWorkbench({id, type, onDirtyChange, restored, onReturnStat
     if (control&&event.currentTarget.contains(control)) store.dispatch({focusToken:control.dataset.focusToken??null});
   }}>{returnNotice&&<p role="status">{returnNotice}</p>}<WorkbenchShell store={store} onDirtyChange={onDirtyChange} tabs={type === 'service_request' ? srTabs : rfcTabs} renderTab={tab => {
     if (tab === 'Notes') return <Notes path={notesPath} setPath={setNotesPath} route={route} ownerFingerprint={ownerFingerprint}/>;
+    if (tab === 'Devices' && type === 'service_request') return <TicketDeviceReferences id={id} type={type}/>;
+    if (tab === 'Service Requests and Devices' && type === 'rfc') return <><RfcServiceRequests id={id} navigate={navigate}/><TicketDeviceReferences id={id} type={type}/></>;
     if (type === 'service_request' && tab === 'RFCs') return <TicketRfcLinks id={id} navigate={navigate}/>;
     if (type === 'rfc' && tab === 'Related RFCs') return <RfcRelated id={id} navigate={navigate}/>;
-    if (type === 'rfc' && tab === 'Service Requests and Devices') return <RfcServiceRequests id={id} navigate={navigate}/>;
     if (tab !== 'Overview') return <><h2>{tab}</h2><p role="status">This owner projection is not yet bound to this surface.</p></>;
     return type === 'service_request' ? <OwnerProjection<SrDetail> path={'/api/v1/tickets/service-requests/' + encodeURIComponent(id)} render={value => <>
       <h2>Service Request {value.identity.official_sr_no ?? value.identity.local_sr_no}</h2><p>Accepted revision: {value.revision}</p>
