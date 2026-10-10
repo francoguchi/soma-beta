@@ -1,9 +1,9 @@
 # SOMA Beta — UI V2 integration lane
 
-**Status:** active implementation preparation; no application/UI source modified by this checkpoint.  
+**Status:** UI V2 shell + Settings/branding/auth presentation implemented in React/Python source on the canonical UI branch; production frozen-assets rebuild and browser validation pending. Do not deploy or merge yet.  
 **Target repository:** `francoguchi/soma-beta`  
 **Protected donor branch:** `feat/beta-1.0-implementation` @ `fbe3821ac0b52802ba8265f979590e75c3ac1209`  
-**Working branch:** `feat/beta-ui-v2` (created from the pin above)  
+**Sole working branch:** `feat/beta-ui-v2`. Keep all UI implementation, documentation, validation fixes and asset builds on THIS branch—**do not open per-task branches**. Draft PR: #80.  
 **Owner goal:** deliver the user-reviewed SOMA UI V2 visual language *on the existing Beta backend*, replacing the unsuccessful current React presentation **without losing working domain integrations**.
 
 ## Read order
@@ -34,17 +34,24 @@ Accepted **direction**: neutral dark, restrained blue; three looks Default Dark,
 
 Each slice: focused tests + browser screenshot comparison against Study 30, explicit remaining gaps, narrow commit and rollback, no promotion based solely on prototype behavior.
 
-## Supplied .bat files from the newer `soma` repo
+## Launcher status and local safety
 
-The source `soma_setup.bat`, `soma_run.bat`, `soma_run_console.bat`, `soma_stop.bat` delegate to `tools/source_launcher.py`. **Beta already has the same trusted delegation architecture.** The supplied `run` and `run_console` wrappers add `pause` on failures, including missing environment, which may hang existing noninteractive Windows launcher tests; do not wholesale overwrite Beta's wrappers. The supplied `soma_reset_dev.bat` calls `source_launcher.py reset`, **but the Beta launcher currently only accepts setup/run/console/stop/host**. Do not introduce an unverified reset command, purge data, or route around DPAPI/runtime-control ownership. Review future launcher ergonomics as a separately tested safety change.
+The canonical UI branch now contains a separate approved/implemented Windows source-launcher correction, including setup, run, console, stop, and **explicitly guarded** `soma_reset_dev.bat`. The `reset` command is **not** required for UI testing and must not be used on an existing instance unless the operator independently authorizes an isolated destructive reset. Source launchers remain adapters to the trusted Beta host, not a bypass of DPAPI/SQLCipher/runtime identity.
 
-## Certification status at lane start
+## Current single-branch checkpoint — 2026-10-10
 
-- GitHub branch contents and file contracts inspected read-only: **yes**.
-- Windows native runtime / keyed SQLCipher wheel: **not executed in this environment**.
-- Beta's full TypeScript/React build and frozen asset verification: **not executed in this environment**.
-- Current CI: combined commit status exposed no status entries; **not proof of green**.
-- User approval of visual language: **yes**; exact production token sheet and all domain interactions still require owner and operator acceptance.
-- Backend/schema/data changes authorized by this checkpoint: **none**.
+- `feat/beta-ui-v2` contained source commit `94d3b0944470aa48863fbf24400fd48656d7768c` when the consolidation was verified. Always check the current head first; do not pin future work to that SHA.
+- The former temporary `feat/ui-v2-settings-brand-auth` pointed to **exactly the same SHA**: comparison status `identical`, ahead `0`, behind `0`. All **20** extra commits were incorporated by a non-forced fast-forward. PR #81 was closed, while draft PR #80 remains the **only** UI implementation PR.
+- Brand lockup, favicon, server-generated pre-auth setup/login appearance, Settings modal, Reference Manager and updated tests are now in the **canonical branch source**. Existing credential/session/domain/backend owners are unchanged.
+- **Frozen asset blocker**: `src/soma/ui/static/` JS/CSS/SVG and `manifest.json` must be built from this new source and committed together. An older frozen bundle may satisfy its own digest but is **not** current relative to source. Use `npm.cmd --prefix src/web ci --ignore-scripts --no-audit --no-fund`, `npm.cmd --prefix src/web test`, `npm.cmd --prefix src/web run build`, `py -3.14 tools/verify_ui_build.py`, then inspect `git status --short`. Stage **only** generated `src/soma/ui/static` outputs if full tests pass; verify determinism, run UI/browser/owner checks and push a normal commit to the same branch. Preserve any other developer work.
+- **No production rollout is certified yet**. Do not merge PR #80 or recreate a separate working branch to address a CI failure. Collect screenshots against the operator-approved Study 30 after passing the frozen-assets gate.
+- **Local checkout is not remotely controllable**. Before deleting any redundant branch, the Windows operator must first verify a clean `D:\\DEV\\soma-beta-ui-v2` worktree and fetch/pull `feat/beta-ui-v2` via `git pull --ff-only`. The remote head being current does *not* prove a local checkout is synchronized.
 
-**Next implementation checkpoint:** UI V2 shared-shell skeleton on `feat/beta-ui-v2`, retaining existing Beta workbench integrations and test gates. Do not merge into the implementation donor branch without an explicitly reviewed PR.
+## Immediate next actions
+
+1. Get the canonical UI branch checkout to the newest commit without overwriting local work.
+2. Build, test, and freeze its production frontend assets on that **same branch**.
+3. Run CI and operator-local Settings modal, 200%-zoom, brand favicon and unauthenticated login verification, followed by existing workbench regressions. Distinguish old inherited UI contracts from intentionally revised modal tests and fix genuine regressions, never weaken tests.
+4. Continue design-to-owner integration under PR #80 using narrow **commits**, not branches.
+
+**One repository + one UI branch + one PR + one next checkpoint.**
