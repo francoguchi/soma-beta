@@ -129,7 +129,7 @@ function RequestEvidence({row}:{row:RequestRow}){
         ||!bounded(d.rmas)||!bounded(d.history)
         ||d.rmas.length>row.authorized_rma_count
         ||d.rmas.some(r=>!uuid.test(r.rma_id)||!uuid.test(r.authorization_batch_id)
-          ||!positive(r.response_ordinal)||!label(r.promised_bom_code)
+          ||!nonnegative(r.response_ordinal)||!label(r.promised_bom_code)
           ||!label(r.current_c10)||!label(r.state)
           ||!positive(r.revision)||typeof r.return_obligation_open!=='boolean'
           ||!optionalUuid(r.target_device_part_unit_id)
@@ -180,7 +180,7 @@ function RequestEvidence({row}:{row:RequestRow}){
 export function InventorySpareRequests(){
   const [lifecycle,setLifecycle]=useState<Lifecycle>('all');
   const [asOf,setAsOf]=useState(()=>Math.floor(Date.now()/1000));
-  const [history,setHistory]=useState(()=>initialOwnerPage(pathFor('all',Math.floor(Date.now()/1000))));
+  const [history,setHistory]=useState(()=>initialOwnerPage(pathFor('all',asOf)));
   const [fingerprint,setFingerprint]=useState<{lifecycle:Lifecycle;asOf:number;digest:string}|null>(null);
   const [selected,setSelected]=useState<string|null>(null);
   const generation=useContext(OwnerReturnRefresh);
