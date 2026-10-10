@@ -17,11 +17,13 @@ from soma.tickets.queries.working_notes import WorkingNoteQueryService
 from soma.tickets.queries.service_request_collection import ServiceRequestCollectionQuery
 from soma.tickets.queries.rfc_collection import RfcCollectionQuery
 from soma.tickets.queries.relationships import ServiceRequestRfcQueryService
+from soma.tickets.queries.rfc_branches import RfcBranchQueryService
 
 _DETAIL = re.compile(r"^/api/v1/tickets/(service-requests|rfcs)/([^/]+)$")
 _IDENTITY = re.compile(r"^/api/v1/tickets/service-requests/by-business-id/([^/]+)$")
 _NOTES = re.compile(r"^/api/v1/tickets/(service_request|rfc)/([^/]+)/notes$")
 _SR_RFCS = re.compile(r"^/api/v1/tickets/service-requests/([^/]+)/rfcs$")
+_RFC_CONTEXT = re.compile(r"^/api/v1/tickets/rfcs/([^/]+)/(branch|effective-srs)$")
 _NOTES_ALLOWED = frozenset({"limit", "cursor"})
 
 
@@ -40,6 +42,7 @@ class TicketReadRouteAdapter:
         self._rfcs = RfcQueryService(factory)
         self._rfc_collection = RfcCollectionQuery(factory)
         self._sr_rfcs = ServiceRequestRfcQueryService(factory)
+        self._rfc_branch = RfcBranchQueryService(factory)
         self._notes = WorkingNoteQueryService(factory)
 
     def dispatch(self, method: str, path: str, values: dict[str, Any]) -> TicketReadResponse | None:
@@ -64,6 +67,23 @@ class TicketReadRouteAdapter:
             return TicketReadResponse(200, self._rfc_collection.list_rfcs(
                 limit=values.get("limit", 25), cursor=values.get("cursor")
             ))
+        rfc_context = _RFC_CONTEXT.fullmatch(path)
+        if rfc_context is not None:
+            if method != "GET":
+                raise ValidationError("RFC relationship reads cannot mutate")
+            if not isinstance(values, dict) or not set(values).issubset({"limit", "cursor"}):
+                raise ValidationError("RFC context query fields are invalid")
+            page_limit = values.get("limit", 25)
+            if type(page_limit) is not int or not 1 <= page_limit <= 25:
+                raise ValidationError("RFC context HTTP page limit must be 1..25")
+            rfc_id = require_uuid4(rfc_context.group(1))
+            if rfc_context.group(2) == "branch":
+                result = self._rfc_branch.get(root_rfc_id=rfc_id, limit=page_limit, cursor=values.get("cursor"))
+            else:
+                result = self._sr_rfcs.effective_context_for_rfc(
+                    rfc_id=rfc_id, limit=page_limit, cursor=values.get("cursor")
+                )
+            return TicketReadResponse(200, result.to_response())
         relation = _SR_RFCS.fullmatch(path)
         if relation is not None:
             if method != "GET":
