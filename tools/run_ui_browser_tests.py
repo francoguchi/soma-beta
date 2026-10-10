@@ -20,6 +20,18 @@ def run():
     node = args.node or shutil.which('node.exe' if os.name == 'nt' else 'node')
     if not node:
         raise RuntimeError('The declared build-time Node toolchain is unavailable')
+    # The 4174 host serves the frozen production bundle, NOT fresh TSX via Vite.
+    # Reject source/asset drift before starting browsers; otherwise newly
+    # implemented tabs appear missing and yield misleading Playwright timeouts.
+    from verify_ui_build import verify
+    try:
+        verify()
+    except Exception as exc:
+        raise RuntimeError(
+            'Browser-test static UI is stale or invalid; run '
+            'npm.cmd --prefix src/web run build, then '
+            'py -3.14 tools/verify_ui_build.py before rerunning Playwright'
+        ) from exc
     for port in (4173, 4174):
         with socket.socket() as probe:
             probe.bind(('127.0.0.1', port))

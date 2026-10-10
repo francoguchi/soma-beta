@@ -44,7 +44,7 @@ function verified(page:Page):Page {
         ||!Number.isSafeInteger(row.membership.membership_revision)||row.membership.membership_revision<1
         ||typeof row.membership.objective_tracking_id!=='string')
       ||typeof row.operational_count_included!=='boolean'
-      ||!Array.isArray(row.warnings)||row.warnings.some(x=>typeof x!=='string'))
+      ||!Array.isArray(row.warnings)||row.warnings.some((x:unknown)=>typeof x!=='string'))
       throw new Error('Invalid accepted Task collection row');
     const key:[number,number,string]=row.operational_plan===null?[1,0,row.task_id]:
       [0,row.operational_plan.start_utc,row.task_id];
