@@ -31,8 +31,8 @@ function Link({href, label, active, navigate, className, icon}: {
     }}>{icon ?? label}</a>;
 }
 
-export function SomaShell({path, navigate, children, warnings = [], dirty = false}: {
-  path: string; navigate: (path: string) => void; children: ReactNode; warnings?: readonly string[]; dirty?: boolean;
+export function SomaShell({path, navigate, children, warnings = [], dirty = false, settingsOpen = false}: {
+  path: string; navigate: (path: string) => void; children: ReactNode; warnings?: readonly string[]; dirty?: boolean; settingsOpen?: boolean;
 }) {
   const shell = useRef<HTMLDivElement>(null);
   const main = useRef<HTMLElement>(null);
@@ -58,14 +58,14 @@ export function SomaShell({path, navigate, children, warnings = [], dirty = fals
   return <div ref={shell} className="soma-shell soma-v2-shell" data-compact={compact ? 'true' : 'false'}>
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="soma-v2-header">
-      <span className="soma-v2-brand"><span aria-hidden="true" className="soma-v2-star">✦</span> SOMA</span>
+      <span className="soma-v2-brand"><img src="/static/ui/brand/soma-lockup.svg" alt="SOMA"/></span>
       <span className="soma-v2-header-spacer"/>
       <span className="soma-v2-build">BETA · UI V2</span>
       <Link className="soma-v2-header-action" href="/settings/appearance" label="Appearance"
-        active={route?.surface === 'appearance_settings'} navigate={navigate}/>
+        active={settingsOpen} navigate={navigate}/>
       <Link className="soma-v2-settings-gear" href="/settings" label="Settings"
         icon={<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m10 2 1 2h2l1-2 2 1-.3 2 1.5 1.5L19 6l2 2-1.5 1.5.5 2.5-.5 2.5L21 16l-2 2-1.8-.5L15.7 19l.3 2-2 1-1-2h-2l-1 2-2-1 .3-2-1.5-1.5L5 18l-2-2 1.5-1.5L4 12l.5-2.5L3 8l2-2 1.8.5L8.3 5l-.3-2 2-1Z"/></svg>}
-        active={navigation.active === 'settings'} navigate={navigate}/>
+        active={settingsOpen} navigate={navigate}/>
     </header>
     <nav className="soma-v2-dock" aria-label="Workspaces">
       {primaryWorkspaces.map(({id, label, href}) => <a key={id} href={href} className="soma-v2-dock-item"
