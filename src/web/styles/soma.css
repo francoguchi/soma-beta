@@ -40,3 +40,140 @@ h1 {font-size: 24px;} h2 {font-size: 20px;} h3 {font-size: 16px;} .metadata {fon
 .soma-shell[data-responsive="narrow"] main {padding: 12px;}
 @media (prefers-reduced-motion: reduce) {* {animation: none !important; transition: none !important; scroll-behavior: auto !important;}}
 @media (forced-colors: active) {:root {--background: Canvas; --surface: Canvas; --text: CanvasText; --muted: GrayText; --border: CanvasText; --focus: Highlight; --selected: Highlight; --selected-text: HighlightText; --accent: LinkText; --warning: CanvasText; --error: CanvasText;}}
+
+/* Integrated UI V2 shell styling shared by app and governed fixtures. */
+/* UI-SHELL-01: scoped presentation; business owners and source routes unchanged. */
+.soma-v2-shell{
+ --canvas:#0a0c0e;--shell:#0d1012;--surface:#111518;--surface2:#161b1f;--line:#363c43;
+ --line-soft:#262d33;--text:#e6eaee;--secondary:#b2bbc4;--dim:#929da7;
+ --current:#9abbe0;--current-bg:#1b2a3b;--current-edge:#80a8d0;
+ --background:var(--canvas);--muted:var(--secondary);--border:var(--line);--focus:var(--current-edge);
+ --selected:var(--current-bg);--selected-text:var(--text);--accent:var(--current);
+ height:100dvh;min-width:0;min-height:0;display:grid;container-type:inline-size;
+ grid-template-columns:52px 182px minmax(0,1fr);grid-template-rows:42px minmax(0,1fr) 26px;
+ font-family:"Cascadia Mono","Cascadia Code",Consolas,"Liberation Mono",monospace;
+ font-size:12px;line-height:1.45;background:var(--canvas);color:var(--text);color-scheme:dark;
+}
+:root[data-mode="light"] .soma-v2-shell{
+ --canvas:#edf1f4;--shell:#e5ebef;--surface:#ffffff;--surface2:#f2f5f7;--line:#b6c0c9;
+ --line-soft:#d8dfe5;--text:#182732;--secondary:#374954;--dim:#5a6b77;
+ --current:#145e95;--current-bg:#d7e8f7;--current-edge:#2c6ea5;color-scheme:light;
+}
+:root[data-mode="dark"] .soma-v2-shell{
+ --canvas:#0a0c0e;--shell:#0d1012;--surface:#111518;--surface2:#161b1f;--line:#363c43;
+ --line-soft:#262d33;--text:#e6eaee;--secondary:#b2bbc4;--dim:#929da7;
+ --current:#9abbe0;--current-bg:#1b2a3b;--current-edge:#80a8d0;
+}
+.soma-v2-shell :is(button,input,select,textarea){border-radius:0;font-family:inherit}
+.soma-v2-shell :is(a,button,select,input):focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.soma-v2-shell>.soma-v2-header{
+ grid-column:1/-1;grid-row:1;display:flex;min-height:0;align-items:center;gap:14px;
+ padding:0 13px;background:var(--shell);border-bottom:1px solid var(--line);font-size:11px;
+}
+.soma-v2-brand{font-size:14px;font-weight:700;letter-spacing:.06em;white-space:nowrap}
+.soma-v2-star{color:var(--current);padding-right:6px;font-size:17px}
+.soma-v2-header-spacer{flex:1}
+.soma-v2-build{color:var(--dim);font-size:10px;white-space:nowrap}
+.soma-v2-header-action,.soma-v2-settings-gear{
+ display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;
+ text-decoration:none;border:1px solid var(--line);color:var(--secondary);min-height:27px;line-height:1;
+}
+.soma-v2-settings-gear{padding-inline:7px}
+.soma-v2-header-action[aria-current],.soma-v2-settings-gear[aria-current]{
+ background:var(--current-bg);color:var(--text);border-color:var(--current-edge);
+}
+.soma-v2-shell>nav.soma-v2-dock{
+ grid-column:1;grid-row:2;display:flex;flex-direction:column;align-items:stretch;gap:3px;
+ padding:9px 4px;margin:0;min-width:0;min-height:0;background:var(--shell);
+ border:0;border-right:1px solid var(--line);
+}
+.soma-v2-dock-item{
+ display:flex;position:relative;min-height:35px;height:35px;
+ align-items:center;justify-content:center;color:var(--dim);
+ padding:0;text-decoration:none;border:1px solid transparent;border-radius:0;
+}
+.soma-v2-dock-item:hover{background:var(--surface2);color:var(--text)}
+.soma-v2-dock-item[aria-current="page"]{
+ background:var(--current-bg);color:var(--current);border-color:var(--line);
+ border-left-color:var(--current-edge);
+}
+.soma-v2-icon{flex:none}
+.soma-v2-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.soma-v2-shell>nav.soma-v2-context{
+ grid-column:2;grid-row:2;display:flex;flex-direction:column;gap:0;
+ padding:0;margin:0;min-width:0;min-height:0;background:var(--surface);
+ border:0;border-right:1px solid var(--line);
+}
+.soma-v2-context-heading{display:flex;flex-direction:column;gap:6px;min-height:65px;padding:12px 13px;border-bottom:1px solid var(--line)}
+.soma-v2-context-heading small{color:var(--dim);font-size:9px;letter-spacing:.05em}
+.soma-v2-context-heading strong{font-size:13px;font-weight:650}
+.soma-v2-context-body{padding:14px 6px;flex:1;min-height:0;overflow-y:auto}
+.soma-v2-context-group{margin:0 6px 8px;color:var(--dim);font-size:9px;letter-spacing:.06em}
+.soma-v2-context-link{
+ display:block;color:var(--secondary);text-decoration:none;border:1px solid transparent;
+ border-left:2px solid transparent;border-radius:0;padding:9px 8px;margin-bottom:2px;
+ font-size:11px;line-height:1.35;
+}
+.soma-v2-context-link:hover{color:var(--text);background:var(--surface2)}
+.soma-v2-context-link[aria-current="page"]{border-left-color:var(--current-edge);color:var(--text);background:var(--current-bg)}
+.soma-v2-command{display:flex;flex-direction:column;gap:7px;padding:12px;min-height:95px;border-top:1px solid var(--line);color:var(--dim);font-size:10px}
+.soma-v2-command small{font-size:9px;color:var(--secondary);letter-spacing:.05em}
+.soma-v2-content-frame{grid-column:3;grid-row:2;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.soma-v2-compact-nav{display:none}
+.soma-v2-shell main.soma-v2-main{
+ flex:1;min-height:0;min-width:0;overflow:auto;
+ padding:0 12px 12px;background:var(--canvas);
+}
+.soma-v2-content-head{
+ display:flex;align-items:center;gap:12px;min-height:44px;margin:0 -12px 12px;
+ padding:0 12px;border-bottom:1px solid var(--line);
+}
+.soma-v2-content-head h1{font-family:inherit;font-size:14px;font-weight:650;line-height:1.4;margin:0}
+.soma-v2-content-head>span{font-size:9px;color:var(--dim)}
+.soma-v2-shell>footer.soma-v2-status{
+ grid-row:3;grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;
+ gap:12px;min-height:26px;padding:0 10px;border-top:1px solid var(--line);
+ background:var(--shell);color:var(--dim);font-size:9px;overflow:hidden;
+}
+.soma-v2-status span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.soma-v2-shell .work-pane,.soma-v2-shell .communication-pane,
+.soma-v2-shell .infrastructure-explorer,.soma-v2-shell .infrastructure-detail{border-radius:0}
+.soma-v2-shell[data-compact="true"]{grid-template-columns:43px minmax(0,1fr)}
+.soma-v2-shell[data-compact="true"]>nav.soma-v2-context{display:none}
+.soma-v2-shell[data-compact="true"]>.soma-v2-content-frame{grid-column:2}
+.soma-v2-shell[data-compact="true"] .soma-v2-compact-nav{
+ display:flex;flex:none;gap:0;min-height:34px;overflow-x:auto;overflow-y:hidden;
+ border-bottom:1px solid var(--line);background:var(--surface);
+}
+.soma-v2-shell[data-compact="true"] .soma-v2-compact-nav .soma-v2-context-link{
+ flex:none;white-space:nowrap;margin:0;border-left:0;border-bottom:2px solid transparent;padding:8px 11px;
+}
+.soma-v2-shell[data-compact="true"] .soma-v2-compact-nav .soma-v2-context-link[aria-current]{
+ border-bottom-color:var(--current-edge);
+}
+.soma-v2-shell[data-compact="true"] .soma-v2-build{display:none}
+.soma-v2-shell[data-compact="true"] .soma-v2-header-action{padding:5px 7px}
+@media(max-width:540px){
+ .soma-v2-shell>.soma-v2-header{gap:7px;padding:0 8px}
+ .soma-v2-header-action{font-size:10px}
+ .soma-v2-brand{font-size:12px}
+ .soma-v2-shell .soma-v2-content-head>span{display:none}
+ .soma-v2-shell main.soma-v2-main{padding:0 8px 8px}
+ .soma-v2-status span:last-child{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .soma-v2-shell *,.soma-v2-shell *::before,.soma-v2-shell *::after{
+ animation-duration:0s!important;transition-duration:0s!important
+ }
+}
+@media(forced-colors:active){
+ .soma-v2-shell{
+ --canvas:Canvas;--shell:Canvas;--surface:Canvas;--surface2:Canvas;
+ --line:CanvasText;--line-soft:CanvasText;--text:CanvasText;--secondary:CanvasText;
+ --dim:GrayText;--current:Highlight;--current-bg:Canvas;--current-edge:Highlight;--focus:Highlight;
+ }
+ .soma-v2-dock-item[aria-current],.soma-v2-context-link[aria-current]{
+ outline:2px solid Highlight;outline-offset:-2px
+ }
+}
+

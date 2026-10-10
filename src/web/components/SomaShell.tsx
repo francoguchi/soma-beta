@@ -40,7 +40,7 @@ export function SomaShell({path, navigate, children, warnings = [], dirty = fals
   const route = resolveRoute(path);
   const navigation = navigationForSurface(route?.surface);
   const missing = unsupportedCapabilities();
-  const compact = width > 0 && width < 900;
+  const compact = width > 0 && width < 1360;
   useEffect(() => {
     const node = shell.current;
     if (!node) return;
