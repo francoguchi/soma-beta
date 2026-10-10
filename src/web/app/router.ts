@@ -206,7 +206,8 @@ export class RouteNavigation {
   constructor(start: string, private readonly port: HistoryPort, private readonly dirty: () => boolean,
     private readonly capture: () => ReturnState | null,
     private readonly changed: (path: string, restored: ReturnState | null) => void,
-    private readonly ask: (path: string | null) => void) {
+    private readonly ask: (path: string | null) => void,
+    private readonly preservesWorkingCopy?: (from: string, to: string) => boolean) {
     this.path = start === '/' ? '/overview' : start; this.port.replace(this.state(), this.path);
   }
   private state() {return {soma_ui_navigation: {session: this.session, index: this.index}};}
@@ -217,7 +218,7 @@ export class RouteNavigation {
   }
   navigate(path: string): void {
     if (!resolveRoute(path) || path === this.path || this.restoring || this.pending) return;
-    if (this.dirty()) {this.pending = {path, index: null}; this.ask(path); return;}
+    if (this.dirty() && !this.preservesWorkingCopy?.(this.path, path)) {this.pending = {path, index: null}; this.ask(path); return;}
     this.push(path);
   }
   private push(path: string): void {
@@ -237,7 +238,7 @@ export class RouteNavigation {
       this.approved = null; this.arrive(path, target); return;
     }
     if (path === this.path && target === this.index) return;
-    if (this.dirty()) {
+    if (this.dirty() && !this.preservesWorkingCopy?.(this.path, path)) {
       this.pending = {path, index: target};
       if (target !== null && target !== this.index) {this.restoring = true; this.port.go(this.index - target);}
       else {this.port.push(this.state(), this.path); this.ask(path);}

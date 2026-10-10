@@ -42,7 +42,15 @@ function Application() {
         if (!settingsPath(previous) && !settingsPath(next)) workReturn.current = null;
         settingsReturn.current = null;
         setRestored(state); setPath(next);
-      }, setPendingPath);
+      }, setPendingPath,
+      (from, to) => {
+        const original = previousWorkspace.current;
+        // The React workbench stays mounted beneath Settings. Opening, switching
+        // its tabs and returning to the *same* workbench do not discard drafts.
+        // Any destination that replaces that workbench retains the dirty guard.
+        return (settingsPath(from) && (settingsPath(to) || to === original))
+          || (!settingsPath(from) && from === original && settingsPath(to));
+      });
     navigation.current = controller; setPath(location.pathname);
     const change = (event: PopStateEvent) => controller.pop(location.pathname, event.state);
     window.addEventListener('popstate', change); return () => {navigation.current = null; window.removeEventListener('popstate', change);};
