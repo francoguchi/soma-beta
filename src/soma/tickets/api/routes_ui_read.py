@@ -36,6 +36,10 @@ class TicketReadRouteAdapter:
         self._notes = WorkingNoteQueryService(factory)
 
     def dispatch(self, method: str, path: str, values: dict[str, Any]) -> TicketReadResponse | None:
+        # A missing business identifier is not a Service Request UUID.
+        # Keep the lookup namespace disjoint from ordinary point routes.
+        if path == "/api/v1/tickets/service-requests/by-business-id":
+            return None
         point = _DETAIL.fullmatch(path)
         identity = _IDENTITY.fullmatch(path)
         notes = _NOTES.fullmatch(path)
