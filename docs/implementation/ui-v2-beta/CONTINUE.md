@@ -76,3 +76,11 @@ If any test fails: stop and preserve the logs. If green: stage **only `src/soma/
 - Updated Settings Back/Forward mocked DTO fixtures, added UI/owner tests. **Rebuild and test these; do not assume screenshot problems are fixed in the currently running old bundle.**
 
 **Continuation discipline:** no historical side branch or #81, no fresh PR. Read this document, the latest GitHub HEAD/CI, and one relevant owner file, then implement a cohesive source batch and collect one operator verification checkpoint.
+
+
+## UI-IMPORT-READ-01 — latest source continuation (2026-10-10)
+- Reconciled live HEAD `f0b5f9805c01` before writing. Its CI #38066745090 was **not green**: Ubuntu Python 3.14 returned 2 UI asset integrity failures (2129 passed, 68 skipped); Windows UI typecheck and 44 Node tests passed but reproducible build detected committed frozen-asset drift. Windows Python jobs were still running when checked. **No updated assets were committed**, no runtime browser certification.
+- Genuine additional composition defect: accepted LLD-04 `TicketImportQueryRouteAdapter` existed and had owner-level tests, but `DomainRoutes` omitted it. Added it **only as an authenticated read adapter**, after session validation; uncomposed import POST commands remain unexposed.
+- Added a Tickets → Source Imports monitoring surface for **three owner-backed source statuses**, accepted checkpoint presence, latest run state, and bounded 25-row run history with cursor navigation. Real empty states are explicit; no mock rows, implicit imports, acceptance, automatic source scanning, or lifecycle inference.
+- Coverage added: `tests/test_ui_import_source_reads.py`, browser `src/web/browser-tests/source-import-owner-monitor-v2.spec.mjs`, and navigation unit assertions. These are committed source/tests **without claiming execution**. Next validated Windows build must include this slice and regenerate `src/soma/ui/static/**` once, after tests.
+- Next authority gate: explicitly bind import start/check, proposal review, finalize and recovery through the existing LLD-04 mutation adapter with correct LLD-12 session/CSRF enforcement and the accepted owner participants. Do **not** expose a UI import button that cannot enforce these contracts.

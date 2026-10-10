@@ -11,6 +11,7 @@ const cases = [
   ['rfc_list', 'tickets', 'RFCs'],
   ['rfc_workbench', 'tickets', 'RFCs'],
   ['ticket_history', 'tickets', 'Ticket History'],
+  ['import_monitor', 'tickets', 'Source Imports'],
   ['overview', 'overview', 'Overview'],
   ['objectives', 'objectives', 'Maintenance Windows & Tasks'],
   ['objective_detail', 'objectives', 'Maintenance Windows & Tasks'],
@@ -111,6 +112,13 @@ test('RFC collection routes preserve Tickets context without misclassifying deep
   assert.equal(navigationForSurface('rfc_list').links.find(x=>x.label==='RFCs')?.current,true);
   assert.equal(navigationForSurface('ticket_list').links.find(x=>x.label==='RFCs')?.current,false);
   assert.equal(resolveRoute('/tickets/rfcs/unknown'),null);
+});
+
+test('Source Imports is a separate read-only route within Tickets navigation',()=>{
+  assert.equal(resolveRoute('/tickets/imports')?.surface,'import_monitor');
+  assert.equal(navigationForSurface('import_monitor').active,'tickets');
+  assert.equal(navigationForSurface('import_monitor').links.filter(link=>link.current)[0]?.label,'Source Imports');
+  assert.equal(resolveRoute('/tickets/imports/unsafe'),null);
 });
 
 test('RFC identity lookup is exact, ASCII-only, and not the same as SR matching',()=>{

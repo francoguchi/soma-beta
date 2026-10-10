@@ -2,7 +2,7 @@ import {settingsIntent,type SettingsIntent} from './settings-intent.js';
 import {ticketNotesQuery} from './ticket-notes-intent.js';
 export type ClientRoute = Readonly<{path: string; surface: string; owner: string; recordId: string | null}>;
 const routes = [
-  ['/overview','overview','LLD-11'], ['/tickets','ticket_list','LLD-03/04'], ['/tickets/rfcs','rfc_list','LLD-03'], ['/tickets/history','ticket_history','LLD-03/04'],
+  ['/overview','overview','LLD-11'], ['/tickets','ticket_list','LLD-03/04'], ['/tickets/rfcs','rfc_list','LLD-03'], ['/tickets/history','ticket_history','LLD-03/04'], ['/tickets/imports','import_monitor','LLD-04'],
   ['/tickets/sr/{id}','sr_workbench','LLD-03'], ['/tickets/rfc/{id}','rfc_workbench','LLD-03'],
   ['/objectives','objectives','LLD-05'], ['/objectives/{id}','objective_detail','LLD-05'], ['/inventory','inventory','LLD-07'],
   ['/infrastructure','infrastructure','LLD-08'], ['/settings','settings','LLD-02/12'],

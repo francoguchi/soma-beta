@@ -17,7 +17,7 @@ export type WorkspaceNav = Readonly<{
 
 const surfaceWorkspace: Readonly<Record<string, WorkspaceId | 'settings'>> = {
   overview: 'overview',
-  ticket_list: 'tickets', rfc_list: 'tickets', ticket_history: 'tickets',
+  ticket_list: 'tickets', rfc_list: 'tickets', ticket_history: 'tickets', import_monitor: 'tickets',
   sr_workbench: 'tickets', rfc_workbench: 'tickets',
   objectives: 'objectives', objective_detail: 'objectives',
   inventory: 'inventory', infrastructure: 'infrastructure',
@@ -35,6 +35,7 @@ const contexts: Readonly<Record<WorkspaceId | 'settings', Readonly<{
   tickets: {title: 'Tickets', group: 'RECORDS', links: [
     {label: 'Service Requests', href: '/tickets', surfaces: ['ticket_list', 'sr_workbench']},
     {label: 'Ticket History', href: '/tickets/history', surfaces: ['ticket_history']},
+    {label: 'Source Imports', href: '/tickets/imports', surfaces: ['import_monitor']},
     {label: 'RFCs', href: '/tickets/rfcs', surfaces: ['rfc_list', 'rfc_workbench']},
   ]},
   objectives: {title: 'Objectives', group: 'MAINTENANCE', links: [

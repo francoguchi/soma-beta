@@ -5,6 +5,7 @@ import {resolveRoute, RouteNavigation, type ReturnState} from './router';
 import {TicketWorkbench} from './TicketWorkbench';
 import {TicketCollection} from './TicketCollection';
 import {RfcRegister} from './RfcRegister';
+import {ImportSourceMonitor} from './ImportSourceMonitor';
 import {OverviewWorkspace} from './OverviewWorkspace';
 import {Modal} from '../components/Modal';
 import {AppearanceSettings} from '../components/AppearanceSettings';
@@ -70,6 +71,7 @@ function Application() {
   return <><div ref={application}><SomaShell path={visiblePath} settingsOpen={settingsOpen} dirty={dirty} navigate={navigate}>
     {visibleRoute?.surface === 'ticket_list' ? <TicketCollection navigate={navigate}/> :
     visibleRoute?.surface === 'rfc_list' ? <RfcRegister navigate={navigate}/> :
+    visibleRoute?.surface === 'import_monitor' ? <ImportSourceMonitor/> :
     visibleRoute?.surface === 'overview' ? <OverviewWorkspace navigate={navigate}/> :
     visibleRoute?.surface === 'sr_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="service_request" navigate={navigate} onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
       visibleRoute?.surface === 'rfc_workbench' && visibleRoute.recordId ? <TicketWorkbench key={visiblePath} id={visibleRoute.recordId} type="rfc" navigate={navigate} onDirtyChange={updateDirty} restored={restored} onReturnState={captureReturnState}/> :
