@@ -42,6 +42,6 @@ test('Communications Settings rejects unsupported progress percentage with unkno
       counters,percentage:0,diagnostic_code:null}],next_cursor:null}});
     return route.fulfill({json:{items:[],next_cursor:null}});
   });
-  await page.goto('http://127.0.0.1:4174/settings/communications');await expect(page.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await page.goto('http://127.0.0.1:4174/settings/communications');await expect(page.getByRole('region',{name:'Communication Jobs'}).getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(page.getByText('Owner percentage: 0%')).toHaveCount(0);
 });

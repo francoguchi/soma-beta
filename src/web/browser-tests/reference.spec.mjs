@@ -21,6 +21,7 @@ test('Settings uses bounded owner reference pages and explicit detail; channel t
       projection:{name:'Synthetic Contact',current_affiliation:null,active_channel_count:2}}});
   });
   await page.setViewportSize({width:480,height:900});await page.goto('http://127.0.0.1:4174/settings');
+  await page.getByRole('button',{name:'Open Reference Manager'}).click();
   await expect(page.getByRole('button',{name:'Open Synthetic Contact'})).toBeVisible();expect(requests.length).toBe(3);
   await page.getByRole('button',{name:'Open Synthetic Contact'}).click();
   await expect(page.getByText('Current Customer affiliation: Unbound.')).toBeVisible();
@@ -46,7 +47,9 @@ test('Settings preserves unavailable Site address and lazily loads exact owner A
     return route.fulfill({json:{reference_type:'customer_organization',reference_id:customer,revision:1,lifecycle_state:'active',
       projection:{name:'Synthetic Customer',current_account_code:null,account_code_history_count:1}}});
   });
-  await page.goto('http://127.0.0.1:4174/settings');await page.getByRole('button',{name:'Open Synthetic Location'}).click();
+  await page.goto('http://127.0.0.1:4174/settings');
+  await page.getByRole('button',{name:'Open Reference Manager'}).click();
+  await page.getByRole('button',{name:'Open Synthetic Location'}).click();
   await expect(page.getByText('Current address source: Site-derived.')).toBeVisible();
   await expect(page.getByText('Current address: Unavailable from the address owner.')).toBeVisible();
   await page.getByRole('button',{name:'Open Synthetic Customer'}).click();await expect(page.getByText('Current Account Code claim: None.')).toBeAttached();
@@ -59,7 +62,9 @@ test('Settings rejects missing affiliation facts instead of inventing Unbound co
     const parts=new URL(route.request().url()).pathname.split('/');
     return route.fulfill({json:parts.length===5?list(parts[4]):{reference_type:'contact',reference_id:contact,revision:1,lifecycle_state:'active',projection:{name:'Synthetic Contact',active_channel_count:0}}});
   });
-  await page.goto('http://127.0.0.1:4174/settings');await page.getByRole('button',{name:'Open Synthetic Contact'}).click();
+  await page.goto('http://127.0.0.1:4174/settings');
+  await page.getByRole('button',{name:'Open Reference Manager'}).click();
+  await page.getByRole('button',{name:'Open Synthetic Contact'}).click();
   await expect(page.getByRole('region',{name:'Contacts',exact:true}).getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(page.getByText('Current Customer affiliation: Unbound.')).toHaveCount(0);
 });
