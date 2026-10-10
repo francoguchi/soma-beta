@@ -1,6 +1,6 @@
 # UI-SR-01 — First live Tickets owner reads (UI V2)
 
-**Branch:** `feat/beta-ui-v2` ONLY. **PR:** #80, draft. **Status:** source integrated, CI and frozen frontend rebuild pending. No SQL/schema/security/audit writes made.
+**Branch:** `feat/beta-ui-v2` ONLY. **PR:** #80, draft. **Status:** SR identity + bounded SR register implemented; CI, operator build and browser/runtime verification pending. No schema/security/audit writes made.
 
 ## Why this slice exists
 
@@ -43,3 +43,28 @@ Unknown routes are still uncomposed; mutation attempts and unexpected query keys
 ## Next owner-backed slice
 
 After the above passes and operator validates Settings/branding first, obtain/approve a bounded, deterministic Service Request collection query in the Tickets owner, then replace exact-lookup-only landing with Study 30 Collection → Details/Context while retaining owner evidence and no fabricated counts. Never broaden SR identity acceptance as a shortcut.
+
+## UI-SR-02 continuation — real bounded owner collection
+
+After the initial exact lookup, `src/soma/tickets/queries/service_request_collection.py` now exposes a **read-only** SR register, composed in `src/soma/tickets/api/routes_ui_read.py`:
+
+- `GET /api/v1/tickets/service-requests?limit=25[&cursor=...]`, strict 1–100 item limit, exact server-validated cursor (`version=1`, sort `SR_UPDATED_ID_DESC_V1`, `updated_at_utc`, canonical SR UUID4), and descending SR-update/UUID keyset order.
+- Uses one `ReadSnapshot` per page; projects current identity, revision, timestamp, currently pointed accepted source summary/status, bounded text/truncation signals, and `total_count_at_read`.
+- This **does not** imply stable repeatable multi-request snapshot, operational lifecycle/archival classification, inferred SLA, Source Import, or full-text search. Owner status values are *source observations* only.
+- The existing `/tickets` React landing page now displays a bounded SR table, selected Details context, 25-item Next/Previous pages and exact lookup. Direct Open goes to the existing SR workbench. No mock production rows.
+- Regression tests: `tests/test_sr_collection_owner.py`, updated `tests/test_ticket_ui_read_routes.py`, `src/web/browser-tests/tickets-sr-register-v2.spec.mjs` and existing exact-SR tests.
+- **IMPORTANT**: CI and local tests of this added slice have *not yet run*; the frontend frozen asset bundle is **stale** relative to the latest source. Do not launch Beta or merge PR until rebuild/test success. Perform the verification commands below and add only `src/soma/ui/static/**` to the canonical branch after green checks.
+
+Suggested Windows commands from the canonical checkout:
+
+```powershell
+git status -sb
+git pull --ff-only origin feat/beta-ui-v2
+npm.cmd --prefix src/web test
+.\.venv\Scripts\python.exe -m pytest tests/test_sr_collection_owner.py tests/test_ticket_ui_read_routes.py tests/test_ticket_point_queries.py tests/test_ui_assets.py -q --basetemp "$env:TEMP\soma-ui-v2-ticket-owner"
+npm.cmd --prefix src/web run build
+py -3.14 tools\verify_ui_build.py
+git status --short
+```
+
+Do not erase local modifications. Verify the staged asset paths, then commit and push *once* after all tests pass. This remains one UI branch and one draft PR.
