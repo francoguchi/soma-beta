@@ -1,26 +1,23 @@
-# UI-V2-AUTH-SETTINGS-BRAND — operator correction checkpoint
+# SOMA Beta UI V2 — Settings, Authentication and Brand
 
-Status: **source implemented, deployment gated by frozen browser asset regeneration and browser/owner tests**. Draft PR #81 -> `feat/beta-ui-v2`; base pin `ecd487c603d93b211b27b67b683b29043af69abb` (preserves launcher repair).
+**Canonical development branch:** `feat/beta-ui-v2`, **single draft PR:** #80.
+**Last refreshed:** 2026-10-10. See [CONTINUE.md](CONTINUE.md) for live source/asset build and verification gates. Historical task branches/PRs were consolidated; do not use them for continuation.
 
-## User-reported screenshots
-- Beta Settings was a full-page preference form, unlike approved Study 30 modal.
-- The canonical SOMA mark/lockup and browser favicon were missing.
-- Beta's pre-auth first-run form was unstyled compared with the dark centered newer SOMA card.
+## Real source composition
 
-## Implemented (no security or owner behavior changes)
-- Live `SomaShell` uses `/static/ui/brand/soma-lockup.svg`, Settings is a distinct header action.
-- Settings routes `/settings`, `/settings/appearance`, `/settings/communications` render inside a focus-trapping route-backed `SettingsDialog` above the preserved workbench; Reference Manager expands the same dialog rather than changing underlying hierarchy or owner.
-- Separate route-return capture for live workbenches versus modal settings; Settings body is the scroll restoration owner. Test current Back/Forward and focus semantics, especially while Reference Manager is expanded.
-- App's HTML entry includes `/static/ui/brand/soma-mark.svg` as favicon; Vite `public/brand/` contains two canonical SVGs from newer `soma` source. Added them explicitly to source hashes, allowable frozen asset list, HTTP SVG content types and startup manifest trust bounds.
-- `SourceApplication.auth_shell` delegates rendering to `soma.ui.auth_shell.render_auth_shell`: polished dark login/setup, existing Beta auth/status endpoints, body keys, cookie and throttle unchanged. CSP keeps nonced JS/CSS, self-only images. No admin password handling moved client-side.
-- Added/reconciled Python/browser tests, no weakening of owner-driven pagination/recovery assertions.
+- `SettingsDialog` presents `/settings`, `/settings/appearance`, `/settings/communications` as route-backed modal over the preserved workbench. Settings has focus trapping, Escape/close, background inert, browser-history restoration. Manual browser acceptance is required.
+- The General tab contains `ObjectiveSettings` and an entry to expanded Reference Manager; the latter owns the larger `ReferenceSettings` and `SlaCatalogSettings` directories. **No new owner mutations are implied.**
+- Objective timezone: `/api/v1/settings/OBJECTIVE_TIMEZONE_V1` (real LLD-02 Settings routing). The result is a full 7-field `SettingValue` envelope: `setting_key`, `contract_name`, `contract_version`, `semantic_owner`, `value`, `source`, `revision`. Value defaults to `America/Guayaquil`; there is no synthetic `iana_timezone` DTO.
+- Product-line/Contract/CPL/Classification catalog owners return `items`, `next_cursor`, `exact_count` (not `continuation`). Respect owner validation and cursor fingerprint in `settings-intent.ts`. Real unpopulated catalogs show zero accepted records, not a red projection error.
+- `src/soma/ui/auth_shell.py` still renders the Beta pre-React authentication page, using the original Beta endpoints, CSRF, password semantics, security session and strict CSP. No credentials or session material moved to React.
+- SOMA artwork: original canonical blue mark `soma-mark.svg`, original lockup `soma-lockup.svg` for light display, and identical artwork with light lettering `soma-lockup-dark.svg` for dark header. A closed frozen manifest and same-origin SVG serving are mandatory.
 
-## Remaining verification
-1. In an **isolated worktree** check out `feat/ui-v2-settings-brand-auth`.
-2. `npm.cmd --prefix src/web ci --ignore-scripts --no-audit --no-fund`; `npm.cmd --prefix src/web test`; `npm.cmd --prefix src/web run build`.
-3. `py -3.14 tools/verify_ui_build.py` from repository root.
-4. Commit **only** generated `src/soma/ui/static/` files (including the two brand SVGs and source/bytes manifest) on this same branch. The current branch intentionally has stale frozen assets; do **not** deploy before this step. No temporary CI exporter or alternate uncontrolled static host.
-5. The PR's existing Windows CI runs `npm test`, determinism check `git diff --exit-code -- src/soma/ui/static`, hash manifest, browser scenarios and backend suites. Review any failures and repair code/tests according to accepted behavior.
-6. For first-run/login inspect on a disposable development instance only; do **not** reset, purge or expose real administrator credentials. Verify login existing cookie sessions, CSRF/security boundaries, and that unauthenticated SVG brand assets are served from the allowlist. Verify Settings overlay at desktop, compact, 200% zoom, focus trap, Escape and Back, and all five workspaces.
+## Screenshot-driven UI repairs, not yet operator certified
 
-Current caveat: Visual design is operator-approved direction, but pixels and authenticated Beta runtime have **not** been rechecked after this change. Do not claim deployed/CI green or merge into donor lane yet.
+User screenshots showed a compact but incomplete Tickets page, the Settings modal with visibly red owner errors, vertically stacked General/Appearance/Communications navigation, and the SOMA letters nearly invisible against the dark shell.
+
+Corrected wrong Settings endpoint/DTO expectations; corrected catalog paging fields; reduced General clutter; forced horizontal Settings tab navigation; supplied dark-header lockup; added explicit real-empty register explanation. All must be rebuilt and inspected in the running Beta app.
+
+## Verification
+
+`npm.cmd --prefix src/web test`, focused pytest `tests/test_ui_settings_owner_shapes.py tests/test_ui_assets.py tests/test_auth_shell_presentation.py`, Vite `npm.cmd --prefix src/web run build`, `py -3.14 tools\\verify_ui_build.py`, and Playwright `settings-owner-bindings-v2.spec.mjs settings-modal-ui-v2.spec.mjs settings-return.spec.mjs`. Other owner/browser integration gates are listed in `CONTINUE.md`. **Do not merge PR #80 until these pass.**
