@@ -3,7 +3,7 @@ import {test,expect} from '@playwright/test';
 const run='11111111-1111-4111-8111-111111111111';
 const proposal='33333333-3333-4333-8333-333333333333';
 const summary={import_run_id:run,source_family:'advanced_search_sr',candidate_filename:'source.xlsx',
-  run_state:'waiting_review',revision:2,
+  run_state:'waiting_review',revision:2,invocation_kind:'manual',logical_fingerprint:'a'.repeat(64),
   counts:Object.fromEntries(['observed','valid_identity','invalid','warning','proposal','pending',
     'accepted','rejected','deferred'].map(k=>[k,k==='pending'?1:0]))};
 const p={proposal_id:proposal,proposal_kind:'sr_create_or_adopt',target_kind:'service_request',
