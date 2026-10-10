@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import {OwnerProjection} from '../components/OwnerProjection';
 import {initialOwnerPage, nextOwnerPage, ownerPagePath, previousOwnerPage} from '../state/owner-page-history';
+import {ImportRunEvidence} from './ImportRunEvidence';
 
 type Family = 'advanced_search_sr' | 'rfc_enhanced' | 'wfm_service_provider';
 const families: readonly Readonly<{id:Family; label:string}>[] = [
@@ -57,6 +58,7 @@ function Status({id,label}:{id:Family;label:string}) {
 export function ImportSourceMonitor() {
   const [history,setHistory]=useState(()=>initialOwnerPage(firstPath));
   const [refresh,setRefresh]=useState(0);
+  const [selectedRun,setSelectedRun]=useState<string|null>(null);
   const path=ownerPagePath(history);
   return <section className="soma-v2-overview" aria-label="Source Imports">
     <header className="soma-v2-overview-title">
@@ -70,7 +72,7 @@ export function ImportSourceMonitor() {
       <div className="soma-v2-sr-register-header">
         <div><h2>Recent import runs</h2><p>Read-only · most recent first · 25 per page</p></div>
         <button type="button" onClick={()=>{
-          setHistory(initialOwnerPage(firstPath));setRefresh(value=>value+1);
+          setSelectedRun(null);setHistory(initialOwnerPage(firstPath));setRefresh(value=>value+1);
         }}>Refresh from latest</button>
       </div>
       <OwnerProjection<RunPage> path={path} refreshKey={refresh} render={page=>{
@@ -79,6 +81,7 @@ export function ImportSourceMonitor() {
            new Set(page.items.map(run=>run.import_run_id)).size!==page.items.length ||
            !Object.hasOwn(page,'next_cursor'))throw new Error('Invalid import run owner page');
         const next=page.next_cursor===null?null:nextPath(page.next_cursor);
+        const chosen=page.items.find(row=>row.import_run_id===selectedRun)??null;
         return <>
           {page.items.length===0?<p role="status">No import runs recorded in this page.</p>:
           <div className="soma-v2-sr-table-viewport" data-scroll-owner="x">
@@ -87,18 +90,25 @@ export function ImportSourceMonitor() {
               <th scope="col">Rows observed</th><th scope="col">Review pending</th><th scope="col">Revision</th>
             </tr></thead><tbody>{page.items.map(run=><tr key={run.import_run_id}>
               <td>{families.find(source=>source.id===run.source_family)?.label}</td>
-              <td title={run.candidate_filename}>{run.candidate_filename||'Unreported filename'}</td>
+              <td><button type="button" className="soma-v2-sr-rowselect"
+                aria-label={'Inspect run '+run.import_run_id}
+                aria-pressed={chosen?.import_run_id===run.import_run_id}
+                onClick={()=>setSelectedRun(run.import_run_id)}>
+                {run.candidate_filename||'Unreported filename'}</button></td>
               <td>{run.run_state}</td><td>{run.counts.observed}</td>
               <td>{run.counts.pending}</td><td>{run.revision}</td>
             </tr>)}</tbody></table>
           </div>}
           <div className="soma-v2-sr-pager">
             <button type="button" disabled={history.page===history.first}
-              onClick={()=>setHistory(previousOwnerPage)}>Previous page</button>
+              onClick={()=>{setSelectedRun(null);setHistory(previousOwnerPage);}}>Previous page</button>
             <span>Page {history.page+1}</span>
             <button type="button" disabled={next===null}
-              onClick={()=>{if(next)setHistory(old=>nextOwnerPage(old,next,firstPath));}}>Next page</button>
+              onClick={()=>{if(next){setSelectedRun(null);setHistory(old=>nextOwnerPage(old,next,firstPath));}}}>Next page</button>
           </div>
+          {page.items.length>0&&!chosen&&<p role="status">Select an import run to inspect accepted owner review evidence.</p>}
+          {chosen&&<ImportRunEvidence key={chosen.import_run_id} importRunId={chosen.import_run_id}
+            expectedFamily={chosen.source_family} minRevision={chosen.revision}/>}
         </>;
       }}/>
     </section>
