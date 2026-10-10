@@ -16,6 +16,7 @@ from soma.tickets.queries.service_requests import ServiceRequestQueryService
 from soma.tickets.queries.working_notes import WorkingNoteQueryService
 
 _DETAIL = re.compile(r"^/api/v1/tickets/(service-requests|rfcs)/([^/]+)$")
+_IDENTITY = re.compile(r"^/api/v1/tickets/service-requests/by-business-id/([^/]+)$")
 _NOTES = re.compile(r"^/api/v1/tickets/(service_request|rfc)/([^/]+)/notes$")
 _NOTES_ALLOWED = frozenset({"limit", "cursor"})
 
@@ -36,13 +37,23 @@ class TicketReadRouteAdapter:
 
     def dispatch(self, method: str, path: str, values: dict[str, Any]) -> TicketReadResponse | None:
         point = _DETAIL.fullmatch(path)
+        identity = _IDENTITY.fullmatch(path)
         notes = _NOTES.fullmatch(path)
-        if point is None and notes is None:
+        if point is None and identity is None and notes is None:
             return None
         if method != "GET":
             raise ValidationError("Ticket presentation routes are read-only")
         if not isinstance(values, dict):
             raise ValidationError("Ticket query fields are invalid")
+
+        if identity is not None:
+            if values:
+                raise ValidationError("Business identity query does not accept filters")
+            business_id = identity.group(1)
+            # The owner query validates the exact official/local ID grammar.
+            return TicketReadResponse(
+                200, asdict(self._service_requests.get(business_identity=business_id))
+            )
 
         if point is not None:
             if values:
