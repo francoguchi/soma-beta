@@ -3,13 +3,13 @@ import {test,expect} from '@playwright/test';
 const identities=[
   {service_request_id:'33333333-3333-4333-8333-333333333333',
     official_sr_no:'48576001',local_sr_no:null,revision:1,
-    updated_at_utc:1770000100,summary:'Accepted source summary A',status:'Open'},
+    updated_at_utc:1770000100,summary:'Accepted source summary A',status:'Open',summary_truncated:false,status_truncated:false},
   {service_request_id:'44444444-4444-4444-8444-444444444444',
     official_sr_no:'48576002',local_sr_no:null,revision:2,
-    updated_at_utc:1770000000,summary:'Accepted source summary B',status:'Suspended'},
+    updated_at_utc:1770000000,summary:'Accepted source summary B',status:'Suspended',summary_truncated:false,status_truncated:false},
   {service_request_id:'55555555-5555-4555-8555-555555555555',
     official_sr_no:'48576003',local_sr_no:null,revision:3,
-    updated_at_utc:1769999990,summary:null,status:null},
+    updated_at_utc:1769999990,summary:null,status:null,summary_truncated:false,status_truncated:false},
 ];
 
 test('SR register shows paged owner identities and selected detail, without invented lifecycle',async({page})=>{
