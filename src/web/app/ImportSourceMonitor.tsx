@@ -25,7 +25,8 @@ function validRun(run:ImportRun):boolean {
     Number.isSafeInteger(run.revision) && run.revision>=1 &&
     !!run.counts && typeof run.counts==='object' && !Array.isArray(run.counts) &&
     ['observed','valid_identity','invalid','warning','proposal','pending','accepted','rejected','deferred']
-      .every(key=>Number.isSafeInteger(run.counts[key]) && run.counts[key]>=0);
+      .every(key=>{const count=run.counts[key];return typeof count==='number' &&
+        Number.isSafeInteger(count) && count>=0;});
 }
 function nextPath(cursor:unknown):string {
   if(!cursor || typeof cursor!=='object' || Array.isArray(cursor) ||
