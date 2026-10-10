@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {navigationForSurface, primaryWorkspaces} from '../.test-build/state/workspace-navigation.js';
-import {RouteNavigation} from '../.test-build/app/router.js';
+import {RouteNavigation,resolveRoute} from '../.test-build/app/router.js';
 import {isExactSrIdentity} from '../.test-build/state/sr-identity.js';
 
 const cases = [
@@ -102,4 +102,12 @@ test('Tickets identity lookup cannot imply partial, fuzzy or ungoverned matching
   for(const wrong of ['','1234567','123456789','LSR-1234567','LSR-123456789',
     'lsr-12345678',' 12345678','12345678 ','SR-12345678','1234.678','1234*678','１２３４５６７８'])
     assert.equal(isExactSrIdentity(wrong),false,wrong);
+});
+
+test('RFC collection routes preserve Tickets context without misclassifying deep links',()=>{
+  assert.equal(resolveRoute('/tickets/rfcs')?.surface,'rfc_list');
+  assert.equal(resolveRoute('/tickets/rfc/33333333-3333-4333-8333-333333333333')?.surface,'rfc_workbench');
+  assert.equal(navigationForSurface('rfc_list').links.find(x=>x.label==='RFCs')?.current,true);
+  assert.equal(navigationForSurface('ticket_list').links.find(x=>x.label==='RFCs')?.current,false);
+  assert.equal(resolveRoute('/tickets/rfcs/unknown'),null);
 });
