@@ -3,7 +3,9 @@
 **Updated:** 2026-10-10. Read this file first in every new chat or coding-agent session.
 **Canonical repo:** `francoguchi/soma-beta` · **SOLE UI branch:** `feat/beta-ui-v2` · **one draft PR:** #80.
 **Protected donor:** `feat/beta-1.0-implementation`; no new UI topic branches or PRs. Do not reset the instance, modify production DB state or bypass SQLCipher, DPAPI, audit, or frozen-asset checks.
-**Most recent operator frozen-asset push:** `62598e984e78d95021c686f052e917a443c15013` (`freeze verified SR selection and pagination assets`). Source has advanced since then. The next asset build is NOT yet frozen; always fetch current branch HEAD first.
+**Latest operator frozen-asset push:** `1d56e4d64cba837f25473b227dbc41ae95204cd6` (`freeze cross-platform verified production assets`). Subsequent UI-DEVICE-READ-01 source/tests advanced after the freeze; Vite JS/manifest must be regenerated locally at the next cohesive operator check. Always fetch live branch HEAD before action.
+
+**Active operator policy (2026-10-10):** prioritize **completing the whole interface** with narrow owner-backed slices and focused local tests. Full CI certification and any PR merge to main are deferred until UI completion; do not gate each source push on full CI. Scheduled CI monitoring was disabled at the user's request. Keep PR #80 draft and the implementation donor untouched.
 
 ## Authority — keep these separate
 
