@@ -12,10 +12,11 @@ export function initialSrPageHistory(firstPath: string): SrPageHistory {
 
 export function currentSrPagePath(history: SrPageHistory): string {
   const offset = history.page - history.first;
-  if (!Number.isSafeInteger(offset) || offset < 0 || offset >= history.paths.length) {
+  const path = history.paths[offset];
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset >= history.paths.length || !path) {
     throw new Error('Invalid SR cursor history');
   }
-  return history.paths[offset];
+  return path;
 }
 
 export function previousSrPage(history: SrPageHistory): SrPageHistory {
