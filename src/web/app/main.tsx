@@ -72,7 +72,7 @@ function Application() {
           onClick={event => {if(event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)return;
             event.preventDefault();setReferenceOpen(false);navigate(href);}}>{label}</a>)}
     </nav>
-    <div className="soma-v2-settings-body" data-scroll-owner="y">
+    <div className="soma-v2-settings-body" data-scroll-owner="y" tabIndex={-1}>
       <SettingsWorkspace key={path} path={path} restored={restored} onReturnState={captureSettingsReturnState}>
         {route?.surface === 'appearance_settings' ? <AppearanceSettings/> :
          route?.surface === 'communication_settings' ? <CommunicationSettings/> :
@@ -80,7 +80,7 @@ function Application() {
            <h3>Reference Manager</h3>
            <button type="button" onClick={() => setReferenceOpen(false)}>Back to General</button>
          </div><p>Reference identities remain governed by their owning services.</p>
-         <ReferenceSettings/></> :
+         <ReferenceSettings/><SlaCatalogSettings/></> :
          <><h3>General</h3>
            <p>Adjust local operational preferences. Changes are accepted only by their owning services.</p>
            <button type="button" onClick={() => setReferenceOpen(true)}>Open Reference Manager ↗</button>
