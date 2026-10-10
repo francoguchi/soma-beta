@@ -11,6 +11,8 @@ type RfcRow=Readonly<{
   source_status:string|null;source_status_truncated:boolean;
   source_status_class:'unknown'|'pre_implement'|'implement_eligible'|'terminal_closed'|'terminal_cancelled';
 }>;
+type RfcIdentityPoint=Readonly<{rfc_id:string;rfc_no:string;revision:number;
+  hierarchy_role:string;local_archive_state:string;warnings:readonly string[]}>;
 type RfcCursor=Readonly<{version:1;sort_registry_id:'RFC_UPDATED_ID_DESC_V1';updated_at_utc:number;rfc_id:string}>;
 type RfcPage=Readonly<{
   items:readonly RfcRow[];total_count_at_read:number;
@@ -133,7 +135,7 @@ export function RfcRegister({navigate}:{navigate:(path:string)=>void}){
         <button type="submit" disabled={!isExactRfcIdentity(exactInput)}>Find exact RFC</button>
       </div>
     </form>
-    {exactQuery&&<OwnerProjection<RfcRow & {warnings:readonly string[]}> path={
+    {exactQuery&&<OwnerProjection<RfcIdentityPoint> path={
       '/api/v1/tickets/rfcs/by-business-id/'+encodeURIComponent(exactQuery)
     } render={item=>{
       if(!item||!uuid4.test(item.rfc_id)||item.rfc_no!==exactQuery

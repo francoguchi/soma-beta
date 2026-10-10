@@ -36,6 +36,10 @@ def test_ticket_ui_owner_read_routes_are_live_bounded_and_closed(initialized_dat
     assert rfc_detail.status == 200
     assert rfc_detail.body["rfc_id"] == rfc.rfc_id
     assert rfc_detail.body["rfc_no"] == "NC20261010000001"
+    rfc_by_number = adapter.dispatch(
+        "GET", "/api/v1/tickets/rfcs/by-business-id/NC20261010000001", {}
+    )
+    assert rfc_by_number.body == rfc_detail.body
     rfc_page = adapter.dispatch("GET", "/api/v1/tickets/rfcs", {"limit": 25})
     assert rfc_page.status == 200
     assert rfc_page.body["total_count_at_read"] == 1
@@ -59,6 +63,7 @@ def test_ticket_ui_owner_read_routes_are_live_bounded_and_closed(initialized_dat
     assert collection.body["items"][0]["service_request_id"] == sr.service_request_id
     assert collection.body["continuation"] is None
     assert adapter.dispatch("GET", "/api/v1/tickets/service-requests/by-business-id", {}) is None
+    assert adapter.dispatch("GET", "/api/v1/tickets/rfcs/by-business-id", {}) is None
     assert adapter.dispatch("GET", "/api/v1/tickets/nonexistent", {}) is None
     assert adapter.dispatch("GET", "/api/v1/tickets/rfcs/not-a-valid-id/extra", {}) is None
 
@@ -78,6 +83,10 @@ def test_ticket_ui_read_routes_never_accept_mutations_unbounded_notes_or_unknown
         ("GET", notes, {"limit": 0}), ("GET", notes, {"other": 1}),
         ("GET", notes, {"cursor": "fake"}), ("GET", notes, {"cursor": {}}),
         ("GET", "/api/v1/tickets/service-requests/by-business-id/bad-id", {}),
+        ("GET", "/api/v1/tickets/rfcs/by-business-id/NC123", {}),
+        ("GET", "/api/v1/tickets/rfcs/by-business-id/nc20261010000001", {}),
+        ("GET", "/api/v1/tickets/rfcs/by-business-id/NC20261010000001", {"limit":1}),
+        ("POST", "/api/v1/tickets/rfcs/by-business-id/NC20261010000001", {}),
         ("GET", "/api/v1/tickets/service-requests/by-business-id/12345678", {"limit": 2}),
         ("POST", "/api/v1/tickets/service-requests", {}),
         ("POST", "/api/v1/tickets/rfcs", {}),
