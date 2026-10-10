@@ -1,6 +1,7 @@
 # SOMA Beta — UI V2 integration lane
 
-**Status:** UI V2 shell + Settings/branding/auth presentation implemented in React/Python source on the canonical UI branch; production frozen-assets rebuild and browser validation pending. Do not deploy or merge yet.  
+> **CURRENT HANDOVER (2026-10-10):** Read [CONTINUE.md](CONTINUE.md) first for the single-branch SHA, actual frozen-asset status, Study 29 vs Study 30 authority, tests and next action. Older build/test instructions below are historical checkpoints, not a claim that the latest frontend source has been built.\n\n
+**Status:** UI V2 shell, Settings/branding/auth, real SR reads/register and selection-gated pagination implemented in source. Latest frontend JS/CSS needs a new frozen build; browser and Windows runtime certification remain pending. Do not deploy or merge yet.  
 **Target repository:** `francoguchi/soma-beta`  
 **Protected donor branch:** `feat/beta-1.0-implementation` @ `fbe3821ac0b52802ba8265f979590e75c3ac1209`  
 **Sole working branch:** `feat/beta-ui-v2`. Keep all UI implementation, documentation, validation fixes and asset builds on THIS branch—**do not open per-task branches**. Draft PR: #80.  
