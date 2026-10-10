@@ -20,6 +20,7 @@
 | SETTINGS/AUTH | Route-backed Settings modal, expanded Reference Manager; Beta server-generated login/setup restyled, same security/cookie authority | Manual login/Settings interaction and accessibility acceptance pending |
 | UI-SR-01/02 | Authenticated SR exact ID point, RFC point, bounded Working Notes, SR8/LSR lookup; 25-row SR keyset register, accepted source summary/status with explicit clipping and point-in-time count | Source observation is **not** operational lifecycle |
 | UI-SR-03 | SR Details only on explicit row selection, cleared on page/refresh; 51-entry moving cursor history; Node/browser coverage | Operator's prior frozen push includes this |
+| **UI-RFC-02 (new)** | Exact RFC number lookup `GET /api/v1/tickets/rfcs/by-business-id/{NC14}` reuses `RfcQueryService.get(rfc_no=...)`; strict case-sensitive ASCII validation and explicit full RFC workbench opening | No fuzzy search, no new RFC-number domain authority |
 | **UI-RFC-01 (new)** | `GET /api/v1/tickets/rfcs?limit=25`: deterministic descending updated/UUID owner register (1..100 backend bound). RFC canonical ID, local archive, hierarchy role, counts and evidence-supported source status/summary; direct RFC workbench opening | Local RFC archive **is** an owner fact; not source-status lifecycle |
 | **UI-REL-01 (new)** | SR workbench RFC tab: `GetServiceRequestRfcBranches` through existing `ServiceRequestRfcQueryService.list_branches()`; selects root/subordinate, fetches current selected RFC point; no duplicated relationship SQL | Governing root and subordinate cannot be conflated |
 | **UI-REL-02 (new)** | RFC Related RFCs: existing `RfcBranchQueryService.get()`; RFC effective SRs: existing `ServiceRequestRfcQueryService.effective_context_for_rfc()`; each selection-gated, paged, and navigable to actual workbench | Subordinate-only branch root lookup not inferred from labels; device membership remains uncomposed |
@@ -31,8 +32,8 @@
 
 Relevant new test inputs:
 - Python: `tests/test_rfc_collection_owner.py`, `tests/test_sr_rfc_ui_branch_routes.py`, `tests/test_rfc_workbench_owner_routes.py`, `tests/test_ticket_ui_read_routes.py`, `tests/test_sr_collection_owner.py`.
-- Node: `src/web/tests/owner-page-history.test.mjs`, `src/web/tests/workspace-navigation.test.mjs`.
-- Playwright: `src/web/browser-tests/tickets-rfc-register-v2.spec.mjs`, `tickets-sr-rfc-branches-v2.spec.mjs`, `tickets-rfc-relations-v2.spec.mjs`, `overview-owner-counts-v2.spec.mjs`, plus existing Tickets and Settings tests.
+- Node: `src/web/tests/owner-page-history.test.mjs`, `src/web/tests/workspace-navigation.test.mjs` (includes exact RFC grammar).
+- Playwright: `src/web/browser-tests/tickets-rfc-identity-v2.spec.mjs`, `tickets-rfc-register-v2.spec.mjs`, `tickets-sr-rfc-branches-v2.spec.mjs`, `tickets-rfc-relations-v2.spec.mjs`, `overview-owner-counts-v2.spec.mjs`, plus existing Tickets and Settings tests.
 
 **One consolidated Windows verification (not per-commit rebuild):**
 ```powershell
