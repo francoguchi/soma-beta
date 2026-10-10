@@ -44,7 +44,13 @@ def test_ticket_ui_owner_read_routes_are_live_bounded_and_closed(initialized_dat
         "GET", f"/api/v1/tickets/rfc/{rfc.rfc_id}/notes", {"limit": 10}
     )
     assert sr_notes.body == rfc_notes.body == {"items": [], "continuation": None}
-    assert adapter.dispatch("GET", "/api/v1/tickets/service-requests", {}) is None
+    collection = adapter.dispatch("GET", "/api/v1/tickets/service-requests", {"limit": 10})
+    assert collection.status == 200
+    assert collection.body["sort_registry_id"] == "SR_UPDATED_ID_DESC_V1"
+    assert collection.body["total_count_at_read"] == 1
+    assert len(collection.body["items"]) == 1
+    assert collection.body["items"][0]["service_request_id"] == sr.service_request_id
+    assert collection.body["continuation"] is None
     assert adapter.dispatch("GET", "/api/v1/tickets/service-requests/by-business-id", {}) is None
     assert adapter.dispatch("GET", "/api/v1/tickets/nonexistent", {}) is None
     assert adapter.dispatch("GET", "/api/v1/tickets/rfcs/not-a-valid-id/extra", {}) is None
@@ -66,6 +72,11 @@ def test_ticket_ui_read_routes_never_accept_mutations_unbounded_notes_or_unknown
         ("GET", notes, {"cursor": "fake"}), ("GET", notes, {"cursor": {}}),
         ("GET", "/api/v1/tickets/service-requests/by-business-id/bad-id", {}),
         ("GET", "/api/v1/tickets/service-requests/by-business-id/12345678", {"limit": 2}),
+        ("POST", "/api/v1/tickets/service-requests", {}),
+        ("GET", "/api/v1/tickets/service-requests", {"limit": True}),
+        ("GET", "/api/v1/tickets/service-requests", {"limit": 101}),
+        ("GET", "/api/v1/tickets/service-requests", {"order": "any"}),
+        ("GET", "/api/v1/tickets/service-requests", {"cursor": {"unreviewed": True}}),
     ]:
         with pytest.raises((ValidationError, SomaError)):
             adapter.dispatch(method, route, values)
