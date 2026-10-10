@@ -28,3 +28,12 @@ test('Existing string-only filters preserve their canonical fingerprint',async()
   const expected='{"schema":"SOMA_TICKET_DEVICE_REFERENCE_FILTER_V1","ticket_id":"'+runId+'","ticket_type":"service_request"}';
   assert.equal(await filterFingerprint(filters),digest(expected));
 });
+
+test('LLD-07 Spare Request cursor hash treats as_of_utc as a number, not text',async()=>{
+  const filters={schema:'SOMA_SPARE_REQUEST_LIST_FILTER_V1',service_request_id:null,
+    lifecycle_state:null,response_warning_only:false,as_of_utc:1791700000};
+  const canonical='{"as_of_utc":1791700000,"lifecycle_state":null,"response_warning_only":false,"schema":"SOMA_SPARE_REQUEST_LIST_FILTER_V1","service_request_id":null}';
+  assert.equal(await filterFingerprint(filters),digest(canonical));
+  assert.notEqual(await filterFingerprint({...filters,as_of_utc:'1791700000'}),digest(canonical));
+  assert.notEqual(await filterFingerprint({...filters,response_warning_only:true}),digest(canonical));
+});
