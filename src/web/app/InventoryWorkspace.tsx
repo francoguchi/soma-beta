@@ -4,6 +4,7 @@ import {filterFingerprint} from '../data/query-controller';
 import {OwnerProjection} from '../components/OwnerProjection';
 import {BoundedCollection} from '../components/BoundedCollection';
 import {InventorySpareNeeds} from './InventorySpareNeeds';
+import {InventorySpareRequests} from './InventorySpareRequests';
 
 type StockUnit = Readonly<{spare_part_unit_id:string;local_tracking_id:string|null;bom_code:string;manufacturer_serial:string|null;
   condition_token:string;disposition_token:string;location_kind:string|null;location_ref_id:string|null;custody_text:string|null;
@@ -63,6 +64,7 @@ export function InventoryWorkspace({restored=null,onReturnState}:{restored?:Retu
   const [asOf,setAsOf]=useState(()=>intent?.asOf??Math.floor(Date.now()/1000));
   const [notice,setNotice]=useState<string|null>(restored&&!intent?'The previous Inventory query is unavailable; the first current pages are shown.':null);
   const [needsOpen,setNeedsOpen]=useState(false);
+  const [requestsOpen,setRequestsOpen]=useState(false);
   const root=useRef<HTMLDivElement>(null);const focus=useRef<string|null>(intent?restored?.focusToken??null:null);
   const fingerprint=useRef<{stock:string;attention:string;value:string}|null>(null);
   const stock=queryPath('stock',stockCursor);const attention=queryPath('attention',attentionCursor,asOf);
@@ -121,6 +123,15 @@ export function InventoryWorkspace({restored=null,onReturnState}:{restored?:Retu
         {needsOpen?'Hide':'Inspect'} Spare Needs
       </button>
       {needsOpen&&<InventorySpareNeeds/>}
+    </section>
+    <section aria-label="Spare Requests Desk" className="soma-v2-rfc-links">
+      <h2>Spare Requests and RMAs</h2>
+      <p>Separate request drafts and submissions from authorized RMA responses.
+        A submitted request does not itself establish an RMA, physical receipt, or warehouse acceptance.</p>
+      <button type="button" aria-expanded={requestsOpen} onClick={()=>setRequestsOpen(open=>!open)}>
+        {requestsOpen?'Hide':'Inspect'} Spare Requests
+      </button>
+      {requestsOpen&&<InventorySpareRequests/>}
     </section>
   </div>;
 }
