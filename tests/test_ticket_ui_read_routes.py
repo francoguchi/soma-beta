@@ -28,6 +28,10 @@ def test_ticket_ui_owner_read_routes_are_live_bounded_and_closed(initialized_dat
     assert sr_detail.body["service_request_id"] == sr.service_request_id
     assert sr_detail.body["identity"]["official_sr_no"] == "82937461"
     assert sr_detail.body["source_projection"] is None
+    official_lookup = adapter.dispatch(
+        "GET", "/api/v1/tickets/service-requests/by-business-id/82937461", {}
+    )
+    assert official_lookup.body == sr_detail.body
     rfc_detail = adapter.dispatch("GET", f"/api/v1/tickets/rfcs/{rfc.rfc_id}", {})
     assert rfc_detail.status == 200
     assert rfc_detail.body["rfc_id"] == rfc.rfc_id
@@ -41,6 +45,7 @@ def test_ticket_ui_owner_read_routes_are_live_bounded_and_closed(initialized_dat
     )
     assert sr_notes.body == rfc_notes.body == {"items": [], "continuation": None}
     assert adapter.dispatch("GET", "/api/v1/tickets/service-requests", {}) is None
+    assert adapter.dispatch("GET", "/api/v1/tickets/service-requests/by-business-id", {}) is None
     assert adapter.dispatch("GET", "/api/v1/tickets/nonexistent", {}) is None
     assert adapter.dispatch("GET", "/api/v1/tickets/rfcs/not-a-valid-id/extra", {}) is None
 
@@ -59,6 +64,8 @@ def test_ticket_ui_read_routes_never_accept_mutations_unbounded_notes_or_unknown
         ("GET", notes, {"limit": True}), ("GET", notes, {"limit": 11}),
         ("GET", notes, {"limit": 0}), ("GET", notes, {"other": 1}),
         ("GET", notes, {"cursor": "fake"}), ("GET", notes, {"cursor": {}}),
+        ("GET", "/api/v1/tickets/service-requests/by-business-id/bad-id", {}),
+        ("GET", "/api/v1/tickets/service-requests/by-business-id/12345678", {"limit": 2}),
     ]:
         with pytest.raises((ValidationError, SomaError)):
             adapter.dispatch(method, route, values)
