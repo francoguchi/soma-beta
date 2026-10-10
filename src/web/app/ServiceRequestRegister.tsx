@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {OwnerProjection} from '../components/OwnerProjection';
+import {initialSrPageHistory,currentSrPagePath,previousSrPage,nextSrPage} from '../state/sr-page-history';
 
 type TicketRow=Readonly<{
   service_request_id:string;
@@ -22,7 +23,6 @@ type SrPage=Readonly<{
 const UUID4=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SR_CODE=/^(?:[0-9]{8}|LSR-[0-9]{8})$/;
 const PAGE_LIMIT=25;
-const HISTORY_LIMIT=51;
 const firstPath='/api/v1/tickets/service-requests?limit='+PAGE_LIMIT;
 
 function acceptedPage(raw:SrPage):SrPage{
@@ -59,14 +59,11 @@ function displayInstant(seconds:number):string{
 
 /** Read-only owner collection. Current-source values are never treated as lifecycle status. */
 export function ServiceRequestRegister({navigate}:{navigate:(path:string)=>void}){
-  // Cursor history is a bounded moving window; the absolute page number does not
-  // reset when older cursor entries are evicted.
-  const [history,setHistory]=useState<{
-    paths:readonly string[];first:number;page:number
-  }>({paths:[firstPath],first:0,page:0});
+  // Cursor history remains bounded without imposing a record-count cutoff.
+  const [history,setHistory]=useState(()=>initialSrPageHistory(firstPath));
   const [refreshKey,setRefreshKey]=useState(0);
   const [selected,setSelected]=useState<string|null>(null);
-  const path=history.paths[history.page-history.first]??firstPath;
+  const path=currentSrPagePath(history);
   return <section className="soma-v2-sr-register" aria-label="Service Request register">
     <div className="soma-v2-sr-register-header">
       <div><h2>Service Requests · Register</h2>
@@ -75,7 +72,7 @@ export function ServiceRequestRegister({navigate}:{navigate:(path:string)=>void}
     </div>
     <div className="soma-v2-sr-register-actions">
       <button type="button" onClick={()=>{
-        setHistory({paths:[firstPath],first:0,page:0});
+        setHistory(initialSrPageHistory(firstPath));
         setSelected(null);
         setRefreshKey(current=>current+1);
       }}>Refresh from latest</button>
@@ -113,16 +110,12 @@ export function ServiceRequestRegister({navigate}:{navigate:(path:string)=>void}
         </p>}
         <div className="soma-v2-sr-pager">
           <button type="button" disabled={history.page===history.first} onClick={()=>{
-            setHistory(old=>({...old,page:old.page-1}));setSelected(null);
+            setHistory(previousSrPage);setSelected(null);
           }}>Previous page</button>
           <button type="button" disabled={!page.continuation} onClick={()=>{
             if(!page.continuation)return;
             const next=nextPath(page.continuation);
-            setHistory(old=>{
-              const retained=[...old.paths.slice(0,old.page-old.first+1),next];
-              const dropped=Math.max(0,retained.length-HISTORY_LIMIT);
-              return {paths:retained.slice(dropped),first:old.first+dropped,page:old.page+1};
-            });
+            setHistory(old=>nextSrPage(old,next));
             setSelected(null);
           }}>Next page</button>
         </div>
