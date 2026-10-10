@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {navigationForSurface, primaryWorkspaces} from '../.test-build/state/workspace-navigation.js';
 import {RouteNavigation} from '../.test-build/app/router.js';
-import {isExactSrIdentity} from '../.test-build/app/TicketCollection.js';
+import {isExactSrIdentity} from '../.test-build/state/sr-identity.js';
 
 const cases = [
   ['ticket_list', 'tickets', 'Service Requests'],
