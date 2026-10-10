@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {navigationForSurface, primaryWorkspaces} from '../.test-build/state/workspace-navigation.js';
+import {RouteNavigation} from '../.test-build/app/router.js';
 
 const cases = [
   ['ticket_list', 'tickets', 'Service Requests'],
@@ -46,4 +47,49 @@ test('invalid/unknown surfaces do not mislabel the selected workspace', () => {
     assert.equal(model.active, null);
     assert.deepEqual(model.links, []);
   }
+});
+
+test('Settings overlays preserve dirty workbench drafts, but replacing the workbench still requires review', () => {
+  const original='/tickets/sr/33333333-3333-4333-8333-333333333333';
+  let shown=original, pending=null, dirty=true;
+  const stack=[];
+  const settingsPath=value=>['/settings','/settings/appearance','/settings/communications'].includes(value);
+  const nav=new RouteNavigation(original,
+    {replace:(state,path)=>{stack[0]={state,path};},
+      push:(state,path)=>stack.push({state,path}),go:()=>{}},
+    ()=>dirty,()=>null,path=>{shown=path;},path=>{pending=path;},
+    (from,to)=>(settingsPath(from)&&(settingsPath(to)||to===original))||
+      (!settingsPath(from)&&from===original&&settingsPath(to)));
+  nav.navigate('/settings');
+  assert.equal(shown,'/settings');
+  assert.equal(pending,null);
+  nav.navigate('/settings/appearance');
+  assert.equal(shown,'/settings/appearance');
+  assert.equal(pending,null);
+  nav.navigate(original);
+  assert.equal(shown,original);
+  assert.equal(pending,null);
+  nav.navigate('/inventory');
+  assert.equal(shown,original);
+  assert.equal(pending,'/inventory');
+  nav.cancel();
+  assert.equal(pending,null);
+  dirty=false;
+  nav.navigate('/inventory');
+  assert.equal(shown,'/inventory');
+});
+
+test('dirty overlay never authorizes navigation to a different underlying workspace',()=>{
+  const original='/tickets/sr/33333333-3333-4333-8333-333333333333';
+  let shown=original,pending=null;
+  const settingsPath=value=>['/settings','/settings/appearance','/settings/communications'].includes(value);
+  const nav=new RouteNavigation(original,
+    {replace:()=>{},push:()=>{},go:()=>{}},
+    ()=>true,()=>null,path=>{shown=path;},path=>{pending=path;},
+    (from,to)=>(settingsPath(from)&&(settingsPath(to)||to===original))||
+      (!settingsPath(from)&&from===original&&settingsPath(to)));
+  nav.navigate('/settings');
+  nav.navigate('/overview');
+  assert.equal(shown,'/settings');
+  assert.equal(pending,'/overview');
 });
