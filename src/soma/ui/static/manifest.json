@@ -1,28 +1,28 @@
 {
   "files": {
+    "assets/index-B1kvrGYe.js": {
+      "bytes": 370144,
+      "sha256": "a0a7d39c534c43486298c965e58b05a453d35e0b20fcf9c6c05010e3003eba4d"
+    },
     "assets/index-CnDOfRIZ.css": {
       "bytes": 26324,
       "sha256": "153f9a40472c969e58c1d9b784014c02b6a6103a9642159612994f95c9eb8bd8"
     },
-    "assets/index-DDZIXaRr.js": {
-      "bytes": 370115,
-      "sha256": "f4478fcce55c01722c5571b3dfeb8beb355e70c1f5eb0a9ad0de59b238d9f647"
-    },
     "brand/soma-lockup-dark.svg": {
-      "bytes": 7674,
-      "sha256": "96963787461a7163f86722e062233951bac629e7eae4e0ccfd27f3957e9b36ad"
+      "bytes": 7669,
+      "sha256": "c12d8fb561cb00e36b7a50d88164e4385c5439f056acfe8aecee7fab3e083cb2"
     },
     "brand/soma-lockup.svg": {
-      "bytes": 7674,
-      "sha256": "5bfd19fe40b8f73f085e7890d804a35bf5c209d28bbc46da8937676e420e64d9"
+      "bytes": 7669,
+      "sha256": "7a2edd64aaf49759dd1fc33c5c7ab5e7c0807255cad9cc666da962efde2df3d1"
     },
     "brand/soma-mark.svg": {
-      "bytes": 6986,
-      "sha256": "460c42c15fd53c4282f92d898621f099d4c8b51410c16f50ac47b2be68e24d5a"
+      "bytes": 6982,
+      "sha256": "0cf73b1b96f15973c5c4066e1b9cc47e11218e5e2af2a5b6afe58f437fa4320a"
     },
     "index.html": {
       "bytes": 445,
-      "sha256": "ae3f7e0cd6a861f3fdad5a8d5ac54e81a9c2cc0dedf897c448acadc67b20e7fd"
+      "sha256": "5a5242b71b0e3b123b97ec3ab14876054e3e67c1b962fa50d9f57192fe994042"
     }
   },
   "schema": "SOMA_UI_STATIC_ASSETS_V1",
@@ -48,7 +48,7 @@
     "app/TicketCollection.tsx": "5597df0e4b6cbe3debf0f5fe598d4b33cdb9a32cd011bcec68742b7abea09b8d",
     "app/TicketCommunications.tsx": "79c34eddbd5f86333a3e3bd31ab981e18045cf38e4c18fbf7a4a71f79300cc58",
     "app/TicketRfcLinks.tsx": "8c89f599ce49b9ef3a920f73bccd24e4a09964204505117c18e467f59712763b",
-    "app/TicketWorkbench.tsx": "5d9fcd2ffeeb9b43ea8306d5356d9f564940705284804353c5a1ada8013d8740",
+    "app/TicketWorkbench.tsx": "498ea8e9e920447d1eea1bbeb2326065cc40f9a4a71454cb49f6e378cc7f7f5c",
     "app/main.tsx": "5e39fb7da2a498bb5d594ada74199097d74826120f4da8c001c341c8dbe76c50",
     "app/router.ts": "072699d330dc289ee4cd19241f8babf877edeb4b17c4d8812943a6d1cfc819de",
     "app/settings-intent.ts": "a40187f8f188593d4f6dd036020b2b1a9ad2bd48ea03f0a487feb1509b011e37",
