@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {OwnerProjection} from '../components/OwnerProjection';
+import {isExactRfcIdentity} from '../state/rfc-identity';
 import {nextOwnerPage, initialOwnerPage, ownerPagePath, previousOwnerPage} from '../state/owner-page-history';
 
 type RfcRow=Readonly<{
@@ -58,6 +59,8 @@ export function RfcRegister({navigate}:{navigate:(path:string)=>void}){
   const [history,setHistory]=useState(()=>initialOwnerPage(first));
   const [selected,setSelected]=useState<string|null>(null);
   const [refresh,setRefresh]=useState(0);
+  const [exactInput,setExactInput]=useState('');
+  const [exactQuery,setExactQuery]=useState<string|null>(null);
   return <section className="soma-v2-rfc-register" aria-label="RFC register">
     <div className="soma-v2-sr-register-header">
       <div><h2>RFCs · Register</h2><p>Canonical identities · current local archive state · updated newest first</p></div>
@@ -115,6 +118,39 @@ export function RfcRegister({navigate}:{navigate:(path:string)=>void}){
         </aside>}
       </>;
     }}/>
+    <div className="soma-v2-ticket-toolbar">
+      <div><h2>Direct RFC identity lookup</h2><p>Exact RFC number · no fuzzy matching</p></div>
+    </div>
+    <form className="soma-v2-ticket-search" onSubmit={event=>{
+      event.preventDefault();if(isExactRfcIdentity(exactInput))setExactQuery(exactInput);
+    }}>
+      <label htmlFor="soma-v2-rfc-lookup">RFC number (NC followed by 14 digits)</label>
+      <div className="soma-v2-ticket-search-controls">
+        <input id="soma-v2-rfc-lookup" value={exactInput} placeholder="NC20261010000001"
+          maxLength={16} spellCheck={false} autoComplete="off"
+          aria-invalid={exactInput.length>0&&!isExactRfcIdentity(exactInput)?'true':undefined}
+          onChange={event=>{setExactInput(event.target.value);setExactQuery(null);}}/>
+        <button type="submit" disabled={!isExactRfcIdentity(exactInput)}>Find exact RFC</button>
+      </div>
+    </form>
+    {exactQuery&&<OwnerProjection<RfcRow & {warnings:readonly string[]}> path={
+      '/api/v1/tickets/rfcs/by-business-id/'+encodeURIComponent(exactQuery)
+    } render={item=>{
+      if(!item||!uuid4.test(item.rfc_id)||item.rfc_no!==exactQuery
+        ||!Number.isSafeInteger(item.revision)||item.revision<1
+        ||!['root','standalone','subordinate'].includes(item.hierarchy_role)
+        ||!['active','archived'].includes(item.local_archive_state))
+        throw new Error('Invalid accepted RFC identity');
+      return <aside className="soma-v2-sr-details" aria-label="Exact RFC match">
+        <div className="soma-v2-sr-details-title"><strong>EXACT MATCH / {item.rfc_no}</strong>
+          <button type="button" onClick={()=>navigate('/tickets/rfc/'+encodeURIComponent(item.rfc_id))}>Open RFC workbench ↗</button></div>
+        <div className="soma-v2-sr-details-grid">
+          <span>Hierarchy</span><span>{item.hierarchy_role}</span>
+          <span>Local archive</span><span>{item.local_archive_state}</span>
+          <span>Revision</span><strong>{item.revision}</strong>
+        </div>
+      </aside>;
+    }}/>}
     <p className="soma-v2-ticket-collection-scope">
       The local archive state is an RFC owner fact. Source status and status class are separate
       accepted observations; neither infers Service Request lifecycle. Each page is a fresh read.

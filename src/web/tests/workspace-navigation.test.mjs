@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {navigationForSurface, primaryWorkspaces} from '../.test-build/state/workspace-navigation.js';
 import {RouteNavigation,resolveRoute} from '../.test-build/app/router.js';
 import {isExactSrIdentity} from '../.test-build/state/sr-identity.js';
+import {isExactRfcIdentity} from '../.test-build/state/rfc-identity.js';
 
 const cases = [
   ['ticket_list', 'tickets', 'Service Requests'],
@@ -110,4 +111,12 @@ test('RFC collection routes preserve Tickets context without misclassifying deep
   assert.equal(navigationForSurface('rfc_list').links.find(x=>x.label==='RFCs')?.current,true);
   assert.equal(navigationForSurface('ticket_list').links.find(x=>x.label==='RFCs')?.current,false);
   assert.equal(resolveRoute('/tickets/rfcs/unknown'),null);
+});
+
+test('RFC identity lookup is exact, ASCII-only, and not the same as SR matching',()=>{
+  for(const value of ['NC20261010000001','NC00000000000000','NC99999999999999'])
+    assert.equal(isExactRfcIdentity(value),true,value);
+  for(const value of ['','NC123','nc20261010000001','NC2026101000000','NC202610100000011',
+    'NC２０２６１０１００００００１','NC20261010-00001','  NC20261010000001','20261010000001','12345678'])
+    assert.equal(isExactRfcIdentity(value),false,value);
 });

@@ -21,6 +21,7 @@ from soma.tickets.queries.rfc_branches import RfcBranchQueryService
 
 _DETAIL = re.compile(r"^/api/v1/tickets/(service-requests|rfcs)/([^/]+)$")
 _IDENTITY = re.compile(r"^/api/v1/tickets/service-requests/by-business-id/([^/]+)$")
+_RFC_IDENTITY = re.compile(r"^/api/v1/tickets/rfcs/by-business-id/([^/]+)$")
 _NOTES = re.compile(r"^/api/v1/tickets/(service_request|rfc)/([^/]+)/notes$")
 _SR_RFCS = re.compile(r"^/api/v1/tickets/service-requests/([^/]+)/rfcs$")
 _RFC_CONTEXT = re.compile(r"^/api/v1/tickets/rfcs/([^/]+)/(branch|effective-srs)$")
@@ -48,7 +49,7 @@ class TicketReadRouteAdapter:
     def dispatch(self, method: str, path: str, values: dict[str, Any]) -> TicketReadResponse | None:
         # A missing business identifier is not a Service Request UUID.
         # Keep the lookup namespace disjoint from ordinary point routes.
-        if path == "/api/v1/tickets/service-requests/by-business-id":
+        if path in {"/api/v1/tickets/service-requests/by-business-id", "/api/v1/tickets/rfcs/by-business-id"}:
             return None
         if path == "/api/v1/tickets/service-requests":
             if method != "GET":
@@ -67,6 +68,16 @@ class TicketReadRouteAdapter:
             return TicketReadResponse(200, self._rfc_collection.list_rfcs(
                 limit=values.get("limit", 25), cursor=values.get("cursor")
             ))
+        rfc_identity = _RFC_IDENTITY.fullmatch(path)
+        if rfc_identity is not None:
+            if method != "GET":
+                raise ValidationError("RFC identity query is read-only")
+            if not isinstance(values, dict) or values:
+                raise ValidationError("RFC identity lookup does not accept filters")
+            value = rfc_identity.group(1)
+            if re.fullmatch(r"NC[0-9]{14}", value) is None:
+                raise ValidationError("RFC number requires NC followed by fourteen ASCII digits")
+            return TicketReadResponse(200, asdict(self._rfcs.get(rfc_no=value)))
         rfc_context = _RFC_CONTEXT.fullmatch(path)
         if rfc_context is not None:
             if method != "GET":
