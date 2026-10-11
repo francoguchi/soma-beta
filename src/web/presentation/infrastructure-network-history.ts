@@ -38,7 +38,7 @@ export function verifyNetworkHistoryPage(page:NetworkHistoryPage):void {
       ||!Array.isArray(event.summary.changes)||event.summary.changes.length>32
       ||!(event.summary.reason_code===null||bounded(event.summary.reason_code,384))
       ||!Array.isArray(event.summary.warning_codes)||event.summary.warning_codes.length>16
-      ||event.summary.warning_codes.some(warning=>!bounded(warning,128))
+      ||event.summary.warning_codes.some((warning:string)=>!bounded(warning,128))
       ||event.summary.changes.some(change=>!change||typeof change!=='object'
         ||Object.keys(change).length!==3
         ||Object.keys(change).some(key=>!['field','prior','new'].includes(key))
