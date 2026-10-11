@@ -12,6 +12,7 @@ import {InfrastructureCandidateEvidence} from './InfrastructureCandidateEvidence
 import {verifyNetworkElement} from '../presentation/infrastructure-element';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
+import {InfrastructureExplorerFilters} from './InfrastructureExplorerFilters';
 import {LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
@@ -194,8 +195,15 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     element.click();
   };
   const path=intent.explorer;
+  const applyOwnerFilters=(explorer:string)=>{
+    // Owner collection scope has changed. Clear selection and opened detail
+    // so an old record cannot be mistaken for a match in the new scope.
+    store.dispatch({selection:emptySelection});
+    setIntent({explorer,openedId:null,tab:'Summary',components:null,history:null,workbook:null});
+  };
   return <div ref={root} onFocusCapture={event=>{const control=event.target.closest<HTMLElement>('[data-focus-token]');if(control)store.dispatch({focusToken:control.dataset.focusToken??null});}}>
     {notice&&<p role="status">{notice}</p>}<p>Contextual explorer. Physical placement, containment, and Cloud assignment represent separate facts.</p>
+    <InfrastructureExplorerFilters path={path} onApply={applyOwnerFilters}/>
     <button type="button" data-focus-token="infrastructure:refresh" onClick={()=>setRefreshKey(value=>value+1)}>Refresh explorer</button>
     <button type="button" className="soma-structure-trigger" ref={structureButton}
       data-focus-token="infrastructure:structure" aria-haspopup="dialog"
