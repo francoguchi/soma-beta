@@ -82,6 +82,11 @@ def dense_indexed_reader():
         site_id, room_id = _id(600_000), _id(700_000)
         cloud_type_id, cloud_id = _id(800_000), _id(900_000)
         ne_ids = [_id(2_000_000 + index) for index in range(DENSITY)]
+        # A parent-selective count requires at least one unrelated Cloud
+        # partition. If every assignment belongs to the target Cloud,
+        # SQLite can rationally prefer a table scan over an index lookup.
+        foreign_cloud = _id(900_001)
+        foreign_ne_ids = [_id(4_000_000 + index) for index in range(DENSITY)]
         connection.execute(
             "INSERT INTO sites VALUES (?,?)", (site_id, _id(500_000))
         )
@@ -93,6 +98,10 @@ def dense_indexed_reader():
         connection.execute(
             "INSERT INTO cloud_deployments VALUES (?,?,?,?,?,?)",
             (cloud_id, cloud_type_id, site_id, "Dense Cloud", "active", 1),
+        )
+        connection.execute(
+            "INSERT INTO cloud_deployments VALUES (?,?,?,?,?,?)",
+            (foreign_cloud, cloud_type_id, site_id, "Unrelated Cloud", "active", 1),
         )
         connection.executemany(
             "INSERT INTO racks VALUES (?,?,?,?)",
@@ -119,6 +128,22 @@ def dense_indexed_reader():
             ((node, cloud_id) for node in ne_ids),
         )
         connection.executemany(
+            "INSERT INTO network_elements VALUES (?,?,?,?)",
+            (
+                (node, site_id, f"Unrelated Node {i}",
+                 "active" if i % 2 else "archived")
+                for i, node in enumerate(foreign_ne_ids)
+            ),
+        )
+        connection.executemany(
+            "INSERT INTO network_element_placement_current VALUES (?,NULL)",
+            ((node,) for node in foreign_ne_ids),
+        )
+        connection.executemany(
+            "INSERT INTO cloud_assignment_current VALUES (?,?)",
+            ((node, foreign_cloud) for node in foreign_ne_ids),
+        )
+        connection.executemany(
             "INSERT INTO network_element_containment_current VALUES (?,?)",
             ((node, ne_ids[0]) for node in ne_ids[1:]),
         )
@@ -126,7 +151,7 @@ def dense_indexed_reader():
         connection.execute("ANALYZE")
         yield SimpleNamespace(
             connection=connection, site=site_id, room=room_id,
-            cloud=cloud_id, parent=ne_ids[0],
+            cloud=cloud_id, foreign_cloud=foreign_cloud, parent=ne_ids[0],
         )
     finally:
         connection.close()
@@ -219,6 +244,10 @@ def test_dense_point_counts_use_declared_relationship_indexes(dense_indexed_read
     )
     assert room["rack_count"] == DENSITY
     assert cloud["assigned_network_element_count"] == DENSITY
+    assert reader.connection.execute(
+        "SELECT count(*) FROM cloud_assignment_current WHERE cloud_deployment_id=?",
+        (reader.foreign_cloud,),
+    ).fetchone()[0] == DENSITY
     for sql, args, index in (
         ("SELECT count(*) FROM racks WHERE room_id=?", (reader.room,), "infra_004"),
         (
