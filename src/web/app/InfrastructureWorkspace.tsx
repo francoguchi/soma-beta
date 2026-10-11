@@ -4,6 +4,7 @@ import {SelectableCollection} from '../components/SelectableCollection';
 import {BoundedCollection} from '../components/BoundedCollection';
 import {UiStore, emptySelection} from '../state/ui-store';
 import {InfrastructureWorkbookActivity} from './InfrastructureWorkbookActivity';
+import {InfrastructureSiteDetails} from './InfrastructureSiteDetails';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
@@ -158,11 +159,19 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
         const nodes:readonly Node[]=page.nodes; const byId=new Map(nodes.map(node=>[`${node.kind}:${node.id}`,node]));
         return <>{nodes.length===0&&<p>No Infrastructure nodes in this page.</p>}
           <SelectableCollection store={store} rows={nodes.map(node=>({id:`${node.kind}:${node.id}`,eligible:true,
-            route:node.kind==='network_element'||node.kind==='containment'?{record_type:'INFRASTRUCTURE',record_id:node.id,revision_token:null}:null}))}
-            open={ref=>setIntent({...intent,openedId:ref.record_id,tab:'Summary',components:`/api/v1/infrastructure/network-elements/${ref.record_id}/components?limit=200`,
-              history:`/api/v1/infrastructure/history?target_kind=network_element&target_id=${ref.record_id}&limit=5`,workbook:null})} render={row=>{const node=byId.get(row.id)!;return <><strong>{node.label}</strong><p>{node.kind.replaceAll('_',' ')} — {node.lifecycle??'Unknown lifecycle'}</p>
+            route:node.kind==='site'?{record_type:'INFRASTRUCTURE_SITE',record_id:node.id,revision_token:null}:
+              node.kind==='network_element'||node.kind==='containment'?{record_type:'INFRASTRUCTURE',record_id:node.id,revision_token:null}:null}))}
+            open={ref=>{
+              const isSite=ref.record_type==='INFRASTRUCTURE_SITE';
+              setIntent({...intent,openedId:ref.record_id,openedKind:isSite?'site':'network_element',tab:'Summary',
+                components:isSite?null:`/api/v1/infrastructure/network-elements/${ref.record_id}/components?limit=200`,
+                history:isSite?null:`/api/v1/infrastructure/history?target_kind=network_element&target_id=${ref.record_id}&limit=5`,
+                workbook:null});
+            }} render={row=>{const node=byId.get(row.id)!;return <><strong>{node.label}</strong><p>{node.kind.replaceAll('_',' ')} — {node.lifecycle??'Unknown lifecycle'}</p>
               <p>{node.kind==='containment'?'Containment parent':'Physical/context parent'}: {node.parent_context_id??'None in this context'}.</p>
               {node.warning_codes.map(warning=><p className="warning" key={warning}>{warning}</p>)}</>;}}/>
           {page.next_cursor!==null&&<button type="button" data-focus-token="infrastructure:explorer:next" onClick={()=>{store.dispatch({selection:emptySelection});setIntent({...intent,explorer:next});}}>Next explorer page</button>}</>;
-      }}/></section>{intent.openedId?<NetworkElement key={intent.openedId} intent={intent} onIntent={setIntent}/>:<section aria-label="Infrastructure detail"><h2>Select and open a Network Element</h2><p>A single click changes selection. Enter, double-click, or Open record opens its owner detail.</p></section>}</div></div>;
+      }}/></section>{intent.openedId?(intent.openedKind==='site'?
+          <InfrastructureSiteDetails key={'site:'+intent.openedId} id={intent.openedId}/>:
+          <NetworkElement key={'ne:'+intent.openedId} intent={intent} onIntent={setIntent}/>):<section aria-label="Infrastructure detail"><h2>Select and open a Network Element</h2><p>A single click changes selection. Enter, double-click, or Open record opens its owner detail.</p></section>}</div></div>;
 }

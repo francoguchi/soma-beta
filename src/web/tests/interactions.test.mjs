@@ -362,3 +362,25 @@ test('Infrastructure return intent fences complete owner cursors, opened identit
   assert.equal(history.restore(token).infrastructure.explorer,explorer);assert.notEqual(history.restore(token).infrastructure.workbook.run,'changed');
   assert.throws(()=>history.remember({...history.restore(token),route:'/inventory'}));
 });
+
+test('Infrastructure Site return intent remains closed, explicit and independent of Network Element panels',()=>{
+  const id='11111111-1111-4111-8111-111111111111';
+  const site={explorer:'/api/v1/infrastructure/tree?limit=200',openedId:id,openedKind:'site',
+    tab:'Summary',components:null,history:null,workbook:null};
+  assert.equal(infrastructureIntent(site),site);
+  const history=new NavigationHistory();
+  const state={route:'/infrastructure',filterFingerprint:'a'.repeat(64),
+    activeId:'site:'+id,selectedId:'site:'+id,memberIds:[],scrollAnchor:null,focusToken:'row:site:'+id,
+    infrastructure:site};
+  const token=history.remember(state);
+  assert.deepEqual(history.restore(token).infrastructure,site);
+  for(const invalid of [
+    {...site,openedKind:'network_element'}, {...site,tab:'History'},
+    {...site,components:'/api/v1/infrastructure/network-elements/'+id+'/components?limit=200'},
+    {...site,history:'/api/v1/infrastructure/history?target_kind=network_element&target_id='+id+'&limit=5'},
+    {...site,workbook:{history:'/api/v1/infrastructure/workbooks/history?limit=200',run:null,proposalId:null,candidatePage:0}},
+    {...site,openedId:null},{...site,openedId:'not-an-id'},
+    {...site,ownerDto:{name:'copied-site'}},
+  ])assert.equal(infrastructureIntent(invalid),null);
+  assert.equal(infrastructureIntent({...site,openedKind:'invalid'}),null);
+});
