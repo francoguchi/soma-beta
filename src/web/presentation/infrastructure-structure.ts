@@ -23,7 +23,9 @@ export function structurePreset(preset:StructurePreset):StructureView {
   return {order:[...order],visible:preset==='direct'?[]:[...order]};
 }
 export function validStructure(view:StructureView):boolean {
-  return !!view&&Array.isArray(view.order)&&Array.isArray(view.visible)
+  return !!view&&typeof view==='object'&&!Array.isArray(view)
+    &&Object.keys(view).length===2&&Object.keys(view).every(key=>key==='order'||key==='visible')
+    &&Array.isArray(view.order)&&Array.isArray(view.visible)
     &&view.order.length===INTERMEDIATE_LEVELS.length
     &&new Set(view.order).size===INTERMEDIATE_LEVELS.length
     &&view.order.every(level=>INTERMEDIATE_LEVELS.includes(level))
@@ -61,6 +63,10 @@ export function projectStructureRows<T extends ExplorerNode>(nodes:readonly T[],
     if(kind==='network_element'||kind==='containment')return INTERMEDIATE_LEVELS.length;
     return (view.order as readonly string[]).indexOf(kind);
   };
+  if(nodes.some(node=>!node||typeof node.kind!=='string'||typeof node.id!=='string'
+    ||node.id.length===0||(!['network_element','containment'].includes(node.kind)
+      &&!(INTERMEDIATE_LEVELS as readonly string[]).includes(node.kind))))
+    throw new Error('Invalid Infrastructure owner node for Structure projection');
   return nodes.map((node,index)=>({node,index}))
     .filter(({node})=>!(INTERMEDIATE_LEVELS as readonly string[]).includes(node.kind)||shown.has(node.kind as StructureLevel))
     .sort((a,b)=>rank(a.node.kind)-rank(b.node.kind)||a.index-b.index)
