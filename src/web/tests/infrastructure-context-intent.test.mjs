@@ -52,7 +52,7 @@ test('Room/Cloud history return rejects foreign, forged, stale and unbounded cur
   {...context,paths:[base,next(cursor(100))+'&limit=5']},
   {...context,extra:'forged'},
   {...context,paths:[base,next(cursor(100)),next(cursor(101))],page:2},
-  {...context,paths:[base,next(cursor(100)),next(cursor(99,event(2),'b'.repeat(64))],page:2},
+  {...context,paths:[base,next(cursor(100)),next(cursor(99,event(2),'b'.repeat(64)))],page:2},
  ];
  for(const item of bad){
   assert.equal(validInfrastructureContextHistory(item,room,'room'),false);
