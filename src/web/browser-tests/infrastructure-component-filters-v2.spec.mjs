@@ -88,3 +88,15 @@ test('Filtered Installed Component continuation preserves complete owner query f
  expect(JSON.parse(last.searchParams.get('cursor'))).toEqual(cursor);
  await expect(form(page).getByRole('combobox',{name:'Component state'})).toHaveValue('installed');
 });
+
+test('Corrupt Installed Component owner row fails closed without displaying its physical evidence',async({page})=>{
+ const reads=[];
+ await fixture(page,()=>({items:[{
+   ...comp(1),device_part_unit_id:'not-an-owner-uuid',
+ }],next_cursor:null}),reads);
+ await expect(panel(page).getByRole('alert'))
+   .toContainText('owner projection could not be rendered');
+ await expect(table(page)).toHaveCount(0);
+ await expect(panel(page)).not.toContainText('SERIAL-1');
+ expect(reads).toHaveLength(1);
+});
