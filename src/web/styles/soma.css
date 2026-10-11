@@ -494,3 +494,20 @@ dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-arrows 
 .soma-infra-owner-filters>p{font-size:11px;color:var(--secondary,var(--muted));line-height:1.5;margin:0 0 9px}
 @media(max-width:990px){.soma-infra-component-filter-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.soma-infra-component-filter-fields{grid-template-columns:minmax(0,1fr)}}
+
+/* LLD-08: distinguish physical Site/Rack placement from logical Cloud and
+ * containment. Every related record is loaded lazily through its own owner. */
+.soma-infra-relation-group{
+  box-sizing:border-box;min-width:0;max-width:100%;
+  margin:11px 0;padding:12px 14px;
+  border:1px solid var(--line,var(--border));
+  background:var(--surface2,var(--surface));overflow-wrap:anywhere;
+}
+.soma-infra-relation-group h3{margin:0 0 7px;font-size:12px}
+.soma-infra-relation-group h3:not(:first-child){margin-top:12px}
+.soma-infra-relation-group p{max-width:100%;font-size:11px;line-height:1.6;margin:6px 0}
+.soma-infra-relation-group button{
+  min-height:34px;max-width:100%;margin:5px 8px 4px 0;
+  white-space:normal;overflow-wrap:anywhere;
+}
+@media(max-width:540px){.soma-infra-relation-group{padding:9px}}
