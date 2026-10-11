@@ -40,6 +40,18 @@ export function moveStructureLevel(view:StructureView,level:StructureLevel,direc
   [order[index],order[next]]=[order[next]!,order[index]!];
   return {order,visible:[...view.visible]};
 }
+/** Optional pointer/drag equivalent to the keyboard arrow controls. Drops
+ * before the named intermediate level; pinned endpoints are not movable.
+ */
+export function dropStructureLevel(view:StructureView,from:StructureLevel,before:StructureLevel):StructureView {
+  if(!validStructure(view))throw new Error('Invalid Structure view');
+  const order=[...view.order],origin=order.indexOf(from),destination=order.indexOf(before);
+  if(origin<0||destination<0)return view;
+  if(origin===destination)return view;
+  order.splice(origin,1);
+  order.splice(order.indexOf(before),0,from);
+  return {order,visible:[...view.visible]};
+}
 export function toggleStructureLevel(view:StructureView,level:StructureLevel):StructureView {
   if(!validStructure(view)||!INTERMEDIATE_LEVELS.includes(level))throw new Error('Invalid Structure level');
   const enabled=new Set(view.visible);
