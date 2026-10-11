@@ -8,6 +8,7 @@ import {InfrastructureSiteDetails} from './InfrastructureSiteDetails';
 import {InfrastructureRackOccupancy} from './InfrastructureRackOccupancy';
 import {InfrastructureModelEvidence} from './InfrastructureModelEvidence';
 import {InfrastructureIpEvidence} from './InfrastructureIpEvidence';
+import {verifyNetworkElement} from '../presentation/infrastructure-element';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
@@ -66,7 +67,7 @@ function NetworkElement({intent,onIntent}:{intent:InfrastructureIntent;onIntent:
     {history:'/api/v1/infrastructure/workbooks/history?limit=200',run:null,proposalId:null,candidatePage:0}:intent.workbook});}
   return <section aria-label="Opened Network Element" data-scroll-owner="y" data-return-scroll="detail" className="infrastructure-detail">
     <OwnerProjection<Element> path={'/api/v1/infrastructure/network-elements/'+encodeURIComponent(id)} render={value=>{
-      if (value.network_element_id!==id||!Array.isArray(value.warning_codes)||value.warning_codes.length>32) throw new Error('Invalid Network Element identity');
+      verifyNetworkElement(value,id);
       return <><h2>{value.operational_name}</h2><p>Network Element identity: {value.network_element_id}. Lifecycle: {value.lifecycle}. Accepted revision: {value.revision}.</p>
         <p>Site identity: {value.site.id}. Customer Organization: {value.customer_org_id}.</p>
         {value.warning_codes.map(warning=><p className="warning" key={warning}>{warning}</p>)}
