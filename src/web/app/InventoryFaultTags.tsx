@@ -2,6 +2,7 @@ import {useContext,useEffect,useState} from 'react';
 import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection';
 import {filterFingerprint} from '../data/query-controller';
 import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
+import {FaultTagLineage} from './FaultTagLineage';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const hash=/^[0-9a-f]{64}$/u;
@@ -106,6 +107,7 @@ function FaultTagEvidence({row}:{row:ListRow}){
           </p>)}
           {value.members.length>25&&<p>Only the first 25 memberships are displayed here.</p>}
         </section>
+        <FaultTagLineage faultTagId={value.fault_tag_id} expectedCount={value.lineage.length}/>
       </>;
     }}/>
   </aside>;
