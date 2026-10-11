@@ -313,3 +313,21 @@ test('Empty logical lens has a local escape without claiming any absent Cloud as
  await expect(page.getByRole('listitem')).toHaveCount(1);
  expect(reads).toHaveLength(1);
 });
+
+test('Relationship lens restores after browser Back without caching owner rows',async({page})=>{
+  const reads=[];await fixture(page,reads);
+  await page.route('**/api/v1/objectives?*',route=>{
+    const asOf=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+    return route.fulfill({json:{items:[],continuation:null,exact_total:0,as_of_utc:asOf}});
+  });
+  const chooser=page.getByRole('group',{name:'Infrastructure relationship lens'});
+  await chooser.getByRole('button',{name:'Cloud and containment'}).click();
+  await expect(page.getByRole('listitem')).toHaveCount(2);
+  await page.getByRole('link',{name:'Objectives',exact:true}).click();
+  await page.goBack();
+  await expect(page.getByRole('listitem')).toHaveCount(2);
+  await expect(page.getByRole('group',{name:'Infrastructure relationship lens'})
+    .getByRole('button',{name:'Cloud and containment'}))
+    .toHaveAttribute('aria-pressed','true');
+  expect(reads.length).toBeGreaterThanOrEqual(2);
+});
