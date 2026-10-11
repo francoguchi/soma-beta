@@ -4,6 +4,7 @@ import {validStructure,type InfrastructureLens,type StructureView} from '../pres
 import {readExplorerFilters} from '../presentation/infrastructure-explorer-filters.js';
 import {readComponentFilters} from '../presentation/infrastructure-component-filters.js';
 import {validInfrastructureContextHistory} from '../presentation/infrastructure-context-intent.js';
+import {validRoomCloudState,type RoomCloudState} from '../presentation/infrastructure-members.js';
 import type {OwnerPageHistory} from '../state/owner-page-history.js';
 export type ClientRoute = Readonly<{path: string; surface: string; owner: string; recordId: string | null}>;
 const routes = [
@@ -39,7 +40,7 @@ export const infrastructureTabs=['Summary','Placement','Components','IP Addresse
 export type WorkbookIntent=Readonly<{history:string;run:string|null;proposalId:string|null;candidatePage:number}>;
 export type InfrastructureIntent=Readonly<{explorer:string;openedId:string|null;openedKind?:'site'|'room'|'rack'|'cloud_deployment'|'network_element';tab:typeof infrastructureTabs[number];
   components:string|null;history:string|null;workbook:WorkbookIntent|null;
-  contextHistory?:OwnerPageHistory|null}>;
+  contextHistory?:OwnerPageHistory|null;roomCloud?:RoomCloudState|null}>;
 type InfrastructureQuery='explorer'|'components'|'history'|'workbookHistory'|'workbookRun';
 const infraUuid=(value:unknown):value is string=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value);
 /** Only the implemented owner query intents, with the complete owner ordering tuple. */
@@ -77,22 +78,24 @@ export function infrastructureQuery(path:string,kind:InfrastructureQuery,id:stri
   }catch{return null;}
 }
 export function infrastructureIntent(value:InfrastructureIntent|undefined):InfrastructureIntent|null {
-  if(!value||![6,7,8].includes(Object.keys(value).length)
-    ||Object.keys(value).some(key=>!['explorer','openedId','openedKind','tab','components','history','workbook','contextHistory'].includes(key))
+  if(!value||![6,7,8,9].includes(Object.keys(value).length)
+    ||Object.keys(value).some(key=>!['explorer','openedId','openedKind','tab','components','history','workbook','contextHistory','roomCloud'].includes(key))
     ||(value.openedKind!==undefined&&!['site','room','rack','cloud_deployment','network_element'].includes(value.openedKind))
     ||!infrastructureQuery(value.explorer,'explorer')||!infrastructureTabs.includes(value.tab)
     ||(value.openedId!==null&&!infraUuid(value.openedId)))return null;
-  const context=value.contextHistory;
+  const context=value.contextHistory,roomCloud=value.roomCloud;
   if(value.openedId===null) return value.openedKind===undefined&&value.components===null&&value.history===null
-    &&value.workbook===null&&context==null&&value.tab==='Summary'?value:null;
+    &&value.workbook===null&&context==null&&roomCloud==null&&value.tab==='Summary'?value:null;
   if(['site','room','rack','cloud_deployment'].includes(value.openedKind??'')) {
     if(value.tab!=='Summary'||value.components!==null||value.history!==null||value.workbook!==null)return null;
-    if(value.openedKind==='room'||value.openedKind==='cloud_deployment')
+    if(value.openedKind==='room'||value.openedKind==='cloud_deployment') {
+      if(roomCloud!==undefined&&roomCloud!==null&&!validRoomCloudState(roomCloud,value.openedKind,value.openedId))return null;
       return context===undefined?!Object.hasOwn(value,'contextHistory')?value:null:
         validInfrastructureContextHistory(context,value.openedId,value.openedKind)?value:null;
-    return context==null?value:null;
+    }
+    return context==null&&roomCloud==null?value:null;
   }
-  if(context!=null)return null;
+  if(context!=null||roomCloud!=null)return null;
   if(typeof value.components!=='string'||!infrastructureQuery(value.components,'components',value.openedId)
     ||typeof value.history!=='string'||!infrastructureQuery(value.history,'history',value.openedId))return null;
   const work=value.workbook;
@@ -180,6 +183,13 @@ export class NavigationHistory {
         workbook:state.infrastructure.workbook===null?null:Object.freeze({...state.infrastructure.workbook}),
         ...(state.infrastructure.contextHistory===undefined?{}:{contextHistory:state.infrastructure.contextHistory===null?null:Object.freeze({
           ...state.infrastructure.contextHistory,paths:Object.freeze([...state.infrastructure.contextHistory.paths]),
+        })}),
+        ...(state.infrastructure.roomCloud===undefined?{}:{roomCloud:state.infrastructure.roomCloud===null?null:Object.freeze({
+          section:state.infrastructure.roomCloud.section,
+          members:state.infrastructure.roomCloud.members===null?null:Object.freeze({
+            ...state.infrastructure.roomCloud.members,
+            paths:Object.freeze([...state.infrastructure.roomCloud.members.paths]),
+          }),
         })})})}),
       ...(state.collectionOrder===undefined?{}:{collectionOrder:Object.freeze([...state.collectionOrder])})}));
     while (this.entries.size > 50) { const oldest = this.entries.keys().next().value; if (oldest) this.entries.delete(oldest); }
