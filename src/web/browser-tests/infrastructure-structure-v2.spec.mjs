@@ -238,3 +238,24 @@ test('Study29 displayed-level shortcuts focus real current-page rows without ope
  await expect(page.getByRole('region',{name:'Opened Network Element'})).toHaveCount(0);
  expect(reads).toHaveLength(1);
 });
+
+test('Hidden-only owner page offers explicit local reveal without changing the owner query',async({page})=>{
+ const reads=[];
+ await page.route('**/api/v1/infrastructure/tree?*',route=>{
+   reads.push(new URL(route.request().url()));
+   return route.fulfill({json:{nodes:[nodes[0]],next_cursor:null}});
+ });
+ await page.goto('http://127.0.0.1:4174/infrastructure');
+ await expect(page.getByRole('listitem')).toHaveCount(1);
+ await page.getByRole('button',{name:'Structure',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Direct to Network Element'}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Apply view'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(0);
+ await page.getByRole('button',{name:'Show hidden Structure levels'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(1);
+ await expect(page.getByRole('listitem')).toContainText('SITE OWNER');
+ await expect(page.locator('[aria-label="Applied Structure view"]'))
+   .toContainText('Customer → Cloud → Site → Room → Rack → Network Element');
+ expect(reads).toHaveLength(1);
+ await expect(page.getByRole('region',{name:'Opened Site'})).toHaveCount(0);
+});
