@@ -39,7 +39,7 @@ export function verifyNetworkHistoryPage(page:NetworkHistoryPage):void {
       ||!(event.summary.reason_code===null||bounded(event.summary.reason_code,384))
       ||!Array.isArray(event.summary.warning_codes)||event.summary.warning_codes.length>16
       ||event.summary.warning_codes.some((warning:string)=>!bounded(warning,128))
-      ||event.summary.changes.some(change=>!change||typeof change!=='object'
+      ||event.summary.changes.some((change:NetworkHistoryChange)=>!change||typeof change!=='object'
         ||Object.keys(change).length!==3
         ||Object.keys(change).some(key=>!['field','prior','new'].includes(key))
         ||!bounded(change.field,128)
