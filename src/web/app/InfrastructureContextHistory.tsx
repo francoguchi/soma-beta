@@ -42,9 +42,9 @@ function validate(page:Page,id:string,kind:Kind,digest:string,path:string):void{
       ||event.effective_at_utc!==null&&!validSeconds(event.effective_at_utc)
       ||!event.summary||!Array.isArray(event.summary.changes)||event.summary.changes.length>32
       ||!Array.isArray(event.summary.warning_codes)||event.summary.warning_codes.length>16
-      ||event.summary.warning_codes.some(w=>!bounded(w,128))
+      ||event.summary.warning_codes.some((w:string)=>!bounded(w,128))
       ||!(event.summary.reason_code===null||bounded(event.summary.reason_code,384))
-      ||event.summary.changes.some(change=>!change||!bounded(change.field,256))
+      ||event.summary.changes.some((change:Change)=>!change||!bounded(change.field,256))
       ||prior&&(event.recorded_at_utc>prior[0]||
         event.recorded_at_utc===prior[0]&&event.event_id>=prior[1]))
       throw new Error('Invalid context history evidence');
