@@ -103,6 +103,11 @@ test('At 200% zoom the Structure footer remains reachable and keyboard focus ret
   const dialog=page.getByRole('dialog',{name:'Infrastructure / Structure view'});
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button',{name:'Close Structure view'})).toBeFocused();
+  for(let press=0;press<15;press++){
+    await page.keyboard.press('Tab');
+    const inside=await page.evaluate(()=>document.activeElement?.closest('dialog.soma-structure-dialog')!==null);
+    expect(inside).toBe(true);
+  }
   const visibility=await dialog.evaluate(element=>{
     const modal=element.getBoundingClientRect();
     const footer=element.querySelector('.soma-structure-dialog-footer')?.getBoundingClientRect();
