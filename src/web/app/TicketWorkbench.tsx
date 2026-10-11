@@ -12,6 +12,7 @@ import {TicketRfcLinks} from './TicketRfcLinks';
 import {RfcRelated,RfcServiceRequests} from './RfcRelations';
 import {TicketDeviceReferences} from './TicketDeviceReferences';
 import {TicketTasks} from './TicketTasks';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 type SrDetail = ServiceRequestContextFacts&Readonly<{service_request_id: string; identity: {official_sr_no: string | null; local_sr_no: string | null}; revision: number;
   linked_root_rfc_count: number; device_reference_count: number; warnings: readonly string[]}>;
 type RfcDetail = Readonly<{rfc_id: string; rfc_no: string; revision: number; hierarchy_role: string; local_archive_state: string;
@@ -34,7 +35,7 @@ function Notes({path,setPath,route,ownerFingerprint}: {path:string;setPath:(path
     const next=nextTicketNotesQuery(path,route,page.continuation,ownerFingerprint);
     return <><h2>Working Notes</h2>{page.items.length === 0 && <p>No active notes in this page.</p>}
       {page.items.map(note => <article key={note.working_note_id}><p style={{whiteSpace: 'pre-wrap'}}>{note.body_text}</p>
-        <p>Created {new Date(note.created_at_utc * 1000).toISOString()}; updated {new Date(note.updated_at_utc * 1000).toISOString()}.</p>
+        <p>Created {formatOwnerLocalTime(note.created_at_utc)}; updated {formatOwnerLocalTime(note.updated_at_utc)}.</p>
         <p>Creator profile: {note.created_by_local_user_profile_id}. Accepted note revision: {note.revision}.</p></article>)}
       {page.continuation !== null && <button type="button" data-focus-token="notes:next" onClick={() => setPath(next)}>Next notes</button>}</>;
   }}/>;

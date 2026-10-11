@@ -2,6 +2,7 @@ import {useState} from 'react';
 import {OwnerProjection} from '../components/OwnerProjection';
 import {BoundedCollection} from '../components/BoundedCollection';
 import {groupingCollectionQuery} from './router';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 
 // LLD-05 owner list projection, refined by the accepted grouping transport contract.
 type Item=Readonly<{proposal_id:string;revision:number;proposal_kind:string;risk_tier:'normal'|'high';origin:string;
@@ -45,7 +46,7 @@ export function GroupingProposalList({query,onQuery}:{query:string;onQuery:(quer
             ||item.diff.task_change_count!==item.affected_task_exact_count||item.diff.objective_change_count!==item.affected_objective_exact_count)throw new Error('Invalid owner grouping list item');
           return {id:item.proposal_id,cells:[item.proposal_kind,`State: ${item.state}`,`Risk: ${item.risk_tier}`,`Origin: ${item.origin}`,
             `Revision: ${item.revision}`,`Affected Tasks: ${count(item.affected_task_exact_count)}; affected Objectives: ${count(item.affected_objective_exact_count)}`,
-            `Created (UTC): ${new Date(count(item.created_at_utc)*1000).toISOString()}`,
+            `Created (local time): ${formatOwnerLocalTime(count(item.created_at_utc))}`,
             `Summary diff: ${item.diff.proposal_kind}; ${item.diff.task_change_count} Task changes; ${item.diff.objective_change_count} Objective changes`,
             <ul>{item.owner_warnings.map((code:string)=><li className="warning" key={code}>{code}</li>)}</ul>]};
         })} next={page.continuation!==null} nextFocusToken="grouping:next" onNext={()=>onQuery(path(intent.filters,page.continuation))}/></>;

@@ -7,6 +7,7 @@ import {InventorySpareNeeds} from './InventorySpareNeeds';
 import {InventorySpareRequests} from './InventorySpareRequests';
 import {InventoryFaultTags} from './InventoryFaultTags';
 import {InventoryWarehouseDesk} from './InventoryWarehouseDesk';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 
 type StockUnit = Readonly<{spare_part_unit_id:string;local_tracking_id:string|null;bom_code:string;manufacturer_serial:string|null;
   condition_token:string;disposition_token:string;location_kind:string|null;location_ref_id:string|null;custody_text:string|null;
@@ -47,7 +48,7 @@ function Attention({asOf,setAsOf,cursor,setCursor}:{asOf:number;setAsOf:(time:nu
       if (!Object.hasOwn(page,'continuation')||!Array.isArray(page.items)||page.items.length>200||page.as_of_utc!==asOf||!Number.isSafeInteger(page.exact_total)||page.exact_total<page.items.length) throw new Error('Invalid owner attention page');
       if(inventoryCollectionQueries({stock:queryPath('stock',null),attention:queryPath('attention',page.continuation,asOf)})===null)throw new Error('Invalid owner attention continuation');
       const items:readonly AttentionItem[]=page.items;
-      return <><p>{page.exact_total} owner attention items; {items.length} on this page. Evaluated at {new Date(asOf*1000).toISOString()}.</p>
+      return <><p>{page.exact_total} owner attention items; {items.length} on this page. Evaluated at {formatOwnerLocalTime(asOf)}.</p>
         {items.length===0&&<p>No attention items in this owner page.</p>}
         <BoundedCollection caption="Inventory owner reasons and next governed actions" rows={items.map(item=>({id:item.attention_id,cells:[
           `Severity: ${item.severity}`,item.attention_kind,`${item.target_kind}: ${item.target_id}`,item.reason,`Next governed action: ${item.next_governed_action}`]}))}

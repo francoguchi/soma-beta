@@ -1,4 +1,5 @@
 import {OwnerProjection} from '../components/OwnerProjection';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 
 const fields=[
   ['summary_text','summary_evidence_id','Summary'],
@@ -46,7 +47,7 @@ export function RfcLifecycle({id}:{id:string}) {
         {terminal&&<p>Accepted terminal source state does not establish that Task, Objective or Communication consequences have executed. Those consequences require the owner cascade review and command.</p>}
         <p>Source projection revision: {source.revision===null?'No accepted source projection':String(source.revision)}.</p>
         <p>Source Customer labels are descriptive evidence; canonical Customer identity remains a separate owner relationship.</p>
-        <dl>{fields.map(([field,proof,label])=><div key={field}><dt>{label}</dt><dd>{source[field]===null?'Unknown':field==='external_created_at_utc'||field==='last_update_utc'?new Date(Number(source[field])*1000).toISOString():String(source[field])}
+        <dl>{fields.map(([field,proof,label])=><div key={field}><dt>{label}</dt><dd>{source[field]===null?'Unknown':field==='external_created_at_utc'||field==='last_update_utc'?formatOwnerLocalTime(Number(source[field])):String(source[field])}
           {source[proof]!==null&&<p>Source evidence: {String(source[proof])}</p>}</dd></div>)}</dl>
         {value.warnings.map(warning=><p className="warning" key={warning}>{warning}</p>)}</>;
     }}/></section>;
