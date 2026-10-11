@@ -103,6 +103,14 @@ export function projectStructureRows<T extends ExplorerNode>(nodes:readonly T[],
  * or all Cloud assignments have been loaded across cursor pages.
  */
 export type InfrastructureLens='all'|'physical'|'logical';
+let sessionLens:InfrastructureLens='all';
+export const currentSessionLens=():InfrastructureLens=>sessionLens;
+export function applySessionLens(lens:InfrastructureLens):InfrastructureLens {
+  if(!['all','physical','logical'].includes(lens))throw new Error('Invalid Infrastructure lens');
+  sessionLens=lens;
+  return sessionLens;
+}
+
 export function projectInfrastructureLens<T extends ExplorerNode & {kind:string}>(
   nodes:readonly T[],lens:InfrastructureLens,
 ):readonly T[] {
