@@ -89,7 +89,7 @@ function NetworkElement({intent,onIntent,onBrowseSite}:{intent:InfrastructureInt
             activate(tabs[next]!);document.getElementById(`${prefix}-tab-${next}`)?.focus();
           }}>{name}</button>)}</div>
         {tabs.map((name,index)=><div role="tabpanel" key={name} hidden={tab!==name} id={`${prefix}-panel-${index}`} aria-labelledby={`${prefix}-tab-${index}`}>
-          {name==='Summary'?<><h3>Identity and Model</h3><p>Model identity: {value.model?.id??'Unassigned'}</p>
+          {tab===name&&(name==='Summary'?<><h3>Identity and Model</h3><p>Model identity: {value.model?.id??'Unassigned'}</p>
             {value.model&&<InfrastructureModelEvidence key={value.model.id} modelId={value.model.id}/>}
             <h3>Component and Device Reference summaries</h3><p>Installed Components: {value.installed_component_count}. Resolved Device References: {value.device_reference_count}.</p>
             <p>Operational Device Reference identifiers retain their own identity after resolution.</p></>:
@@ -106,7 +106,7 @@ function NetworkElement({intent,onIntent,onBrowseSite}:{intent:InfrastructureInt
             <InfrastructureCandidateEvidence key={id+':'+value.site.id+':'+(value.model?.id??'none')}
               elementId={id} siteId={value.site.id} modelId={value.model?.id??null}/></>:
           name==='History'?<HistoryView id={id} path={intent.history!} onPath={history=>onIntent({...intent,history})}/>:intent.workbook?
-            <InfrastructureWorkbookActivity intent={intent.workbook} onIntent={workbook=>onIntent({...intent,workbook})}/>:null}
+            <InfrastructureWorkbookActivity intent={intent.workbook} onIntent={workbook=>onIntent({...intent,workbook})}/>:null)}
         </div>)}</>;
     }}/>
   </section>;
