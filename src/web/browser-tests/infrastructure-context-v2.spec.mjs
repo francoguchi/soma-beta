@@ -97,3 +97,36 @@ test('Room return restores only identity and refreshes current owner history aft
   expect(reads.length).toBeGreaterThanOrEqual(2);
   expect(reads.every(url=>url.searchParams.get('target_kind')==='room')).toBe(true);
 });
+
+const historyValue=(kind,item)=>({
+  kind,text_value:kind==='text'?item:null,integer_value:kind==='integer'?item:null,
+  boolean_value:kind==='boolean'?item:null,entity_ref:null,
+});
+test('Typed Room historical changes can be inspected without inventing current Room details',async({page})=>{
+  const calls=[];
+  await fixtures(page,()=>({events:[{...row('room',1,1700000000),
+    summary:{reason_code:'room_edit',warning_codes:['REVIEW_HISTORY'],
+      changes:[
+        {field:'name',prior:historyValue('text','Previous owner room'),new:historyValue('text','Current owner room')},
+        {field:'revision',prior:historyValue('integer',2),new:historyValue('integer',3)},
+      ]}}],next_cursor:null}),calls);
+  const panel=await open(page,'Room R');
+  await expect(panel).toContainText('2 changed fields');
+  await expect(panel.getByText('Previous owner room')).toBeHidden();
+  await panel.locator('details summary').click();
+  await expect(panel).toContainText('name: Previous owner room → Current owner room');
+  await expect(panel).toContainText('revision: 2 → 3');
+  await expect(panel).toContainText('Owner warnings: REVIEW_HISTORY');
+  await expect(panel).toContainText('not a full Room or Cloud Deployment detail response');
+  expect(calls).toHaveLength(1);
+});
+test('Invalid typed history change rejects the complete context page',async({page})=>{
+  await fixtures(page,()=>({events:[{...row('room',1,1700000000),
+    summary:{reason_code:null,warning_codes:[],
+      changes:[{field:'room',prior:historyValue('text','valid prior'),new:{
+        ...historyValue('integer',1),text_value:'forged text',
+      }}]}}],next_cursor:null}),[]);
+  const panel=await open(page,'Room R');
+  await expect(panel.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(panel).not.toContainText('valid prior');
+});
