@@ -12,7 +12,7 @@ import {InfrastructureCandidateEvidence} from './InfrastructureCandidateEvidence
 import {verifyNetworkElement} from '../presentation/infrastructure-element';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
-import {FULL_STRUCTURE,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
+import {applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
@@ -112,14 +112,14 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
   const [intent,setIntent]=useState<InfrastructureIntent>(()=>restoredIntent??{explorer:'/api/v1/infrastructure/tree?limit=200',openedId:null,tab:'Summary',components:null,history:null,workbook:null});
   const [structureView,setStructureView]=useState<StructureView>(()=>
     restoredIntent&&restored?.infrastructureStructure&&validStructure(restored.infrastructureStructure)
-      ?restored.infrastructureStructure:FULL_STRUCTURE);
+      ?restored.infrastructureStructure:currentSessionStructure());
   const [structureOpen,setStructureOpen]=useState(false);
   const structureButton=useRef<HTMLButtonElement>(null);
   const closeStructure=()=>{
     setStructureOpen(false);
     window.requestAnimationFrame(()=>structureButton.current?.focus({preventScroll:true}));
   };
-  const applyStructure=(next:StructureView)=>{setStructureView(next);closeStructure();};
+  const applyStructure=(next:StructureView)=>{setStructureView(applySessionStructure(next));closeStructure();};
   const [refreshKey,setRefreshKey]=useState(0);const [notice,setNotice]=useState<string|null>(restored&&!restoredIntent?'The previous Infrastructure context is unavailable; the first current explorer page is shown.':null);
   const root=useRef<HTMLDivElement>(null);const fingerprint=useRef<{key:string;value:string}|null>(null);
   const store=useMemo(()=>{
