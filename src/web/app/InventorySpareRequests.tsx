@@ -2,6 +2,7 @@ import {useContext,useEffect,useState} from 'react';
 import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection';
 import {filterFingerprint} from '../data/query-controller';
 import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
+import {InventoryHistoryToggle} from './InventoryHistory';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const sha=/^[a-f0-9]{64}$/u;
@@ -109,6 +110,7 @@ function RmaEvidence({row,requestId}:{row:RmaRow;requestId:string}){
           <span>Assignment history entries</span><span>{d.assignment_history.length}</span>
         </div>
         <p>An RMA authorization is not a physical receipt. Warehouse acceptance and return obligations remain separate owner evidence.</p>
+        <InventoryHistoryToggle targetKind="rma" targetId={d.rma_id} label="RMA"/>
       </>;
     }}/>
   </aside>;
@@ -154,6 +156,7 @@ function RequestEvidence({row}:{row:RequestRow}){
           <span>SR7 aliases</span><span>{d.sr7_aliases.length}</span>
         </div>
         <p>Need allocations and draft logistics are not evidence of submission, RMA authorization, or physical fulfillment.</p>
+        <InventoryHistoryToggle targetKind="spare_request" targetId={d.spare_request_id} label="Spare Request"/>
         <section aria-label="Spare Request need allocations">
           <h5>Need allocations (first 25 of {d.allocations.length})</h5>
           {d.allocations.slice(0,25).map(a=><p key={a.request_need_allocation_id}>

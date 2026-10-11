@@ -2,6 +2,7 @@ import {useContext,useEffect,useState} from 'react';
 import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection';
 import {filterFingerprint} from '../data/query-controller';
 import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
+import {InventoryHistoryToggle} from './InventoryHistory';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const hash=/^[a-f0-9]{64}$/u;
@@ -141,6 +142,7 @@ export function InventorySpareNeeds(){
             </div>
             <p>These are current owner aggregates. A local selection is planning evidence, not an
               accepted delivery, warehouse decision, installation or a newly created LSU.</p>
+            <InventoryHistoryToggle targetKind="spare_need" targetId={chosen.spare_need_id} label="Spare Need"/>
           </aside>}
         </>;
       }}/>}
