@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {NavigationHistory} from '../.test-build/app/router.js';
 import {
- FULL_STRUCTURE,structurePreset,structurePath,moveStructureLevel,toggleStructureLevel,
+ FULL_STRUCTURE,structurePreset,structurePath,moveStructureLevel,dropStructureLevel,toggleStructureLevel,
  projectStructureRows,validStructure,
 } from '../.test-build/presentation/infrastructure-structure.js';
 
@@ -79,4 +79,12 @@ test('Structure view survives return by closed intent; historical projection nev
   ...view,ownerRows:[{fake:true}],
  }}),/Invalid bounded return context/u);
  assert.throws(()=>history.remember({...state,route:'/inventory'}),/Invalid bounded return context/u);
+});
+
+test('Drag/drop reorders intermediate Structure levels without moving pinned endpoints',()=>{
+ const moved=dropStructureLevel(FULL_STRUCTURE,'rack','site');
+ assert.deepEqual(moved.order,['cloud_deployment','rack','site','room']);
+ assert.equal(structurePath(moved),'Customer → Cloud → Rack → Site → Room → Network Element');
+ assert.deepEqual(dropStructureLevel(moved,'rack','rack'),moved);
+ assert.equal(structurePath(FULL_STRUCTURE),'Customer → Cloud → Site → Room → Rack → Network Element');
 });
