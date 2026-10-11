@@ -88,7 +88,8 @@ export function infrastructureIntent(value:InfrastructureIntent|undefined):Infra
   if(['site','room','rack','cloud_deployment'].includes(value.openedKind??'')) {
     if(value.tab!=='Summary'||value.components!==null||value.history!==null||value.workbook!==null)return null;
     if(value.openedKind==='room'||value.openedKind==='cloud_deployment')
-      return context===undefined||validInfrastructureContextHistory(context,value.openedId,value.openedKind)?value:null;
+      return context===undefined?!Object.hasOwn(value,'contextHistory')?value:null:
+        validInfrastructureContextHistory(context,value.openedId,value.openedKind)?value:null;
     return context==null?value:null;
   }
   if(context!=null)return null;
