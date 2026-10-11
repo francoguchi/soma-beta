@@ -87,6 +87,11 @@ test('Filtered Installed Component continuation preserves complete owner query f
  expect(last.searchParams.get('state')).toBe('installed');
  expect(JSON.parse(last.searchParams.get('cursor'))).toEqual(cursor);
  await expect(form(page).getByRole('combobox',{name:'Component state'})).toHaveValue('installed');
+ await form(page).getByRole('button',{name:'First component owner page'}).click();
+ await expect(table(page)).toContainText('SERIAL-200');
+ const restarted=reads.at(-1);
+ expect(restarted.searchParams.get('state')).toBe('installed');
+ expect(restarted.searchParams.has('cursor')).toBe(false);
 });
 
 test('Corrupt Installed Component owner row fails closed without displaying its physical evidence',async({page})=>{
