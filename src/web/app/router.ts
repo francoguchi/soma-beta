@@ -1,5 +1,6 @@
 import {settingsIntent,type SettingsIntent} from './settings-intent.js';
 import {ticketNotesQuery} from './ticket-notes-intent.js';
+import {validStructure,type StructureView} from '../presentation/infrastructure-structure.js';
 export type ClientRoute = Readonly<{path: string; surface: string; owner: string; recordId: string | null}>;
 const routes = [
   ['/overview','overview','LLD-11'], ['/tickets','ticket_list','LLD-03/04'], ['/tickets/rfcs','rfc_list','LLD-03'], ['/tickets/history','ticket_history','LLD-03/04'], ['/tickets/imports','import_monitor','LLD-04'],
@@ -29,7 +30,7 @@ export function defaultOpen(recordType: string, id: string): ClientRoute | null 
 export type ReturnState = Readonly<{route: string; filterFingerprint: string; activeId: string | null; selectedId: string | null;
   memberIds: readonly string[]; scrollAnchor: string | null; focusToken: string | null; tab?: string; pane?: 'work' | 'communications';
   collectionQuery?:string;collectionOrder?:readonly string[];groupingQuery?:string|null;
-  inventoryQueries?:Readonly<{stock:string;attention:string}>;infrastructure?:InfrastructureIntent;settings?:SettingsIntent;ticketNotesQuery?:string}>;
+  inventoryQueries?:Readonly<{stock:string;attention:string}>;infrastructure?:InfrastructureIntent;infrastructureStructure?:StructureView;settings?:SettingsIntent;ticketNotesQuery?:string}>;
 export const infrastructureTabs=['Summary','Placement','Components','IP Addresses','Relationships','History','Workbook Activity'] as const;
 export type WorkbookIntent=Readonly<{history:string;run:string|null;proposalId:string|null;candidatePage:number}>;
 export type InfrastructureIntent=Readonly<{explorer:string;openedId:string|null;openedKind?:'site'|'room'|'rack'|'cloud_deployment'|'network_element';tab:typeof infrastructureTabs[number];
@@ -142,6 +143,8 @@ export class NavigationHistory {
       ||(state.ticketNotesQuery!==undefined&&ticketNotesQuery(state.ticketNotesQuery,state.route)===null)
       ||(state.settings!==undefined&&settingsIntent(state.settings,state.route)===null)
       ||(state.infrastructure!==undefined&&(state.route!=='/infrastructure'||infrastructureIntent(state.infrastructure)===null))
+      ||(state.infrastructureStructure!==undefined&&(state.route!=='/infrastructure'
+        ||state.infrastructure===undefined||!validStructure(state.infrastructureStructure)))
       ||(state.inventoryQueries!==undefined&&(state.route!=='/inventory'||inventoryCollectionQueries(state.inventoryQueries)===null))
       ||(state.groupingQuery!==undefined&&(state.route!=='/objectives'
         ||(state.groupingQuery!==null&&groupingCollectionQuery(state.groupingQuery)===null)))
@@ -151,6 +154,9 @@ export class NavigationHistory {
     const token = crypto.randomUUID(); this.entries.set(token, Object.freeze({...state, memberIds: Object.freeze([...state.memberIds]),
       ...(state.settings===undefined?{}:{settings:Object.freeze({...state.settings,queries:Object.freeze({...state.settings.queries}),opened:Object.freeze({...state.settings.opened})})}),
       ...(state.inventoryQueries===undefined?{}:{inventoryQueries:Object.freeze({...state.inventoryQueries})}),
+      ...(state.infrastructureStructure===undefined?{}:{infrastructureStructure:Object.freeze({
+        order:Object.freeze([...state.infrastructureStructure.order]),
+        visible:Object.freeze([...state.infrastructureStructure.visible])})}),
       ...(state.infrastructure===undefined?{}:{infrastructure:Object.freeze({...state.infrastructure,
         workbook:state.infrastructure.workbook===null?null:Object.freeze({...state.infrastructure.workbook})})}),
       ...(state.collectionOrder===undefined?{}:{collectionOrder:Object.freeze([...state.collectionOrder])})}));
