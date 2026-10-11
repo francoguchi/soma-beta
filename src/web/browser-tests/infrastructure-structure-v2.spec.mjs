@@ -221,3 +221,20 @@ test('Structure footer remains visually reachable when viewport shrinks while 20
  await modal.getByRole('button',{name:'Apply view'}).click();
  await expect(page.getByRole('button',{name:'Structure',exact:true})).toBeFocused();
 });
+
+test('Study29 displayed-level shortcuts focus real current-page rows without opening or changing owner parentage',async({page})=>{
+ const reads=[];await fixture(page,reads);
+ const jumps=page.getByRole('group',{name:'Structure current-page shortcuts'});
+ await expect(jumps).toContainText('Jump to displayed level on this owner page');
+ await jumps.getByRole('button',{name:'Rack',exact:true}).click();
+ const rack=page.getByRole('listitem').filter({hasText:'RACK OWNER'});
+ await expect(rack).toBeFocused();
+ await expect(rack).toHaveAttribute('aria-current','true');
+ await expect(rack).toContainText('Physical/context parent: '+id(2));
+ await expect(page.getByRole('region',{name:'Opened Rack'})).toHaveCount(0);
+ await jumps.getByRole('button',{name:'Network Element',exact:true}).click();
+ const ne=page.getByRole('listitem').filter({hasText:'NE OWNER'});
+ await expect(ne).toBeFocused();
+ await expect(page.getByRole('region',{name:'Opened Network Element'})).toHaveCount(0);
+ expect(reads).toHaveLength(1);
+});
