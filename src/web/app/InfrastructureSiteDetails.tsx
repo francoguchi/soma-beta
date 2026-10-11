@@ -1,4 +1,5 @@
 import {OwnerProjection} from '../components/OwnerProjection';
+import {InfrastructureSiteBlockers} from './InfrastructureSiteBlockers';
 
 type SiteDetail=Readonly<{
   site_id:string;revision:number;customer_org_id:string;name:string;address_text:string;
@@ -49,6 +50,7 @@ export function InfrastructureSiteDetails({id}:{id:string}){
           <p>Archive blockers: {raw.archive_blocker_count}. Possible duplicate-address candidates: {raw.duplicate_candidate_count}.</p>
           <p>These are accepted Site query counts, not an inferred physical tree or permission to archive or merge Sites.
             Cloud deployment, physical placement, containment and Dispatch Location remain separate owner relationships.</p>
+          <InfrastructureSiteBlockers key={raw.site_id} siteId={raw.site_id}/>
         </>;
       }}/>
   </section>;
