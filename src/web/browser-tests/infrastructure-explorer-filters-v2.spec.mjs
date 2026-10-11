@@ -127,3 +127,36 @@ test('Filtered explorer never keeps a previously opened Network Element outside 
  await expect(page.getByRole('region',{name:'Opened Network Element'})).toHaveCount(0);
  expect(requests.filter(path=>path==='/api/v1/infrastructure/network-elements/'+ne)).toHaveLength(1);
 });
+
+test('Accepted Site detail explicitly scopes owner explorer by exact Site and Customer',async({page})=>{
+ const treeReads=[];
+ await page.route('**/api/v1/infrastructure/**',route=>{
+   const url=new URL(route.request().url());
+   if(url.pathname===tree){
+     treeReads.push(url);
+     return route.fulfill({json:{nodes:url.searchParams.has('site_id')?[initial[0]]:initial,next_cursor:null}});
+   }
+   if(url.pathname==='/api/v1/infrastructure/sites/'+site){
+     return route.fulfill({json:{
+       site_id:site,revision:2,customer_org_id:customer,name:'OWNER SITE',
+       address_text:'Recorded test address',lifecycle:'active',
+       dispatch_location_id:id(4),room_count:1,rack_count:0,
+       network_element_count:1,cloud_deployment_count:0,
+       archive_blocker_count:0,duplicate_candidate_count:0,
+     }});
+   }
+   return route.fulfill({status:404,json:{code:'UNEXPECTED_TEST_OWNER'}});
+ });
+ await page.goto('http://127.0.0.1:4174/infrastructure');
+ await page.getByRole('listitem').filter({hasText:'OWNER SITE'}).press('Enter');
+ const sitePanel=page.getByRole('region',{name:'Opened Site'});
+ await expect(sitePanel).toContainText('OWNER SITE');
+ await sitePanel.getByRole('button',{name:'Explore this Site in owner collection'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(1);
+ await expect(sitePanel).toHaveCount(0);
+ expect(treeReads).toHaveLength(2);
+ expect(treeReads[1].searchParams.get('site_id')).toBe(site);
+ expect(treeReads[1].searchParams.get('customer_org_id')).toBe(customer);
+ await expect(filters(page).getByRole('textbox',{name:'Site UUID'})).toHaveValue(site);
+ await expect(filters(page).getByRole('textbox',{name:'Customer Organization UUID'})).toHaveValue(customer);
+});
