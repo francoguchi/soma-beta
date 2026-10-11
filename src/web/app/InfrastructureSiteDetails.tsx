@@ -25,7 +25,7 @@ function verifySite(value:SiteDetail,id:string):void{
 /** LLD-08 SiteDetailQuery: descriptive, selection-gated, read-only.
  * Site–Dispatch Location linkage is an owner fact, not an accepted work order.
  */
-export function InfrastructureSiteDetails({id}:{id:string}){
+export function InfrastructureSiteDetails({id,onBrowseSite}:{id:string;onBrowseSite?:(customer:string,site:string)=>void}){
   return <section aria-label="Opened Site" data-scroll-owner="y" data-return-scroll="detail" className="infrastructure-detail">
     <OwnerProjection<SiteDetail> path={'/api/v1/infrastructure/sites/'+encodeURIComponent(id)}
       render={raw=>{
@@ -50,6 +50,9 @@ export function InfrastructureSiteDetails({id}:{id:string}){
           <p>Archive blockers: {raw.archive_blocker_count}. Possible duplicate-address candidates: {raw.duplicate_candidate_count}.</p>
           <p>These are accepted Site query counts, not an inferred physical tree or permission to archive or merge Sites.
             Cloud deployment, physical placement, containment and Dispatch Location remain separate owner relationships.</p>
+          {onBrowseSite&&<button type="button" onClick={()=>onBrowseSite(raw.customer_org_id,raw.site_id)}>
+            Explore this Site in owner collection
+          </button>}
           <InfrastructureSiteBlockers key={raw.site_id} siteId={raw.site_id}/>
         </>;
       }}/>
