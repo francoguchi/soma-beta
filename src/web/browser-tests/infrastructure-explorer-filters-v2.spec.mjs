@@ -160,3 +160,37 @@ test('Accepted Site detail explicitly scopes owner explorer by exact Site and Cu
  await expect(filters(page).getByRole('textbox',{name:'Site UUID'})).toHaveValue(site);
  await expect(filters(page).getByRole('textbox',{name:'Customer Organization UUID'})).toHaveValue(customer);
 });
+
+test('Opened Network Element reveals exact parent Site owner scope only on deliberate action',async({page})=>{
+ const reads=[];
+ await page.route('**/api/v1/infrastructure/**',route=>{
+  const url=new URL(route.request().url());
+  if(url.pathname===tree){
+   reads.push(url);
+   return route.fulfill({json:{nodes:url.searchParams.has('site_id')?[initial[0]]:[initial[1]],
+     next_cursor:null}});
+  }
+  if(url.pathname==='/api/v1/infrastructure/network-elements/'+ne)
+   return route.fulfill({json:{
+     network_element_id:ne,revision:1,lifecycle:'active',operational_name:'OWNER NE',
+     site:{kind:'site',id:site},customer_org_id:customer,
+     placement:{rack_id:null,u_start:null,u_span:null,revision:1,explicit_unracked:true},
+     model:null,cloud_deployment:null,primary_ip:null,ip_count:0,
+     containment_parent:null,containment_child_count:0,device_reference_count:0,
+     installed_component_count:0,warning_codes:[],
+   }});
+  return route.fulfill({status:404,json:{code:'UNEXPECTED_TEST_OWNER'}});
+ });
+ await page.goto('http://127.0.0.1:4174/infrastructure');
+ await page.getByRole('listitem').first().press('Enter');
+ const selected=page.getByRole('region',{name:'Opened Network Element'});
+ await expect(selected).toBeVisible();
+ expect(reads).toHaveLength(1);
+ await selected.getByRole('button',{name:'Explore parent Site in owner collection'}).click();
+ await expect(selected).toHaveCount(0);
+ await expect(page.getByRole('listitem')).toContainText('OWNER SITE');
+ expect(reads).toHaveLength(2);
+ expect(reads[1].searchParams.get('customer_org_id')).toBe(customer);
+ expect(reads[1].searchParams.get('site_id')).toBe(site);
+ await expect(filters(page).getByRole('textbox',{name:'Site UUID'})).toHaveValue(site);
+});
