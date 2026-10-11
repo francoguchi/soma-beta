@@ -153,6 +153,10 @@ class DomainRoutes:
             ),
             "EligibleFaultTagMembershipQuery": eligible_fault_tag_memberships_query,
             "WarehouseQueueQuery": warehouse_queue_query,
+            "FaultTagLineageQuery": lambda route, values: (
+                fault_tags.lineage(route.path_parameters["fault_tag_id"])
+                if not values else self._bad_query()
+            ),
         })
         from soma.product_line_sla.queries.catalog import ProductLineSlaCatalogQueryService
         from soma.product_line_sla.queries.classification import ProductLineSlaClassificationQueryService

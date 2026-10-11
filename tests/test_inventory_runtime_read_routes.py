@@ -106,6 +106,17 @@ def test_fault_tag_registry_is_composed_without_mutation_routes(initialized_data
         ):
             with pytest.raises(ValidationError):
                 domains.fault_tags.dispatch("GET", endpoint, rejected)
+    lineage = domains.fault_tags.dispatch(
+        "GET", "/api/v1/inventory/fault-tags/" + missing + "/lineage", {}
+    )
+    assert lineage is not None and lineage.status == 200
+    assert lineage.body == {"fault_tag_id": missing, "edges": []}
+    for forbidden in ({"unexpected": "input"}, {"fault_tag_id": missing}):
+        with pytest.raises(ValidationError):
+            domains.fault_tags.dispatch(
+                "GET", "/api/v1/inventory/fault-tags/" + missing + "/lineage",
+                forbidden,
+            )
     with pytest.raises(IntegrityFailure, match="not assembled"):
         domains.fault_tags.dispatch("POST", "/api/v1/inventory/fault-tags", {})
     for endpoint in (
