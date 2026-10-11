@@ -55,7 +55,8 @@ try {
         $temp = Join-Path $env:TEMP ('soma-infrastructure-' + [guid]::NewGuid().ToString('N'))
         Invoke-Checked 'FOCUSED INFRASTRUCTURE BACKEND' $venvPython @(
             '-m','pytest','tests/test_infrastructure_routes.py',
-            'tests/test_infrastructure_query_certification.py','-q',"--basetemp=$temp"
+            'tests/test_infrastructure_query_certification.py',
+            'tests/test_infrastructure_room_cloud_reads.py','-q',"--basetemp=$temp"
         )
     }
     if (-not $env:SOMA_TEST_BROWSER) {
