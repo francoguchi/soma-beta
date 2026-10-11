@@ -275,3 +275,41 @@ test('Corrupted Infrastructure explorer page cannot render selectable or project
   await page.getByRole('dialog').getByRole('button',{name:'Apply view'}).click();
   await expect(page.getByRole('listitem')).toHaveCount(0);
 });
+
+test('Physical and logical Infrastructure lenses show distinct owner row families without extra queries',async({page})=>{
+ const reads=[];await fixture(page,reads);
+ const lens=page.getByRole('group',{name:'Infrastructure relationship lens'});
+ await expect(lens.getByRole('button',{name:'All source rows'})).toHaveAttribute('aria-pressed','true');
+ await lens.getByRole('button',{name:'Physical structure'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(4);
+ await expect(page.getByRole('listitem').filter({hasText:'SITE OWNER'})).toHaveCount(1);
+ await expect(page.getByRole('listitem').filter({hasText:'NE OWNER'})).toHaveCount(1);
+ await expect(page.getByRole('listitem').filter({hasText:'CLOUD OWNER'})).toHaveCount(0);
+ await expect(page.getByRole('listitem').filter({hasText:'NE CONTAINMENT'})).toHaveCount(0);
+ await lens.getByRole('button',{name:'Cloud and containment'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(2);
+ await expect(page.getByRole('listitem').filter({hasText:'CLOUD OWNER'})).toHaveCount(1);
+ await expect(page.getByRole('listitem').filter({hasText:'NE CONTAINMENT'})).toHaveCount(1);
+ await expect(page.getByRole('listitem').filter({hasText:'SITE OWNER'})).toHaveCount(0);
+ await lens.getByRole('button',{name:'All source rows'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(6);
+ expect(reads).toHaveLength(1);
+ await expect(page.getByRole('region',{name:'Opened Network Element'})).toHaveCount(0);
+});
+test('Empty logical lens has a local escape without claiming any absent Cloud assignments',async({page})=>{
+ const reads=[];
+ await page.route('**/api/v1/infrastructure/tree?*',route=>{
+  reads.push(new URL(route.request().url()));
+  return route.fulfill({json:{nodes:[nodes[0]],next_cursor:null}});
+ });
+ await page.goto('http://127.0.0.1:4174/infrastructure');
+ await expect(page.getByRole('listitem')).toHaveCount(1);
+ const lens=page.getByRole('group',{name:'Infrastructure relationship lens'});
+ await lens.getByRole('button',{name:'Cloud and containment'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(0);
+ await expect(page.getByRole('status').filter({hasText:'current relationship lens has no matching'}))
+   .toBeVisible();
+ await page.getByRole('button',{name:'Show all owner row kinds'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(1);
+ expect(reads).toHaveLength(1);
+});
