@@ -19,3 +19,15 @@ test('Owner epoch zero is a known local instant, not an unknown/null sentinel',(
     dateStyle:'medium',timeStyle:'short',
   }));
 });
+
+test('All visible application components avoid serializing UTC ISO directly',async()=>{
+  const {readdir,readFile}=await import('node:fs/promises');
+  const dir=new URL('../app/',import.meta.url);
+  const files=(await readdir(dir)).filter(name=>name.endsWith('.tsx'));
+  assert.ok(files.length>=37,'Unexpectedly missing application screens');
+  for(const name of files){
+    const source=await readFile(new URL(name,dir),'utf8');
+    assert.doesNotMatch(source,/\.toISOString\s*\(|\.toUTCString\s*\(/u,
+      name+' must use operator-local presentation for displayed timestamps');
+  }
+});
