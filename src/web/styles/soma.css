@@ -443,3 +443,10 @@ dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-level{p
 dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-arrows button{
   min-width:30px;min-height:32px;padding:3px 5px
 }
+
+/* Study29 current-owner-page navigation shortcuts; do not imply a real tree. */
+.soma-structure-page-jumps{display:flex;align-items:center;flex-wrap:wrap;gap:5px;
+  padding:7px 0 10px;min-width:0}
+.soma-structure-page-jumps span{font-size:11px;color:var(--secondary,var(--muted))}
+.soma-structure-page-jumps button{font-size:11px;min-height:32px;max-width:100%;
+  white-space:normal;overflow-wrap:anywhere}
