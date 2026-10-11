@@ -69,7 +69,7 @@ export function InfrastructureCandidateEvidence({siteId,modelId,elementId}:{
     {opened&&<section aria-label="Related NE candidate evidence" className="soma-v2-rfc-links">
       <h4>Exact owner evidence candidates</h4>
       <p>Candidate filters: Site {siteId}{modelId===null?'':', Model '+modelId}. The owner
-        ranks matching exact Site and Model evidence. A candidate is NOT a verified
+        ranks exact Site evidence{modelId===null?'':' and Model evidence'}. A candidate is NOT a verified
         duplicate, operational relationship, containment parent or physical installation.</p>
       {digest===null?<p role="status">Preparing candidate query identity.</p>:
         <OwnerProjection<Page> path={ownerPagePath(history)} render={page=>{
