@@ -259,3 +259,19 @@ test('Hidden-only owner page offers explicit local reveal without changing the o
  expect(reads).toHaveLength(1);
  await expect(page.getByRole('region',{name:'Opened Site'})).toHaveCount(0);
 });
+
+test('Corrupted Infrastructure explorer page cannot render selectable or projected rows',async({page})=>{
+  const invalid=[
+    nodes[0],
+    {...nodes[1],parent_context_id:'not-uuid'},
+  ];
+  await page.route('**/api/v1/infrastructure/tree?*',route=>
+    route.fulfill({json:{nodes:invalid,next_cursor:null}}));
+  await page.goto('http://127.0.0.1:4174/infrastructure');
+  await expect(page.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(page.getByRole('listitem')).toHaveCount(0);
+  await page.getByRole('button',{name:'Structure',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'Direct to Network Element'}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'Apply view'}).click();
+  await expect(page.getByRole('listitem')).toHaveCount(0);
+});
