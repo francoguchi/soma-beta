@@ -26,7 +26,7 @@ function validate(value:Page,kind:OwnerKind,previousId:string|null):Page {
     const id=kind==='warehouse'
       ?(item as WarehouseRow)?.fault_tag_membership_id
       :(item as EligibleRow)?.rma_id;
-    if(!item||!uuid.test(id)||id<=last)
+    if(!item||typeof id!=='string'||!uuid.test(id)||id<=last)
       throw new Error('Unordered or foreign warehouse owner item');
     if(kind==='warehouse'){
       const row=item as WarehouseRow;
