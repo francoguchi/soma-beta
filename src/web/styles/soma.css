@@ -481,3 +481,11 @@ dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-arrows 
 .soma-infra-owner-filters [role="alert"]{overflow-wrap:anywhere;font-size:11px}
 @media(max-width:990px){.soma-infra-owner-filter-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.soma-infra-owner-filter-fields{grid-template-columns:minmax(0,1fr)}}
+
+/* Auditable LLD-08 event evidence; no implied live Room/Cloud detail DTO. */
+.soma-infra-history-changes{min-width:0;max-width:min(660px,75vw);overflow-wrap:anywhere;font-size:11px}
+.soma-infra-history-changes summary{cursor:pointer;min-height:28px;align-content:center;color:var(--current,#9abbe0)}
+.soma-infra-history-changes ul{padding-inline-start:18px;line-height:1.5;margin:7px 0}
+.soma-infra-history-changes li{margin-block:5px;overflow-wrap:anywhere}
+.soma-infra-history-changes p{font-size:11px;line-height:1.5}
+@media(max-width:580px){.soma-infra-history-changes{max-width:75vw}}
