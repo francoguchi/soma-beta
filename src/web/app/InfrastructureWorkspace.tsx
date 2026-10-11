@@ -193,7 +193,12 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
         return <>{nodes.length!==page.nodes.length&&<p role="status">
           Showing {nodes.length} of {page.nodes.length} current owner page rows.
           Hidden display levels have not been deleted.</p>}
-          {nodes.length===0&&<p>No Infrastructure nodes are visible in this display projection.</p>}
+          {nodes.length===0&&<p role="status">
+            {page.nodes.length===0?'No Infrastructure owner nodes on this page.':
+              'Every owner row on this page is hidden by the current Structure view.'}
+            {page.next_cursor!==null?' Continue to the next owner page to inspect additional records.':
+              ' No further owner page was supplied.'}
+          </p>}
           <SelectableCollection store={store} rows={nodes.map(node=>({id:`${node.kind}:${node.id}`,eligible:true,
             route:node.kind==='site'?{record_type:'INFRASTRUCTURE_SITE',record_id:node.id,revision_token:null}:
               node.kind==='rack'?{record_type:'INFRASTRUCTURE_RACK',record_id:node.id,revision_token:null}:
