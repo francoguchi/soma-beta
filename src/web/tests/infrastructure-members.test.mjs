@@ -2,6 +2,8 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {initialOwnerPage,nextOwnerPage} from '../.test-build/state/owner-page-history.js';
+import {infrastructureIntent,NavigationHistory} from '../.test-build/app/router.js';
+import {firstInfrastructureContextHistory} from '../.test-build/presentation/infrastructure-context-intent.js';
 import {firstMembersPath,membersDigestInput,nextMembersPath,
   validMembersHistory,validRoomCloudState,verifyMembersPage} from '../.test-build/presentation/infrastructure-members.js';
 const room='11111111-1111-4111-8111-111111111111';
@@ -47,4 +49,33 @@ test('typed direct members fail closed on forged owner rows and cursor order',()
  }
  assert.throws(()=>verifyMembersPage(page,'room',room,site,digest,
    nextMembersPath('room',room,cursor(101))));
+});
+
+test('Room member history and active tab are immutable closed return intent, not owner data',()=>{
+ const first=firstMembersPath('room',room),second=nextMembersPath('room',room,cursor(100));
+ const members=nextOwnerPage(initialOwnerPage(first),second,first+'&cursor=');
+ const intent={explorer:'/api/v1/infrastructure/tree?limit=200',openedId:room,
+   openedKind:'room',tab:'Summary',components:null,history:null,workbook:null,
+   contextHistory:initialOwnerPage(firstInfrastructureContextHistory(room,'room')),
+   roomCloud:{section:'Members',members}};
+ assert.ok(infrastructureIntent(intent));
+ const history=new NavigationHistory(),token=history.remember({
+   route:'/infrastructure',filterFingerprint:'a'.repeat(64),activeId:null,
+   selectedId:null,memberIds:[],scrollAnchor:null,focusToken:null,
+   infrastructure:intent,
+ });
+ const saved=history.restore(token).infrastructure.roomCloud;
+ assert.equal(saved.section,'Members');
+ assert.deepEqual(saved.members,members);
+ assert.ok(Object.isFrozen(saved));
+ assert.ok(Object.isFrozen(saved.members));
+ assert.ok(Object.isFrozen(saved.members.paths));
+ assert.ok(infrastructureIntent({...intent,roomCloud:{section:'History',members}}));
+ assert.equal(infrastructureIntent({...intent,roomCloud:{section:'Members',members:null}}),null);
+ assert.equal(infrastructureIntent({...intent,openedKind:'site'}),null);
+ assert.equal(infrastructureIntent({...intent,roomCloud:{section:'Members',members,
+   cachedRows:[{id:room}]}}),null);
+ assert.equal(infrastructureIntent({...intent,roomCloud:{section:'Members',members:{
+   ...members,paths:[...members.paths,'synthetic-current-owner-row'],
+ }}}),null);
 });
