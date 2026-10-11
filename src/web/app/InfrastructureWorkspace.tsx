@@ -15,6 +15,7 @@ import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
 import {InfrastructureExplorerFilters} from './InfrastructureExplorerFilters';
 import {InfrastructureComponentFilters} from './InfrastructureComponentFilters';
 import {buildExplorerQuery} from '../presentation/infrastructure-explorer-filters';
+import {verifyInstalledComponentPage,type InstalledComponentPage} from '../presentation/infrastructure-components';
 import {FULL_STRUCTURE,LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
@@ -26,9 +27,7 @@ type Element = Readonly<{network_element_id:string;revision:number;lifecycle:str
   placement:Readonly<{rack_id:string|null;u_start:number|null;u_span:number|null;revision:number;explicit_unracked:boolean}>;
   model:Ref|null;cloud_deployment:Ref|null;primary_ip:string|null;ip_count:number;containment_parent:Ref|null;
   containment_child_count:number;device_reference_count:number;installed_component_count:number;warning_codes:readonly string[]}>;
-type Component = Readonly<{installed_component_id:string;state:string;bom_code:string|null;manufacturer_serial:string|null;slot_label:string|null;
-  condition:string;device_part_unit_id:string|null;physical_consequence_id:string|null}>;
-type Components = Readonly<{items:readonly Component[];next_cursor:unknown|null}>;
+type Components=InstalledComponentPage;
 type HistoryValue = Readonly<{kind:'null'|'text'|'integer'|'boolean'|'entity_ref';text_value:string|null;integer_value:number|null;boolean_value:boolean|null;entity_ref:Ref|null}>;
 type History = Readonly<{events:readonly {event_id:string;event_kind:string;recorded_at_utc:number;effective_at_utc:number|null;
   summary:Readonly<{changes:readonly {field:string;prior:HistoryValue;new:HistoryValue}[];reason_code:string|null;warning_codes:readonly string[]}>}[];next_cursor:unknown|null}>;
@@ -42,7 +41,7 @@ function historyValue(value:HistoryValue):string {
 function ComponentsView({id,path,onPath}:{id:string;path:string;onPath:(path:string)=>void}) {
   return <><InfrastructureComponentFilters id={id} path={path} onApply={onPath}/>
     <OwnerProjection<Components> path={path} render={page=>{
-    if (!Array.isArray(page.items)||page.items.length>200) throw new Error('Invalid component page');
+    verifyInstalledComponentPage(page);
     const next=withCursor(path,page.next_cursor);
     if(!infrastructureQuery(next,'components',id))throw new Error('Invalid component continuation');
     return <><p>Installed Component instances are separate from reusable Model/BOM compatibility. Removed components remain visible in the owner history.</p>
