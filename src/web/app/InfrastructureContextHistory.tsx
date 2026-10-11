@@ -4,7 +4,8 @@ import {BoundedCollection} from '../components/BoundedCollection';
 import {filterFingerprint} from '../data/query-controller';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {historyValueText,verifyHistoryValue,type HistoryValue} from '../presentation/infrastructure-history';
-import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
+import {nextOwnerPage,ownerPagePath,previousOwnerPage,type OwnerPageHistory} from '../state/owner-page-history';
+import {firstInfrastructureContextHistory} from '../presentation/infrastructure-context-intent';
 
 type Kind='room'|'cloud_deployment';
 type Change=Readonly<{field:string;prior:HistoryValue;new:HistoryValue}>;
@@ -18,7 +19,7 @@ type Page=Readonly<{events:readonly Event[];next_cursor:Cursor|null}>;
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const validSeconds=(n:unknown):n is number=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0&&n<=8640000000000;
 const bounded=(s:unknown,n:number)=>typeof s==='string'&&new TextEncoder().encode(s).length<=n;
-const first=(id:string,kind:Kind)=>'/api/v1/infrastructure/history?target_kind='+kind+'&target_id='+encodeURIComponent(id)+'&limit=5';
+const first=firstInfrastructureContextHistory;
 function validate(page:Page,id:string,kind:Kind,digest:string,path:string):void{
   if(!uuid.test(id)||!['room','cloud_deployment'].includes(kind)||!page
     ||!Array.isArray(page.events)||page.events.length>5||!Object.hasOwn(page,'next_cursor'))
@@ -74,9 +75,9 @@ function validate(page:Page,id:string,kind:Kind,digest:string,path:string):void{
 /** Room and Cloud have no LLD-08 detail GET. Their authoritative history query
  * verifies current target existence, but must not be misrepresented as full details.
  */
-export function InfrastructureContextHistory({id,kind}:{id:string;kind:Kind}){
+export function InfrastructureContextHistory({id,kind,history,onHistory}:{id:string;kind:Kind;
+  history:OwnerPageHistory;onHistory:(value:OwnerPageHistory)=>void}){
   const [digest,setDigest]=useState<string|null>(null);
-  const [history,setHistory]=useState(()=>initialOwnerPage(first(id,kind)));
   useEffect(()=>{
     let active=true;void filterFingerprint({target_id:id,target_kind:kind})
       .then(value=>{if(active)setDigest(value);}).catch(()=>{if(active)setDigest(null);});
@@ -108,13 +109,13 @@ export function InfrastructureContextHistory({id,kind}:{id:string;kind:Kind}){
             next={false} onNext={()=>{}}/>
           <div className="soma-v2-sr-pager">
             <button type="button" disabled={history.page===history.first}
-              onClick={()=>setHistory(previousOwnerPage)}>Previous page</button>
+              onClick={()=>onHistory(previousOwnerPage(history))}>Previous page</button>
             <span>Page {history.page+1}</span>
             <button type="button" disabled={page.next_cursor===null}
               onClick={()=>{
                 if(page.next_cursor===null)return;
                 const path=first(id,kind)+'&cursor='+encodeURIComponent(JSON.stringify(page.next_cursor));
-                setHistory(old=>nextOwnerPage(old,path,first(id,kind)+'&cursor='));
+                onHistory(nextOwnerPage(history,path,first(id,kind)+'&cursor='));
               }}>Next page</button>
           </div>
         </>;

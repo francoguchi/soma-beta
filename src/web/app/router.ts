@@ -3,6 +3,8 @@ import {ticketNotesQuery} from './ticket-notes-intent.js';
 import {validStructure,type InfrastructureLens,type StructureView} from '../presentation/infrastructure-structure.js';
 import {readExplorerFilters} from '../presentation/infrastructure-explorer-filters.js';
 import {readComponentFilters} from '../presentation/infrastructure-component-filters.js';
+import {validInfrastructureContextHistory} from '../presentation/infrastructure-context-intent.js';
+import type {OwnerPageHistory} from '../state/owner-page-history.js';
 export type ClientRoute = Readonly<{path: string; surface: string; owner: string; recordId: string | null}>;
 const routes = [
   ['/overview','overview','LLD-11'], ['/tickets','ticket_list','LLD-03/04'], ['/tickets/rfcs','rfc_list','LLD-03'], ['/tickets/history','ticket_history','LLD-03/04'], ['/tickets/imports','import_monitor','LLD-04'],
@@ -36,7 +38,8 @@ export type ReturnState = Readonly<{route: string; filterFingerprint: string; ac
 export const infrastructureTabs=['Summary','Placement','Components','IP Addresses','Relationships','History','Workbook Activity'] as const;
 export type WorkbookIntent=Readonly<{history:string;run:string|null;proposalId:string|null;candidatePage:number}>;
 export type InfrastructureIntent=Readonly<{explorer:string;openedId:string|null;openedKind?:'site'|'room'|'rack'|'cloud_deployment'|'network_element';tab:typeof infrastructureTabs[number];
-  components:string|null;history:string|null;workbook:WorkbookIntent|null}>;
+  components:string|null;history:string|null;workbook:WorkbookIntent|null;
+  contextHistory?:OwnerPageHistory|null}>;
 type InfrastructureQuery='explorer'|'components'|'history'|'workbookHistory'|'workbookRun';
 const infraUuid=(value:unknown):value is string=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value);
 /** Only the implemented owner query intents, with the complete owner ordering tuple. */
@@ -74,14 +77,21 @@ export function infrastructureQuery(path:string,kind:InfrastructureQuery,id:stri
   }catch{return null;}
 }
 export function infrastructureIntent(value:InfrastructureIntent|undefined):InfrastructureIntent|null {
-  if(!value||![6,7].includes(Object.keys(value).length)
-    ||Object.keys(value).some(key=>!['explorer','openedId','openedKind','tab','components','history','workbook'].includes(key))
+  if(!value||![6,7,8].includes(Object.keys(value).length)
+    ||Object.keys(value).some(key=>!['explorer','openedId','openedKind','tab','components','history','workbook','contextHistory'].includes(key))
     ||(value.openedKind!==undefined&&!['site','room','rack','cloud_deployment','network_element'].includes(value.openedKind))
     ||!infrastructureQuery(value.explorer,'explorer')||!infrastructureTabs.includes(value.tab)
     ||(value.openedId!==null&&!infraUuid(value.openedId)))return null;
-  if(value.openedId===null) return value.openedKind===undefined&&value.components===null&&value.history===null&&value.workbook===null&&value.tab==='Summary'?value:null;
-  if(['site','room','rack','cloud_deployment'].includes(value.openedKind??''))
-    return value.tab==='Summary'&&value.components===null&&value.history===null&&value.workbook===null?value:null;
+  const context=value.contextHistory;
+  if(value.openedId===null) return value.openedKind===undefined&&value.components===null&&value.history===null
+    &&value.workbook===null&&context==null&&value.tab==='Summary'?value:null;
+  if(['site','room','rack','cloud_deployment'].includes(value.openedKind??'')) {
+    if(value.tab!=='Summary'||value.components!==null||value.history!==null||value.workbook!==null)return null;
+    if(value.openedKind==='room'||value.openedKind==='cloud_deployment')
+      return context===undefined||validInfrastructureContextHistory(context,value.openedId,value.openedKind)?value:null;
+    return context==null?value:null;
+  }
+  if(context!=null)return null;
   if(typeof value.components!=='string'||!infrastructureQuery(value.components,'components',value.openedId)
     ||typeof value.history!=='string'||!infrastructureQuery(value.history,'history',value.openedId))return null;
   const work=value.workbook;
@@ -166,7 +176,10 @@ export class NavigationHistory {
         order:Object.freeze([...state.infrastructureStructure.order]),
         visible:Object.freeze([...state.infrastructureStructure.visible])})}),
       ...(state.infrastructure===undefined?{}:{infrastructure:Object.freeze({...state.infrastructure,
-        workbook:state.infrastructure.workbook===null?null:Object.freeze({...state.infrastructure.workbook})})}),
+        workbook:state.infrastructure.workbook===null?null:Object.freeze({...state.infrastructure.workbook}),
+        ...(state.infrastructure.contextHistory===undefined?{}:{contextHistory:state.infrastructure.contextHistory===null?null:Object.freeze({
+          ...state.infrastructure.contextHistory,paths:Object.freeze([...state.infrastructure.contextHistory.paths]),
+        })})})}),
       ...(state.collectionOrder===undefined?{}:{collectionOrder:Object.freeze([...state.collectionOrder])})}));
     while (this.entries.size > 50) { const oldest = this.entries.keys().next().value; if (oldest) this.entries.delete(oldest); }
     return token;

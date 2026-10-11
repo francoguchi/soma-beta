@@ -98,6 +98,37 @@ test('Room return restores only identity and refreshes current owner history aft
   expect(reads.every(url=>url.searchParams.get('target_kind')==='room')).toBe(true);
 });
 
+test('Room and Cloud paged context survives browser return with exact owner cursor and no cached evidence',async({page})=>{
+  const calls=[];let changed=false;
+  await fixtures(page,url=>{
+    calls.push(url.search);
+    if(url.searchParams.has('cursor'))return {events:[{...row('room',6,1699999994),
+      event_kind:changed?'room_fresh_second_page':'room_original_second_page'}],next_cursor:null};
+    return {events:[1,2,3,4,5].map(n=>row('room',n,1700000000-n)),
+      next_cursor:cursor('room',5,1699999995)};
+  },[]);
+  await page.route('**/api/v1/objectives?**',route=>route.fulfill({json:{
+    items:[],continuation:null,exact_total:0,
+    as_of_utc:Number(new URL(route.request().url()).searchParams.get('as_of_utc')),
+  }}));
+  const panel=await open(page,'Room R');
+  await panel.getByRole('button',{name:'Next page'}).click();
+  await expect(panel).toContainText('Page 2');
+  await expect(panel).toContainText('room_original_second_page');
+  const cursorQuery=calls[1];
+  await page.getByRole('link',{name:'Objectives',exact:true}).click();
+  changed=true;
+  await page.goBack();
+  await expect(page.getByRole('region',{name:'Opened Infrastructure context'})).toContainText('room_fresh_second_page');
+  await expect(panel).toContainText('Page 2');
+  expect(calls.at(-1)).toBe(cursorQuery);
+  expect(JSON.stringify(await page.evaluate(()=>history.state))).not.toContain('room_original_second_page');
+  await panel.getByRole('button',{name:'Previous page'}).click();
+  await expect(panel).toContainText('Page 1');
+  await expect(panel).toContainText('room_moved');
+  expect(calls.at(-1)).not.toContain('cursor=');
+});
+
 const historyValue=(kind,item)=>({
   kind,text_value:kind==='text'?item:null,integer_value:kind==='integer'?item:null,
   boolean_value:kind==='boolean'?item:null,entity_ref:null,

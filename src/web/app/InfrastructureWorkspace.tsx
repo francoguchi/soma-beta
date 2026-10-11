@@ -11,6 +11,8 @@ import {InfrastructureIpEvidence} from './InfrastructureIpEvidence';
 import {InfrastructureCandidateEvidence} from './InfrastructureCandidateEvidence';
 import {verifyNetworkElement} from '../presentation/infrastructure-element';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
+import {firstInfrastructureContextHistory} from '../presentation/infrastructure-context-intent';
+import {initialOwnerPage} from '../state/owner-page-history';
 import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
 import {InfrastructureExplorerFilters} from './InfrastructureExplorerFilters';
 import {InfrastructureComponentFilters} from './InfrastructureComponentFilters';
@@ -238,7 +240,7 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     // belong to a newly restricted current-page display projection.
     store.dispatch({selection:emptySelection});
     setIntent(old=>({explorer:old.explorer,openedId:null,tab:'Summary',
-      components:null,history:null,workbook:null}));
+      components:null,history:null,workbook:null,contextHistory:null}));
     setRelationshipLens(applySessionLens(lens));
   };
   const path=intent.explorer;
@@ -246,7 +248,7 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     // Owner collection scope has changed. Clear selection and opened detail
     // so an old record cannot be mistaken for a match in the new scope.
     store.dispatch({selection:emptySelection});
-    setIntent({explorer,openedId:null,tab:'Summary',components:null,history:null,workbook:null});
+    setIntent({explorer,openedId:null,tab:'Summary',components:null,history:null,workbook:null,contextHistory:null});
   };
   return <div ref={root} onFocusCapture={event=>{const control=event.target.closest<HTMLElement>('[data-focus-token]');if(control)store.dispatch({focusToken:control.dataset.focusToken??null});}}>
     {notice&&<p role="status">{notice}</p>}<p>Contextual explorer. Physical placement, containment, and Cloud assignment represent separate facts.</p>
@@ -319,7 +321,9 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
               setIntent({...intent,openedId:ref.record_id,openedKind:simpleKind??'network_element',tab:'Summary',
                 components:simpleKind?null:`/api/v1/infrastructure/network-elements/${ref.record_id}/components?limit=200`,
                 history:simpleKind?null:`/api/v1/infrastructure/history?target_kind=network_element&target_id=${ref.record_id}&limit=5`,
-                workbook:null});
+                workbook:null,
+                contextHistory:simpleKind==='room'||simpleKind==='cloud_deployment'
+                  ?initialOwnerPage(firstInfrastructureContextHistory(ref.record_id,simpleKind)):null});
             }} render={row=>{const node=byId.get(row.id)!;return <><strong>{node.label}</strong><p>{node.kind.replaceAll('_',' ')} — {node.lifecycle??'Unknown lifecycle'}</p>
               <p>{node.kind==='containment'?'Containment parent':'Physical/context parent'}: {node.parent_context_id??'None in this context'}.</p>
               {node.warning_codes.map(warning=><p className="warning" key={warning}>{warning}</p>)}</>;}}/>
@@ -337,7 +341,9 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
             }}/>:
           (intent.openedKind==='room'||intent.openedKind==='cloud_deployment')?
           <InfrastructureContextHistory key={intent.openedKind+':'+intent.openedId}
-            id={intent.openedId} kind={intent.openedKind}/>:
+            id={intent.openedId} kind={intent.openedKind}
+            history={intent.contextHistory??initialOwnerPage(firstInfrastructureContextHistory(intent.openedId,intent.openedKind))}
+            onHistory={contextHistory=>setIntent(old=>({...old,contextHistory}))}/>:
           <NetworkElement key={'ne:'+intent.openedId} intent={intent} onIntent={setIntent}
             onBrowseSite={(customer,site)=>{
               const next=buildExplorerQuery({customerOrgId:customer,siteId:site,nodeKind:'',lifecycle:''});

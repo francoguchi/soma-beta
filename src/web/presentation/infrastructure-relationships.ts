@@ -1,4 +1,6 @@
 import {infrastructureIntent,type InfrastructureIntent} from '../app/router.js';
+import {initialOwnerPage} from '../state/owner-page-history.js';
+import {firstInfrastructureContextHistory} from './infrastructure-context-intent.js';
 
 /** Navigate only to existing LLD-08 owner read surfaces. A selected
  * relationship from the accepted current owner is authority to request
@@ -19,6 +21,8 @@ export function openInfrastructureRelated(
     components:isElement?'/api/v1/infrastructure/network-elements/'+id+'/components?limit=200':null,
     history:isElement?'/api/v1/infrastructure/history?target_kind=network_element&target_id='+id+'&limit=5':null,
     workbook:null,
+    contextHistory:kind==='room'||kind==='cloud_deployment'
+      ?initialOwnerPage(firstInfrastructureContextHistory(id,kind)):null,
   };
   return infrastructureIntent(result);
 }
