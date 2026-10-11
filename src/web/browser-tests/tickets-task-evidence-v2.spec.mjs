@@ -85,3 +85,87 @@ test('Malformed Task attention proof remains unavailable instead of showing untr
   await expect(alerts.getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(alerts.getByText('not-a-hash')).toHaveCount(0);
 });
+
+const emptyInventory=(taskId=task)=>({
+  task_id:taskId,allocation_history:[],local_fulfillment_history:[],
+  physical_consequences:[],return_obligations:[],
+});
+async function taskInventoryFixture(page,raw,reads){
+  await page.route('**/api/v1/tasks?*',route=>route.fulfill({json:{
+    items:[rootRow],continuation:null,exact_total:1,
+  }}));
+  await page.route('**/api/v1/tasks/'+task,route=>route.fulfill({json:detail}));
+  await page.route('**/api/v1/inventory/tasks/'+task,route=>{
+    reads.push(route.request().url());return route.fulfill({json:raw});
+  });
+  await page.goto('http://127.0.0.1:4174/tickets/sr/'+sr);
+  await page.getByRole('tab',{name:'Tasks',exact:true}).click();
+  const panel=page.getByRole('region',{name:'Service Request Tasks'});
+  await panel.getByRole('button',{name:'Evidence Task'}).click();
+  return panel.getByRole('complementary',{name:'Selected Task details'});
+}
+test('Task Inventory point is lazy beneath accepted Task and distinguishes allocation from physical consequence',async({page})=>{
+  const calls=[];
+  const projection={
+    ...emptyInventory(),
+    allocation_history:[{
+      allocation_event_id:id,allocation_id:link,spare_part_unit_id:link,
+      spare_need_id:null,event_kind:'planned_selection',reason_code:null,recorded_at_utc:1720000000,
+    }],
+    local_fulfillment_history:[],
+    physical_consequences:[{
+      physical_consequence_id:id,task_review_fingerprint:'a'.repeat(64),rma_id:rfc,
+      physical_disposition:'installed',installed_spare_part_unit_id:link,
+      removed_device_part_unit_id:null,inbound_spare_part_unit_id:link,
+      parent_dismantled_unit_id:null,revision:1,input_fingerprint:'b'.repeat(64),
+    }],
+    return_obligations:[{
+      rma_id:rfc,state:'open',device_part_unit_id:null,spare_part_unit_id:link,
+      physical_consequence_id:id,revision:1,
+    }],
+  };
+  const selected=await taskInventoryFixture(page,projection,calls);
+  const toggle=selected.getByRole('button',{name:'Inspect Task Inventory evidence'});
+  await expect(toggle).toBeVisible();
+  expect(calls).toHaveLength(0);
+  await toggle.click();
+  const pane=selected.getByRole('region',{name:'Task Inventory evidence',exact:true});
+  await expect(pane.getByRole('region',{name:'Task unit allocation events'})).toContainText('planned_selection');
+  await expect(pane.getByRole('region',{name:'Task physical consequences'})).toContainText('installed');
+  await expect(pane.getByRole('region',{name:'Task return obligations'})).toContainText('open');
+  await expect(pane).toContainText('not an independent proof of Task existence');
+  expect(calls).toHaveLength(1);
+  await expect(page.getByRole('button',{name:'Reserve selected unit'})).toHaveCount(0);
+});
+test('Foreign Task Inventory owner identity fails closed, despite valid-looking allocations',async({page})=>{
+  const calls=[];
+  const selected=await taskInventoryFixture(page,{
+    ...emptyInventory(rfc),
+    allocation_history:[{
+      allocation_event_id:id,allocation_id:link,spare_part_unit_id:link,
+      spare_need_id:null,event_kind:'UNTRUSTED_TASK_ALLOCATION',
+      reason_code:null,recorded_at_utc:1720000000,
+    }],
+  },calls);
+  await selected.getByRole('button',{name:'Inspect Task Inventory evidence'}).click();
+  const pane=selected.getByRole('region',{name:'Task Inventory evidence',exact:true});
+  await expect(pane.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(pane).not.toContainText('UNTRUSTED_TASK_ALLOCATION');
+  expect(calls).toHaveLength(1);
+});
+test('Out-of-order Task Inventory allocation evidence rejects the entire projection',async({page})=>{
+  const calls=[];
+  const selected=await taskInventoryFixture(page,{
+    ...emptyInventory(),
+    allocation_history:[
+      {allocation_event_id:link,allocation_id:id,spare_part_unit_id:id,
+        spare_need_id:null,event_kind:'recent',reason_code:null,recorded_at_utc:200},
+      {allocation_event_id:id,allocation_id:link,spare_part_unit_id:link,
+        spare_need_id:null,event_kind:'UNTRUSTED_OLD_ALLOCATION',reason_code:null,recorded_at_utc:100},
+    ],
+  },calls);
+  await selected.getByRole('button',{name:'Inspect Task Inventory evidence'}).click();
+  const pane=selected.getByRole('region',{name:'Task Inventory evidence',exact:true});
+  await expect(pane.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(pane).not.toContainText('UNTRUSTED_OLD_ALLOCATION');
+});
