@@ -11,6 +11,8 @@ import {InfrastructureIpEvidence} from './InfrastructureIpEvidence';
 import {InfrastructureCandidateEvidence} from './InfrastructureCandidateEvidence';
 import {verifyNetworkElement} from '../presentation/infrastructure-element';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
+import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
+import {FULL_STRUCTURE,projectStructureRows,structurePath,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
@@ -108,6 +110,14 @@ function withCursor(path:string,cursor:unknown|null):string {
 export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?:ReturnState|null;onReturnState?:(capture:()=>ReturnState|null)=>void}) {
   const restoredIntent=restored?.route==='/infrastructure'?infrastructureIntent(restored.infrastructure):null;
   const [intent,setIntent]=useState<InfrastructureIntent>(()=>restoredIntent??{explorer:'/api/v1/infrastructure/tree?limit=200',openedId:null,tab:'Summary',components:null,history:null,workbook:null});
+  const [structureView,setStructureView]=useState<StructureView>(FULL_STRUCTURE);
+  const [structureOpen,setStructureOpen]=useState(false);
+  const structureButton=useRef<HTMLButtonElement>(null);
+  const closeStructure=()=>{
+    setStructureOpen(false);
+    window.requestAnimationFrame(()=>structureButton.current?.focus({preventScroll:true}));
+  };
+  const applyStructure=(next:StructureView)=>{setStructureView(next);closeStructure();};
   const [refreshKey,setRefreshKey]=useState(0);const [notice,setNotice]=useState<string|null>(restored&&!restoredIntent?'The previous Infrastructure context is unavailable; the first current explorer page is shown.':null);
   const root=useRef<HTMLDivElement>(null);const fingerprint=useRef<{key:string;value:string}|null>(null);
   const store=useMemo(()=>{
@@ -163,12 +173,24 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
   return <div ref={root} onFocusCapture={event=>{const control=event.target.closest<HTMLElement>('[data-focus-token]');if(control)store.dispatch({focusToken:control.dataset.focusToken??null});}}>
     {notice&&<p role="status">{notice}</p>}<p>Contextual explorer. Physical placement, containment, and Cloud assignment represent separate facts.</p>
     <button type="button" data-focus-token="infrastructure:refresh" onClick={()=>setRefreshKey(value=>value+1)}>Refresh explorer</button>
+    <button type="button" className="soma-structure-trigger" ref={structureButton}
+      data-focus-token="infrastructure:structure" aria-haspopup="dialog"
+      aria-expanded={structureOpen} onClick={()=>setStructureOpen(true)}>Structure</button>
+    <p className="soma-structure-applied" aria-label="Applied Structure view">
+      Display projection: {structurePath(structureView)}. Current page only; authoritative
+      Infrastructure parentage, relationships and owner pagination are unchanged.</p>
+    {structureOpen&&<InfrastructureStructureDialog current={structureView}
+      onApply={applyStructure} onDismiss={closeStructure}/>}
     <div className="infrastructure-workspace"><section aria-label="Infrastructure contextual explorer" data-scroll-owner="y" data-return-scroll="explorer" className="infrastructure-explorer">
       <OwnerProjection<Explorer> path={path} refreshKey={refreshKey} render={page=>{
         if (!Array.isArray(page.nodes)||page.nodes.length>200) throw new Error('Invalid explorer page');
         const next=withCursor(path,page.next_cursor);if(!infrastructureQuery(next,'explorer'))throw new Error('Invalid explorer continuation');
-        const nodes:readonly Node[]=page.nodes; const byId=new Map(nodes.map(node=>[`${node.kind}:${node.id}`,node]));
-        return <>{nodes.length===0&&<p>No Infrastructure nodes in this page.</p>}
+        const nodes:readonly Node[]=projectStructureRows(page.nodes,structureView);
+        const byId=new Map(nodes.map(node=>[`${node.kind}:${node.id}`,node]));
+        return <>{nodes.length!==page.nodes.length&&<p role="status">
+          Showing {nodes.length} of {page.nodes.length} current owner page rows.
+          Hidden display levels have not been deleted.</p>}
+          {nodes.length===0&&<p>No Infrastructure nodes are visible in this display projection.</p>}
           <SelectableCollection store={store} rows={nodes.map(node=>({id:`${node.kind}:${node.id}`,eligible:true,
             route:node.kind==='site'?{record_type:'INFRASTRUCTURE_SITE',record_id:node.id,revision_token:null}:
               node.kind==='rack'?{record_type:'INFRASTRUCTURE_RACK',record_id:node.id,revision_token:null}:
