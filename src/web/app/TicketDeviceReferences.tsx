@@ -2,6 +2,7 @@ import {useContext, useEffect, useState} from 'react';
 import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection';
 import {filterFingerprint} from '../data/query-controller';
 import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
+import {TicketDeviceResolutionEvidence} from './TicketDeviceResolutionEvidence';
 
 type TicketType='service_request'|'rfc';
 type DeviceRow=Readonly<{
@@ -104,6 +105,9 @@ export function TicketDeviceReferences({id,type}:{id:string;type:TicketType}) {
                 ??'No accepted Network Element resolution supplied'}</span>
             </div>
             <p>A Device Reference does not establish a physical unit, installed component, or Network Element registration.</p>
+            <TicketDeviceResolutionEvidence key={chosen.device_reference_id}
+              deviceId={chosen.device_reference_id} revision={chosen.revision}
+              ticketResolution={chosen.registered_network_element_id}/>
           </aside>}
         </>;
       }}/>}
