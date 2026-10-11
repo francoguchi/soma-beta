@@ -12,7 +12,7 @@ import {InfrastructureCandidateEvidence} from './InfrastructureCandidateEvidence
 import {verifyNetworkElement} from '../presentation/infrastructure-element';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
-import {FULL_STRUCTURE,projectStructureRows,structurePath,type StructureView} from '../presentation/infrastructure-structure';
+import {FULL_STRUCTURE,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
@@ -110,7 +110,9 @@ function withCursor(path:string,cursor:unknown|null):string {
 export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?:ReturnState|null;onReturnState?:(capture:()=>ReturnState|null)=>void}) {
   const restoredIntent=restored?.route==='/infrastructure'?infrastructureIntent(restored.infrastructure):null;
   const [intent,setIntent]=useState<InfrastructureIntent>(()=>restoredIntent??{explorer:'/api/v1/infrastructure/tree?limit=200',openedId:null,tab:'Summary',components:null,history:null,workbook:null});
-  const [structureView,setStructureView]=useState<StructureView>(FULL_STRUCTURE);
+  const [structureView,setStructureView]=useState<StructureView>(()=>
+    restoredIntent&&restored?.infrastructureStructure&&validStructure(restored.infrastructureStructure)
+      ?restored.infrastructureStructure:FULL_STRUCTURE);
   const [structureOpen,setStructureOpen]=useState(false);
   const structureButton=useRef<HTMLButtonElement>(null);
   const closeStructure=()=>{
@@ -131,9 +133,10 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     const hash=fingerprint.current;if(!hash||hash.key!==key||infrastructureIntent(intent)===null)return null;const state=store.getSnapshot();
     const positions=Array.from(root.current?.querySelectorAll<HTMLElement>('[data-return-scroll]')??[]).map(element=>[element.dataset.returnScroll,element.scrollTop,element.scrollLeft]);
     return {route:'/infrastructure',filterFingerprint:hash.value,infrastructure:intent,activeId:state.selection.active_id,selectedId:state.selection.selected_id,
-      memberIds:state.selection.member_ids,collectionOrder:store.getCollectionOrder(),focusToken:state.focusToken,
+      memberIds:state.selection.member_ids,collectionOrder:store.getCollectionOrder(),
+      infrastructureStructure:structureView,focusToken:state.focusToken,
       scrollAnchor:JSON.stringify({main:document.getElementById('main-content')?.scrollTop??0,panes:positions})};
-  });},[key,intent,store,onReturnState]);
+  });},[key,intent,store,onReturnState,structureView]);
   useLayoutEffect(()=>{
     const node=root.current;if(!node||!restoredIntent||!restored)return;
     let positions:{main:number;panes:[string,number,number][]}|null=null;
