@@ -97,7 +97,9 @@ class DomainRoutes:
         from soma.inventory.queries.stock_needs import InventoryNeedsQueryService
         from soma.inventory.queries.attention_history import InventoryAttentionHistoryQuery
         from soma.inventory.queries.requests_rma import InventoryRequestsRmaQueryService
+        from soma.inventory.queries.fault_tags import InventoryFaultTagQueryService
         from soma.inventory.api.routes_inventory import build_route_adapter
+        from soma.inventory.api.routes_fault_tags import build_route_adapter as build_fault_tag_route_adapter
         stock = InventoryNeedsQueryService(factory)
         attention = InventoryAttentionHistoryQuery(factory)
         requests = InventoryRequestsRmaQueryService(factory)
@@ -126,6 +128,17 @@ class DomainRoutes:
             ),
             "RmaDetailQuery": lambda route, values: (
                 requests.rma_detail(route.path_parameters["rma_id"])
+                if not values else self._bad_query()
+            ),
+        })
+        # The Fault Tag route registry is distinct from the general Inventory
+        # routes. Compose only existing LLD-07 query owners, never its declared
+        # mutation authority.
+        fault_tags = InventoryFaultTagQueryService(factory)
+        self.fault_tags = build_fault_tag_route_adapter({
+            "FaultTagListQuery": lambda route, values: fault_tags.list_query(dict(values)),
+            "FaultTagDetailQuery": lambda route, values: (
+                fault_tags.detail(route.path_parameters["fault_tag_id"])
                 if not values else self._bad_query()
             ),
         })
@@ -182,7 +195,7 @@ class DomainRoutes:
             return self.ui.routes.dispatch(method, path, request=request, decoded=values)
         context = self.security.validate_request(request, mutation=method != "GET")
         communications = self.communications.routes(actor_kind="local_user", actor_id=context.actor_id)
-        for adapter in (self.tickets, self.import_reads, self.infrastructure, self.reference, self.inventory, self.sla, self.objective_routes, communications):
+        for adapter in (self.tickets, self.import_reads, self.infrastructure, self.reference, self.inventory, self.fault_tags, self.sla, self.objective_routes, communications):
             try:
                 result = adapter.dispatch(method, path, values)
             except TypeError:

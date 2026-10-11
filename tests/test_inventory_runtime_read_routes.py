@@ -65,3 +65,24 @@ def test_source_runtime_binds_existing_inventory_need_request_and_rma_read_owner
     # Declared mutation routes remain uncomposed; no accidental write handler.
     with pytest.raises(Exception, match="not assembled"):
         domains.inventory.dispatch("POST", "/api/v1/inventory/requests", {})
+
+def test_fault_tag_registry_is_composed_without_mutation_routes(initialized_database, tmp_path):
+    from soma.foundation.errors import IntegrityFailure
+
+    path, builder = initialized_database
+    domains = DomainRoutes(builder(path), SimpleNamespace(root=tmp_path))
+    page = domains.fault_tags.dispatch("GET", "/api/v1/inventory/fault-tags", {"limit": 25})
+    assert page is not None and page.status == 200
+    assert page.body == {"items": [], "continuation": None, "exact_total": 0}
+    with pytest.raises(ValidationError):
+        domains.fault_tags.dispatch("GET", "/api/v1/inventory/fault-tags", {"unsupported": 1})
+    with pytest.raises(ValidationError):
+        domains.fault_tags.dispatch("GET", "/api/v1/inventory/fault-tags", {"archived": 1})
+    missing = "11111111-1111-4111-8111-111111111111"
+    with pytest.raises(SomaError) as exc:
+        domains.fault_tags.dispatch("GET", "/api/v1/inventory/fault-tags/" + missing, {})
+    assert exc.value.code == "NOT_FOUND"
+    with pytest.raises(ValidationError):
+        domains.fault_tags.dispatch("GET", "/api/v1/inventory/fault-tags/" + missing, {"wrong": True})
+    with pytest.raises(IntegrityFailure, match="not assembled"):
+        domains.fault_tags.dispatch("POST", "/api/v1/inventory/fault-tags", {})
