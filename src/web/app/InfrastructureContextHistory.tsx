@@ -97,7 +97,7 @@ export function InfrastructureContextHistory({id,kind}:{id:string;kind:Kind}){
             rows={page.events.map(event=>({id:event.event_id,cells:[
               formatOwnerLocalTime(event.recorded_at_utc),
               event.event_kind,event.summary.reason_code??'No reason recorded',
-              <details><summary>{event.summary.changes.length} changed fields · inspect evidence</summary>
+              <details className="soma-infra-history-changes"><summary>{event.summary.changes.length} changed fields · inspect evidence</summary>
                 {event.summary.changes.length===0?
                   <p>No structured changes recorded for this event.</p>:
                   <ul>{event.summary.changes.map((change,index)=><li key={index}>
