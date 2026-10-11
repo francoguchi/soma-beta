@@ -19,7 +19,7 @@ import {verifyInstalledComponentPage,type InstalledComponentPage} from '../prese
 import {verifyInfrastructureExplorerPage,type InfrastructureExplorerNode,type InfrastructureExplorerPage} from '../presentation/infrastructure-explorer-page';
 import {verifyNetworkHistoryPage,type NetworkHistoryPage} from '../presentation/infrastructure-network-history';
 import {openInfrastructureRelated,type InfrastructureRelatedKind} from '../presentation/infrastructure-relationships';
-import {FULL_STRUCTURE,LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,projectInfrastructureLens,structurePath,validStructure,type InfrastructureLens,type StructureView} from '../presentation/infrastructure-structure';
+import {FULL_STRUCTURE,LEVEL_NAMES,applySessionLens,applySessionStructure,currentSessionLens,currentSessionStructure,projectStructureRows,projectInfrastructureLens,structurePath,validStructure,type InfrastructureLens,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
@@ -153,9 +153,12 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     // current document-session choice, without persisting domain owner DTOs.
     if(restoredIntent&&restored?.infrastructureStructure&&validStructure(restored.infrastructureStructure))
       applySessionStructure(restored.infrastructureStructure);
+    if(restoredIntent&&restored?.infrastructureLens)applySessionLens(restored.infrastructureLens);
   },[]);
   const [structureOpen,setStructureOpen]=useState(false);
-  const [relationshipLens,setRelationshipLens]=useState<InfrastructureLens>('all');
+  const [relationshipLens,setRelationshipLens]=useState<InfrastructureLens>(()=>
+    restoredIntent&&restored?.infrastructureLens
+      ?restored.infrastructureLens:currentSessionLens());
   const structureButton=useRef<HTMLButtonElement>(null);
   const closeStructure=()=>{
     setStructureOpen(false);
@@ -176,9 +179,9 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     const positions=Array.from(root.current?.querySelectorAll<HTMLElement>('[data-return-scroll]')??[]).map(element=>[element.dataset.returnScroll,element.scrollTop,element.scrollLeft]);
     return {route:'/infrastructure',filterFingerprint:hash.value,infrastructure:intent,activeId:state.selection.active_id,selectedId:state.selection.selected_id,
       memberIds:state.selection.member_ids,collectionOrder:store.getCollectionOrder(),
-      infrastructureStructure:structureView,focusToken:state.focusToken,
+      infrastructureStructure:structureView,infrastructureLens:relationshipLens,focusToken:state.focusToken,
       scrollAnchor:JSON.stringify({main:document.getElementById('main-content')?.scrollTop??0,panes:positions})};
-  });},[key,intent,store,onReturnState,structureView]);
+  });},[key,intent,store,onReturnState,structureView,relationshipLens]);
   useLayoutEffect(()=>{
     const node=root.current;if(!node||!restoredIntent||!restored)return;
     let positions:{main:number;panes:[string,number,number][]}|null=null;
@@ -236,7 +239,7 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     store.dispatch({selection:emptySelection});
     setIntent(old=>({...old,openedId:null,openedKind:undefined,tab:'Summary',
       components:null,history:null,workbook:null}));
-    setRelationshipLens(lens);
+    setRelationshipLens(applySessionLens(lens));
   };
   const path=intent.explorer;
   const applyOwnerFilters=(explorer:string)=>{
