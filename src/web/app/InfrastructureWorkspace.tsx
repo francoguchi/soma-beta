@@ -237,7 +237,7 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     // Prevent previously selected rows and opened details from appearing to
     // belong to a newly restricted current-page display projection.
     store.dispatch({selection:emptySelection});
-    setIntent(old=>({...old,openedId:null,openedKind:undefined,tab:'Summary',
+    setIntent(old=>({explorer:old.explorer,openedId:null,tab:'Summary',
       components:null,history:null,workbook:null}));
     setRelationshipLens(applySessionLens(lens));
   };
