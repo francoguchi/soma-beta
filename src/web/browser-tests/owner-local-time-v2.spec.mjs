@@ -7,8 +7,8 @@ const ne='11111111-1111-4111-8111-111111111111';
 const site='22222222-2222-4222-8222-222222222222';
 const objective='33333333-3333-4333-8333-333333333333';
 const at=1704067200; // 2024-01-01 00:00 UTC = 2023-12-31 19:00 in Guayaquil
-const local=()=>new Intl.DateTimeFormat('en-US',{timeZone:'America/Guayaquil',
-  dateStyle:'medium',timeStyle:'short'}).format(new Date(at*1000));
+const local=page=>page.evaluate(seconds=>
+  new Date(seconds*1000).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}),at);
 test('Objective owner envelope uses the browser timezone without changing the backend instant',async({page})=>{
   const asOfRequests=[];
   await page.route('**/api/v1/objectives?*',route=>{
@@ -25,7 +25,7 @@ test('Objective owner envelope uses the browser timezone without changing the ba
   });
   await page.goto('http://127.0.0.1:4174/objectives');
   const row=page.getByRole('listitem').filter({hasText:'MW-00000001'});
-  await expect(row).toContainText(local());
+  await expect(row).toContainText(await local(page));
   await expect(row).toContainText('Membership-pinned Objective envelope');
   await expect(row).not.toContainText(new Date(at*1000).toISOString());
   await expect(page.getByText("Times below use this device's local time.",{exact:false})).toBeVisible();
@@ -70,11 +70,11 @@ test('Infrastructure chronology and workbook history both render browser-local t
   await page.getByRole('listitem').first().press('Enter');
   await page.getByRole('tab',{name:'History'}).click();
   const history=page.getByRole('tabpanel',{name:'History'});
-  await expect(history).toContainText(local());
+  await expect(history).toContainText(await local(page));
   await expect(history).not.toContainText(new Date(at*1000).toISOString());
   await page.getByRole('tab',{name:'Workbook Activity'}).click();
   const workbook=page.getByRole('region',{name:'Infrastructure workbook activity'});
-  await expect(workbook).toContainText(local());
+  await expect(workbook).toContainText(await local(page));
   await expect(workbook).not.toContainText(new Date(at*1000).toISOString());
   expect(historyReads).toEqual(['events','workbooks']);
 });

@@ -8,7 +8,7 @@ test('Owner epoch remains exact while operator presentation uses local calendar,
     dateStyle:'medium',timeStyle:'short',
   });
   assert.equal(formatOwnerLocalTime(epoch),expected);
-  assert.doesNotMatch(formatOwnerLocalTime(epoch),/\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d+)?Z/u);
+  assert.doesNotMatch(formatOwnerLocalTime(epoch),/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z/u);
 });
 test('Local presentation does not silently invent times from invalid owner seconds',()=>{
   for(const value of [-1,1.5,NaN,Infinity,8640000000001,Number.MAX_SAFE_INTEGER])
