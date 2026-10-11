@@ -23,6 +23,7 @@ export function openInfrastructureRelated(
     workbook:null,
     contextHistory:kind==='room'||kind==='cloud_deployment'
       ?initialOwnerPage(firstInfrastructureContextHistory(id,kind)):null,
+    roomCloud:kind==='room'||kind==='cloud_deployment'?{section:'Summary',members:null}:null,
   };
   return infrastructureIntent(result);
 }

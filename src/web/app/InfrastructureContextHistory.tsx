@@ -72,8 +72,8 @@ function validate(page:Page,id:string,kind:Kind,digest:string,path:string):void{
       'filter_fingerprint,last_key_tuple,null_order,query_id,sort_registry_id,version'))
     throw new Error('Invalid context history continuation');
 }
-/** Room and Cloud have no LLD-08 detail GET. Their authoritative history query
- * verifies current target existence, but must not be misrepresented as full details.
+/** Historical evidence is independent from current Room/Cloud detail owner reads.
+ * This tab must not interpret past changes as accepted current entity metadata.
  */
 export function InfrastructureContextHistory({id,kind,history,onHistory}:{id:string;kind:Kind;
   history:OwnerPageHistory;onHistory:(value:OwnerPageHistory)=>void}){
@@ -86,8 +86,8 @@ export function InfrastructureContextHistory({id,kind,history,onHistory}:{id:str
   return <section aria-label="Opened Infrastructure context" className="infrastructure-detail"
     data-scroll-owner="y" data-return-scroll="detail">
     <h2>{kind==='room'?'Room':'Cloud Deployment'} context</h2>
-    <p>Selected owner identity: {id}. This is an authenticated historical context read,
-      not a full Room or Cloud Deployment detail response.</p>
+    <p>Selected owner identity: {id}. These are historical events; current Room and
+      Cloud Deployment properties come from separate, validated detail owner reads.</p>
     {digest===null?<p role="status">Preparing exact history identity.</p>:
       <OwnerProjection<Page> path={ownerPagePath(history)} render={page=>{
         validate(page,id,kind,digest,ownerPagePath(history));

@@ -10,7 +10,7 @@ import {InfrastructureModelEvidence} from './InfrastructureModelEvidence';
 import {InfrastructureIpEvidence} from './InfrastructureIpEvidence';
 import {InfrastructureCandidateEvidence} from './InfrastructureCandidateEvidence';
 import {verifyNetworkElement} from '../presentation/infrastructure-element';
-import {InfrastructureContextHistory} from './InfrastructureContextHistory';
+import {InfrastructureRoomCloudDetails} from './InfrastructureRoomCloudDetails';
 import {firstInfrastructureContextHistory} from '../presentation/infrastructure-context-intent';
 import {initialOwnerPage} from '../state/owner-page-history';
 import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
@@ -240,7 +240,7 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     // belong to a newly restricted current-page display projection.
     store.dispatch({selection:emptySelection});
     setIntent(old=>({explorer:old.explorer,openedId:null,tab:'Summary',
-      components:null,history:null,workbook:null,contextHistory:null}));
+      components:null,history:null,workbook:null,contextHistory:null,roomCloud:null}));
     setRelationshipLens(applySessionLens(lens));
   };
   const path=intent.explorer;
@@ -248,7 +248,7 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     // Owner collection scope has changed. Clear selection and opened detail
     // so an old record cannot be mistaken for a match in the new scope.
     store.dispatch({selection:emptySelection});
-    setIntent({explorer,openedId:null,tab:'Summary',components:null,history:null,workbook:null,contextHistory:null});
+    setIntent({explorer,openedId:null,tab:'Summary',components:null,history:null,workbook:null,contextHistory:null,roomCloud:null});
   };
   return <div ref={root} onFocusCapture={event=>{const control=event.target.closest<HTMLElement>('[data-focus-token]');if(control)store.dispatch({focusToken:control.dataset.focusToken??null});}}>
     {notice&&<p role="status">{notice}</p>}<p>Contextual explorer. Physical placement, containment, and Cloud assignment represent separate facts.</p>
@@ -323,7 +323,8 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
                 history:simpleKind?null:`/api/v1/infrastructure/history?target_kind=network_element&target_id=${ref.record_id}&limit=5`,
                 workbook:null,
                 contextHistory:simpleKind==='room'||simpleKind==='cloud_deployment'
-                  ?initialOwnerPage(firstInfrastructureContextHistory(ref.record_id,simpleKind)):null});
+                  ?initialOwnerPage(firstInfrastructureContextHistory(ref.record_id,simpleKind)):null,
+                roomCloud:simpleKind==='room'||simpleKind==='cloud_deployment'?{section:'Summary',members:null}:null});
             }} render={row=>{const node=byId.get(row.id)!;return <><strong>{node.label}</strong><p>{node.kind.replaceAll('_',' ')} — {node.lifecycle??'Unknown lifecycle'}</p>
               <p>{node.kind==='containment'?'Containment parent':'Physical/context parent'}: {node.parent_context_id??'None in this context'}.</p>
               {node.warning_codes.map(warning=><p className="warning" key={warning}>{warning}</p>)}</>;}}/>
@@ -340,10 +341,20 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
               if(next!==null){store.dispatch({selection:emptySelection});setIntent(next);}
             }}/>:
           (intent.openedKind==='room'||intent.openedKind==='cloud_deployment')?
-          <InfrastructureContextHistory key={intent.openedKind+':'+intent.openedId}
+          <InfrastructureRoomCloudDetails key={intent.openedKind+':'+intent.openedId}
             id={intent.openedId} kind={intent.openedKind}
+            state={intent.roomCloud??{section:'Summary',members:null}}
+            onState={roomCloud=>setIntent(old=>({...old,roomCloud}))}
             history={intent.contextHistory??initialOwnerPage(firstInfrastructureContextHistory(intent.openedId,intent.openedKind))}
-            onHistory={contextHistory=>setIntent(old=>({...old,contextHistory}))}/>:
+            onHistory={contextHistory=>setIntent(old=>({...old,contextHistory}))}
+            onBrowseSite={(customer,site)=>{
+              const next=buildExplorerQuery({customerOrgId:customer,siteId:site,nodeKind:'',lifecycle:''});
+              if(next!==null)applyOwnerFilters(next);
+            }}
+            onOpenRelated={(kind,id)=>{
+              const next=openInfrastructureRelated(intent,kind,id);
+              if(next!==null){store.dispatch({selection:emptySelection});setIntent(next);}
+            }}/>:
           <NetworkElement key={'ne:'+intent.openedId} intent={intent} onIntent={setIntent}
             onBrowseSite={(customer,site)=>{
               const next=buildExplorerQuery({customerOrgId:customer,siteId:site,nodeKind:'',lifecycle:''});
