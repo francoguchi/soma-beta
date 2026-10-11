@@ -56,7 +56,7 @@ const units=(range:Range)=>range.u_span===1?'U'+range.u_start:
   'U'+range.u_start+'–U'+(range.u_start+range.u_span-1);
 
 /** Authenticated LLD-08 RackOccupancyQuery, read-only, not a placement approval. */
-export function InfrastructureRackOccupancy({id}:{id:string}){
+export function InfrastructureRackOccupancy({id,onOpenElement}:{id:string;onOpenElement?:(id:string)=>void}){
   return <section aria-label="Opened Rack" data-scroll-owner="y" data-return-scroll="detail" className="infrastructure-detail">
     <OwnerProjection<Rack> path={'/api/v1/infrastructure/racks/'+encodeURIComponent(id)+'/occupancy'} render={owner=>{
       validate(owner,id);
@@ -71,7 +71,10 @@ export function InfrastructureRackOccupancy({id}:{id:string}){
               Physical Rack occupancy does not establish containment or Cloud assignment.</p>
             {owner.occupants.length===0&&<p>No Network Element occupies Rack units in the accepted snapshot.</p>}
             <BoundedCollection caption="Rack occupied U ranges" rows={owner.occupants.map(item=>({
-              id:item.network_element_id,cells:[units(item),item.operational_name,item.network_element_id]}))}
+              id:item.network_element_id,cells:[units(item),item.operational_name,
+                onOpenElement?<button type="button" onClick={()=>onOpenElement(item.network_element_id)}
+                  aria-label={'Inspect Network Element '+item.network_element_id}>{item.network_element_id}</button>
+                  :item.network_element_id]}))}
               next={false} onNext={()=>{}}/>
             <h3>Accepted available Unit ranges</h3>
             {owner.free_ranges.length===0?<p>No free U range in this Rack snapshot.</p>:
