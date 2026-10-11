@@ -164,6 +164,9 @@ def _children(reader, p):
                "WHERE a.cloud_deployment_id=?")
         bind = (parent_id,)
         child_kind = "network_element"
+        # The relationship FK key equals the joined NE identity, but using
+        # the indexed FK key retains UUID order without a whole-parent sort.
+        ordered_child_key = "a.network_element_id"
         split_lifecycle = False
     else:
         get(reader, "network_elements", parent_id)
@@ -174,6 +177,7 @@ def _children(reader, p):
                "WHERE c.parent_network_element_id=?")
         bind = (parent_id,)
         child_kind = "network_element"
+        ordered_child_key = "c.child_network_element_id"
         split_lifecycle = False
 
     # The historical FK indexes for Site/Room are keyed by lifecycle *then*
@@ -201,9 +205,9 @@ def _children(reader, p):
             source += " AND n.lifecycle_state=?"
             values.append(lifecycle)
         if after is not None:
-            source += " AND n.network_element_id>?"
+            source += " AND " + ordered_child_key + ">?"
             values.append(after)
-        source += " ORDER BY n.network_element_id ASC LIMIT ?"
+        source += " ORDER BY " + ordered_child_key + " ASC LIMIT ?"
         result = rows(reader, source, (*values, limit + 1))
 
     if any(result[i - 1]["id"] >= result[i]["id"] for i in range(1, len(result))):
