@@ -37,3 +37,12 @@ test('LLD-07 Spare Request cursor hash treats as_of_utc as a number, not text',a
   assert.notEqual(await filterFingerprint({...filters,as_of_utc:'1791700000'}),digest(canonical));
   assert.notEqual(await filterFingerprint({...filters,response_warning_only:true}),digest(canonical));
 });
+
+test('LLD-07 Inventory history cursor hash binds exact target kind and UUID',async()=>{
+  const id='11111111-1111-4111-8111-111111111111';
+  const filters={schema:'SOMA_INVENTORY_HISTORY_FILTER_V1',target_kind:'rma',target_id:id};
+  const canonical='{"schema":"SOMA_INVENTORY_HISTORY_FILTER_V1","target_id":"'+id+'","target_kind":"rma"}';
+  assert.equal(await filterFingerprint(filters),digest(canonical));
+  assert.notEqual(await filterFingerprint({...filters,target_kind:'spare_request'}),digest(canonical));
+  assert.notEqual(await filterFingerprint({...filters,target_id:'22222222-2222-4222-8222-222222222222'}),digest(canonical));
+});
