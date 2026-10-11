@@ -10,7 +10,11 @@ const base='/api/v1/infrastructure/network-elements/'+id+'/components?limit=200'
 const filters={state:'removed',bomKey:'exact-bom-key',slotKey:'slot/A'};
 
 test('LLD08 Installed Component filters preserve exact owner keys and existing page shape',()=>{
- assert.equal(buildComponentQuery(id,EMPTY_COMPONENT_FILTERS),base);
+ assert.deepEqual(EMPTY_COMPONENT_FILTERS,{state:'',bomKey:'',slotKey:''});
+ assert.equal(buildComponentQuery(id,{state:'',bomKey:'',slotKey:''}),base,
+   'A plain canonical empty filter must open the first component owner page');
+ assert.equal(buildComponentQuery(id,EMPTY_COMPONENT_FILTERS),base,
+   'The immutable empty filter must build the same first-page owner query');
  const path=buildComponentQuery(id,filters);
  assert.equal(path,base+'&state=removed&bom_key=exact-bom-key&slot_match_key=slot%2FA');
  assert.deepEqual(readComponentFilters(path,id),filters);
