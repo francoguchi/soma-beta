@@ -27,7 +27,7 @@ test('LLD08 exact Customer/Site/kind/lifecycle filters construct only accepted f
 test('LLD08 malformed filter scopes fail closed instead of becoming unfiltered data',()=>{
   for(const invalid of [
     {...filled,customerOrgId:'not-a-uuid'},
-    {...filled,siteId:site.toUpperCase()},
+    {...filled,siteId:site.replace('11111111','AAAAAAAA')},
     {...filled,nodeKind:'cloud'},
     {...filled,lifecycle:'pending'},
     {...filled,extra:'injected'},
