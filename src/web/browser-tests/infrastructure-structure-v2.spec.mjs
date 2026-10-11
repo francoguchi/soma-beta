@@ -119,3 +119,23 @@ test('At 200% zoom the Structure footer remains reachable and keyboard focus ret
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);
   expect(overflow).toBe(false);
 });
+
+test('Applied Structure survives browser Back and still refetches owner page without copied records',async({page})=>{
+ const reads=[];
+ await fixture(page,reads);
+ await page.route('**/api/v1/objectives?*',route=>{
+   const asOf=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+   return route.fulfill({json:{items:[],continuation:null,exact_total:0,as_of_utc:asOf}});
+ });
+ await page.getByRole('button',{name:'Structure',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Direct to Network Element'}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Apply view'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(2);
+ await page.getByRole('link',{name:'Objectives',exact:true}).click();
+ await page.goBack();
+ await expect(page.getByLabel('Applied Structure view'))
+   .toContainText('Customer → Network Element');
+ await expect(page.getByRole('listitem')).toHaveCount(2);
+ expect(reads.length).toBeGreaterThanOrEqual(2);
+ await expect(page.getByRole('button',{name:'Structure',exact:true})).toBeFocused();
+});
