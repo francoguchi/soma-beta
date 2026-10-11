@@ -139,3 +139,18 @@ test('Applied Structure survives browser Back and still refetches owner page wit
  expect(reads.length).toBeGreaterThanOrEqual(2);
  await expect(page.getByRole('button',{name:'Structure',exact:true})).toBeFocused();
 });
+
+test('Study29 pointer drag reorders only intermediate display levels with unchanged owner source',async({page})=>{
+ const reads=[];await fixture(page,reads);
+ await page.getByRole('button',{name:'Structure',exact:true}).click();
+ const dialog=page.getByRole('dialog');
+ const levels=dialog.getByRole('list',{name:'Reorder intermediate levels'});
+ await levels.getByRole('listitem').filter({hasText:'Show Rack'})
+   .dragTo(levels.getByRole('listitem').filter({hasText:'Show Site'}));
+ await expect(dialog.getByRole('region',{name:'Structure example path'}))
+   .toContainText('Customer → Cloud → Rack → Site → Room → Network Element');
+ await dialog.getByRole('button',{name:'Apply view'}).click();
+ const order=await rowNames(page);
+ expect(order.join('|').indexOf('RACK OWNER')).toBeLessThan(order.join('|').indexOf('SITE OWNER'));
+ expect(reads).toHaveLength(1);
+});
