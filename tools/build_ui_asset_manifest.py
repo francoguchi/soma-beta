@@ -6,7 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1] / 'src/soma/ui/static'
 def source_inputs():
     web = ROOT.parents[2] / 'web'
-    paths = [path for directory in ('app', 'components', 'data', 'interactions', 'layout', 'state', 'styles', 'working-copy')
+    paths = [path for directory in ('app', 'components', 'data', 'interactions', 'layout', 'presentation', 'state', 'styles', 'working-copy')
              for path in sorted((web / directory).rglob('*')) if path.is_file()]
     paths += [web / name for name in ('package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.mjs', 'index.html', 'env.d.ts')]
     paths += sorted(path for path in (web / 'public' / 'brand').glob('*.svg') if path.is_file())
