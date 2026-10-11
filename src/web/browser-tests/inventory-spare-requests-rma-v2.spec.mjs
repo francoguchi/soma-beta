@@ -237,3 +237,86 @@ test('Inventory history cursor owner mismatch refuses rows without trusted-looki
   await expect(timeline.getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(timeline).not.toContainText('UNTRUSTED-OWNER-HISTORY');
 });
+
+test('Selected RMA physical evidence stays collapsed until requested and distinguishes chronology from receipt',async({page})=>{
+  await base(page);const calls=[];
+  await page.route('**/api/v1/inventory/requests?*',route=>{
+    const at=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+    return route.fulfill({json:{items:[request(reqA)],continuation:null,exact_total:1,as_of_utc:at}});
+  });
+  await page.route('**/api/v1/inventory/requests/'+reqA,route=>route.fulfill({json:detail}));
+  await page.route('**/api/v1/inventory/rmas/'+rma,route=>{
+    calls.push('point');
+    return route.fulfill({json:{...rmaDetail,
+      assignment_history:[{assignment_event_id:batch,prior_device_part_unit_id:null,
+        new_device_part_unit_id:need,event_kind:'target_assigned',
+        reason_code:'replacement_setup',recorded_at_utc:1720000000}],
+      actual_logistics:[{logistics_event_id:need,event_kind:'dispatch_in_transit',
+        effective_at_utc:1720000100,dispatch_location_id:batch,
+        custody_text:'With authorized carrier',observed_condition:'Sealed package',
+        recorded_at_utc:1720000200}],
+    }});
+  });
+  const requests=await showRequests(page);
+  await requests.getByRole('button',{name:'Inspect Spare Request '+reqA}).click();
+  await requests.getByRole('button',{name:'Inspect RMA '+rma}).click();
+  const selected=requests.getByRole('complementary',{name:'Selected RMA'});
+  await expect(selected.getByRole('button',{name:'Inspect RMA physical evidence'})).toBeVisible();
+  await expect(selected.getByRole('region',{name:'RMA physical evidence',exact:true})).toHaveCount(0);
+  expect(calls).toEqual(['point']);
+  await selected.getByRole('button',{name:'Inspect RMA physical evidence'}).click();
+  const physical=selected.getByRole('region',{name:'RMA physical evidence',exact:true});
+  await expect(physical.getByRole('region',{name:'RMA assignment history'})).toContainText('target_assigned');
+  await expect(physical.getByRole('region',{name:'RMA actual logistics history'})).toContainText('Sealed package');
+  await expect(physical).toContainText('No direct inbound unit registered');
+  await expect(physical).toContainText('Return obligation currently open');
+  await expect(physical).toContainText('do not by themselves prove inbound receipt');
+  expect(calls).toEqual(['point']);
+  for(const action of ['Record actual receipt','Register LSU','Close return obligation']){
+    await expect(page.getByRole('button',{name:action})).toHaveCount(0);
+  }
+});
+test('RMA point rejects malformed actual logistics even before physical evidence is expanded',async({page})=>{
+  await base(page);
+  await page.route('**/api/v1/inventory/requests?*',route=>{
+    const at=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+    return route.fulfill({json:{items:[request(reqA)],continuation:null,exact_total:1,as_of_utc:at}});
+  });
+  await page.route('**/api/v1/inventory/requests/'+reqA,route=>route.fulfill({json:detail}));
+  await page.route('**/api/v1/inventory/rmas/'+rma,route=>route.fulfill({json:{
+    ...rmaDetail,actual_logistics:[{
+      logistics_event_id:batch,event_kind:'UNTRUSTED-PHYSICAL-EVENT',
+      effective_at_utc:null,dispatch_location_id:null,custody_text:72,
+      observed_condition:'invented',recorded_at_utc:1720000000,
+    }],
+  }}));
+  const requests=await showRequests(page);
+  await requests.getByRole('button',{name:'Inspect Spare Request '+reqA}).click();
+  await requests.getByRole('button',{name:'Inspect RMA '+rma}).click();
+  const selected=requests.getByRole('complementary',{name:'Selected RMA'});
+  await expect(selected.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(selected).not.toContainText('UNTRUSTED-PHYSICAL-EVENT');
+});
+test('RMA point rejects unordered physical event history without showing stale custody evidence',async({page})=>{
+  await base(page);
+  await page.route('**/api/v1/inventory/requests?*',route=>{
+    const at=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+    return route.fulfill({json:{items:[request(reqA)],continuation:null,exact_total:1,as_of_utc:at}});
+  });
+  await page.route('**/api/v1/inventory/requests/'+reqA,route=>route.fulfill({json:detail}));
+  await page.route('**/api/v1/inventory/rmas/'+rma,route=>route.fulfill({json:{
+    ...rmaDetail,assignment_history:[
+      {assignment_event_id:need,prior_device_part_unit_id:null,
+        new_device_part_unit_id:null,event_kind:'late_event',reason_code:null,recorded_at_utc:200},
+      {assignment_event_id:batch,prior_device_part_unit_id:null,
+        new_device_part_unit_id:null,event_kind:'UNTRUSTED-OLD-EVENT',
+        reason_code:null,recorded_at_utc:100},
+    ],
+  }}));
+  const requests=await showRequests(page);
+  await requests.getByRole('button',{name:'Inspect Spare Request '+reqA}).click();
+  await requests.getByRole('button',{name:'Inspect RMA '+rma}).click();
+  const selected=requests.getByRole('complementary',{name:'Selected RMA'});
+  await expect(selected.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(selected).not.toContainText('UNTRUSTED-OLD-EVENT');
+});
