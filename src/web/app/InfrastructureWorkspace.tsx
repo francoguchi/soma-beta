@@ -18,6 +18,7 @@ import {buildExplorerQuery} from '../presentation/infrastructure-explorer-filter
 import {verifyInstalledComponentPage,type InstalledComponentPage} from '../presentation/infrastructure-components';
 import {verifyInfrastructureExplorerPage,type InfrastructureExplorerNode,type InfrastructureExplorerPage} from '../presentation/infrastructure-explorer-page';
 import {verifyNetworkHistoryPage,type NetworkHistoryPage} from '../presentation/infrastructure-network-history';
+import {openInfrastructureRelated,type InfrastructureRelatedKind} from '../presentation/infrastructure-relationships';
 import {FULL_STRUCTURE,LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
@@ -68,8 +69,9 @@ function HistoryView({id,path,onPath}:{id:string;path:string;onPath:(path:string
         <ul>{item.summary.changes.map((change,index)=><li key={index}>{change.field}: {historyValue(change.prior)} → {historyValue(change.new)}</li>)}</ul>]}))} next={page.next_cursor!==null} returnScrollToken="history" nextFocusToken="infrastructure:history:next" onNext={()=>onPath(next)}/></>;
   }}/>;
 }
-function NetworkElement({intent,onIntent,onBrowseSite}:{intent:InfrastructureIntent;onIntent:(intent:InfrastructureIntent)=>void;
-  onBrowseSite:(customer:string,site:string)=>void}) {
+function NetworkElement({intent,onIntent,onBrowseSite,onOpenRelated}:{intent:InfrastructureIntent;onIntent:(intent:InfrastructureIntent)=>void;
+  onBrowseSite:(customer:string,site:string)=>void;
+  onOpenRelated:(kind:InfrastructureRelatedKind,id:string)=>void}) {
   const id=intent.openedId!;const tab=intent.tab;const prefix=useId();
   function activate(name:typeof tabs[number]) {onIntent({...intent,tab:name,workbook:name==='Workbook Activity'&&intent.workbook===null?
     {history:'/api/v1/infrastructure/workbooks/history?limit=200',run:null,proposalId:null,candidatePage:0}:intent.workbook});}
@@ -94,14 +96,39 @@ function NetworkElement({intent,onIntent,onBrowseSite}:{intent:InfrastructureInt
             <h3>Component and Device Reference summaries</h3><p>Installed Components: {value.installed_component_count}. Resolved Device References: {value.device_reference_count}.</p>
             <p>Operational Device Reference identifiers retain their own identity after resolution.</p></>:
           name==='Placement'?<><h3>Physical Placement</h3><p>{value.placement.explicit_unracked?'Explicitly Unracked':`Rack: ${value.placement.rack_id}. U start: ${value.placement.u_start}. U span: ${value.placement.u_span}.`}</p>
-            <p>Placement revision: {value.placement.revision}. Physical placement is separate from containment and Cloud assignment.</p></>:
+            <p>Placement revision: {value.placement.revision}. Physical placement is separate from containment and Cloud assignment.</p>
+            {value.placement.rack_id&&<button type="button" onClick={()=>onOpenRelated('rack',value.placement.rack_id!)}>
+              Inspect accepted Rack occupancy
+            </button>}</>:
           name==='Components'?<ComponentsView id={id} path={intent.components!} onPath={components=>onIntent({...intent,components})}/>:
           name==='IP Addresses'?<><h3>Descriptive IP inventory</h3><p>Active addresses: {value.ip_count}. Primary IP: {value.primary_ip??'No primary selected'}.</p>
             <p>Descriptive addresses do not establish connectivity or reachability. No automatic primary promotion is implied.</p>
             {value.primary_ip&&<InfrastructureIpEvidence key={id+':'+value.primary_ip}
               address={value.primary_ip} elementId={id}/>}</>:
-          name==='Relationships'?<><h3>Containment</h3><p>Parent Network Element: {value.containment_parent?.id??'None'}. Child count: {value.containment_child_count}.</p>
-            <h3>Cloud assignment</h3><p>Cloud Deployment: {value.cloud_deployment?.id??'Unassigned'}. Cloud is separate from physical placement.</p>
+          name==='Relationships'?<>
+            <section aria-label="Physical Infrastructure relationship" className="soma-infra-relation-group">
+              <h3>Physical Site / Rack</h3>
+              <p>Accepted Site: {value.site.id}. Current Rack: {value.placement.rack_id??'Explicitly Unracked'}.</p>
+              <button type="button" onClick={()=>onOpenRelated('site',value.site.id)}>
+                Inspect accepted Site details
+              </button>
+              {value.placement.rack_id&&<button type="button" onClick={()=>onOpenRelated('rack',value.placement.rack_id!)}>
+                Inspect accepted Rack occupancy
+              </button>}
+            </section>
+            <section aria-label="Logical Infrastructure relationships" className="soma-infra-relation-group">
+              <h3>Containment</h3>
+              <p>Parent Network Element: {value.containment_parent?.id??'None'}. Child count: {value.containment_child_count}.</p>
+              {value.containment_parent&&<button type="button" onClick={()=>onOpenRelated('network_element',value.containment_parent!.id)}>
+                Inspect containment parent Network Element
+              </button>}
+              <h3>Cloud assignment</h3>
+              <p>Cloud Deployment: {value.cloud_deployment?.id??'Unassigned'}. Cloud is separate from physical placement.</p>
+              {value.cloud_deployment&&<button type="button" onClick={()=>onOpenRelated('cloud_deployment',value.cloud_deployment!.id)}>
+                Inspect Cloud Deployment history
+              </button>}
+              <p>Cloud Type is a separate reusable identity, not a physical ancestor or the same record as a deployment.</p>
+            </section>
             <h3>Model relation</h3><p>Model identity: {value.model?.id??'Unassigned'}.</p>
             <InfrastructureCandidateEvidence key={id+':'+value.site.id+':'+(value.model?.id??'none')}
               elementId={id} siteId={value.site.id} modelId={value.model?.id??null}/></>:
@@ -276,7 +303,11 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
               const next=buildExplorerQuery({customerOrgId:customer,siteId:site,nodeKind:'',lifecycle:''});
               if(next!==null)applyOwnerFilters(next);
             }}/>:
-          intent.openedKind==='rack'?<InfrastructureRackOccupancy key={'rack:'+intent.openedId} id={intent.openedId}/>:
+          intent.openedKind==='rack'?<InfrastructureRackOccupancy key={'rack:'+intent.openedId} id={intent.openedId}
+            onOpenElement={id=>{
+              const next=openInfrastructureRelated(intent,'network_element',id);
+              if(next!==null)setIntent(next);
+            }}/>:
           (intent.openedKind==='room'||intent.openedKind==='cloud_deployment')?
           <InfrastructureContextHistory key={intent.openedKind+':'+intent.openedId}
             id={intent.openedId} kind={intent.openedKind}/>:
@@ -284,5 +315,8 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
             onBrowseSite={(customer,site)=>{
               const next=buildExplorerQuery({customerOrgId:customer,siteId:site,nodeKind:'',lifecycle:''});
               if(next!==null)applyOwnerFilters(next);
+            }} onOpenRelated={(kind,id)=>{
+              const next=openInfrastructureRelated(intent,kind,id);
+              if(next!==null)setIntent(next);
             }}/>):<section aria-label="Infrastructure detail"><h2>Select and open a Network Element</h2><p>A single click changes selection. Enter, double-click, or Open record opens its owner detail.</p></section>}</div></div>;
 }
