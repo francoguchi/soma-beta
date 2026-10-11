@@ -56,7 +56,7 @@ test('Direct projection hides only intermediary rows while NE and containment co
   await expect(page.getByRole('listitem')).toHaveCount(2);
   await expect(page.getByRole('listitem').filter({hasText:'NE OWNER'})).toHaveCount(1);
   await expect(page.getByRole('listitem').filter({hasText:'NE CONTAINMENT'})).toHaveCount(1);
-  await expect(page.getByRole('status')).toContainText('Hidden display levels have not been deleted.');
+  await expect(page.getByRole('status').filter({hasText:'Hidden display levels have not been deleted.'})).toBeVisible();
   await button.click();
   await page.getByRole('dialog').getByRole('button',{name:'Full structure'}).click();
   await page.getByRole('dialog').getByRole('button',{name:'Apply view'}).click();
