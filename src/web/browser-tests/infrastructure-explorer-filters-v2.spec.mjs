@@ -97,3 +97,33 @@ test('Filtered owner pagination preserves query scope; Back reloads exact owner 
  expect(reads.at(-1).search).toBe(last.search);
  await expect(filters(page).getByRole('textbox',{name:'Site UUID'})).toHaveValue(site);
 });
+
+test('Filtered explorer never keeps a previously opened Network Element outside the new scope',async({page})=>{
+ const requests=[];
+ await page.route('**/api/v1/infrastructure/**',route=>{
+   const url=new URL(route.request().url());requests.push(url.pathname);
+   if(url.pathname===tree)return route.fulfill({json:{
+     nodes:url.searchParams.get('node_kind')==='site'?[initial[0]]:initial,next_cursor:null,
+   }});
+   if(url.pathname==='/api/v1/infrastructure/network-elements/'+ne)
+     return route.fulfill({json:{
+       network_element_id:ne,revision:1,lifecycle:'active',operational_name:'OWNER NE',
+       site:{kind:'site',id:site},customer_org_id:customer,
+       placement:{rack_id:null,u_start:null,u_span:null,revision:1,explicit_unracked:true},
+       model:null,cloud_deployment:null,primary_ip:null,ip_count:0,
+       containment_parent:null,containment_child_count:0,device_reference_count:0,
+       installed_component_count:0,warning_codes:[],
+     }});
+   return route.fulfill({status:404,json:{code:'UNEXPECTED_TEST_OWNER'}});
+ });
+ await page.goto('http://127.0.0.1:4174/infrastructure');
+ await page.getByRole('listitem').filter({hasText:'OWNER NE'}).press('Enter');
+ await expect(page.getByRole('region',{name:'Opened Network Element'})).toBeVisible();
+ const form=filters(page);
+ await form.getByRole('combobox',{name:'Node kind'}).selectOption('site');
+ await form.getByRole('button',{name:'Apply owner filters'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(1);
+ await expect(page.getByRole('listitem')).toContainText('OWNER SITE');
+ await expect(page.getByRole('region',{name:'Opened Network Element'})).toHaveCount(0);
+ expect(requests.filter(path=>path==='/api/v1/infrastructure/network-elements/'+ne)).toHaveLength(1);
+});
