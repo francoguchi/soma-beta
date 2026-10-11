@@ -6,6 +6,7 @@ import {UiStore, emptySelection} from '../state/ui-store';
 import {InfrastructureWorkbookActivity} from './InfrastructureWorkbookActivity';
 import {InfrastructureSiteDetails} from './InfrastructureSiteDetails';
 import {InfrastructureRackOccupancy} from './InfrastructureRackOccupancy';
+import {InfrastructureModelEvidence} from './InfrastructureModelEvidence';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
@@ -75,6 +76,7 @@ function NetworkElement({intent,onIntent}:{intent:InfrastructureIntent;onIntent:
           }}>{name}</button>)}</div>
         {tabs.map((name,index)=><div role="tabpanel" key={name} hidden={tab!==name} id={`${prefix}-panel-${index}`} aria-labelledby={`${prefix}-tab-${index}`}>
           {name==='Summary'?<><h3>Identity and Model</h3><p>Model identity: {value.model?.id??'Unassigned'}</p>
+            {value.model&&<InfrastructureModelEvidence key={value.model.id} modelId={value.model.id}/>}
             <h3>Component and Device Reference summaries</h3><p>Installed Components: {value.installed_component_count}. Resolved Device References: {value.device_reference_count}.</p>
             <p>Operational Device Reference identifiers retain their own identity after resolution.</p></>:
           name==='Placement'?<><h3>Physical Placement</h3><p>{value.placement.explicit_unracked?'Explicitly Unracked':`Rack: ${value.placement.rack_id}. U start: ${value.placement.u_start}. U span: ${value.placement.u_span}.`}</p>
