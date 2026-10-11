@@ -77,11 +77,12 @@ function History({targetKind,targetId}:{targetKind:TargetKind;targetId:string}){
           {page.items.length===0&&<p role="status">No owner history events returned for this target.</p>}
           <div className="soma-v2-sr-table-viewport" data-scroll-owner="x"><table className="soma-v2-sr-table">
             <thead><tr><th scope="col">Recorded locally</th><th scope="col">Authority</th>
-              <th scope="col">Event</th><th scope="col">Evidence</th></tr></thead>
+              <th scope="col">Event</th><th scope="col">Immutable event identity</th>
+              <th scope="col">Evidence</th></tr></thead>
             <tbody>{page.items.map(e=><tr key={e.authority_kind+':'+e.immutable_event_or_relation_id}>
               <td>{new Date(e.recorded_at_utc*1000).toLocaleString()}</td>
               <td>{e.authority_kind.replaceAll('_',' ')}</td>
-              <td>{e.event_kind}</td>
+              <td>{e.event_kind}</td><td>{e.immutable_event_or_relation_id}</td>
               <td>{e.source_ref?e.source_ref.kind+' · '+e.source_ref.id:
                 e.command_id?'Command '+e.command_id:'No external source referenced'}</td>
             </tr>)}</tbody>
