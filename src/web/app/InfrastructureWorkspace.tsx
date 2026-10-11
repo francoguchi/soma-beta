@@ -19,7 +19,7 @@ import {verifyInstalledComponentPage,type InstalledComponentPage} from '../prese
 import {verifyInfrastructureExplorerPage,type InfrastructureExplorerNode,type InfrastructureExplorerPage} from '../presentation/infrastructure-explorer-page';
 import {verifyNetworkHistoryPage,type NetworkHistoryPage} from '../presentation/infrastructure-network-history';
 import {openInfrastructureRelated,type InfrastructureRelatedKind} from '../presentation/infrastructure-relationships';
-import {FULL_STRUCTURE,LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
+import {FULL_STRUCTURE,LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,projectInfrastructureLens,structurePath,validStructure,type InfrastructureLens,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
@@ -155,6 +155,7 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
       applySessionStructure(restored.infrastructureStructure);
   },[]);
   const [structureOpen,setStructureOpen]=useState(false);
+  const [relationshipLens,setRelationshipLens]=useState<InfrastructureLens>('all');
   const structureButton=useRef<HTMLButtonElement>(null);
   const closeStructure=()=>{
     setStructureOpen(false);
@@ -228,6 +229,15 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     element.scrollIntoView({block:'nearest',inline:'nearest'});
     element.click();
   };
+  const changeRelationshipLens=(lens:InfrastructureLens)=>{
+    if(lens===relationshipLens)return;
+    // Prevent previously selected rows and opened details from appearing to
+    // belong to a newly restricted current-page display projection.
+    store.dispatch({selection:emptySelection});
+    setIntent(old=>({...old,openedId:null,openedKind:undefined,tab:'Summary',
+      components:null,history:null,workbook:null}));
+    setRelationshipLens(lens);
+  };
   const path=intent.explorer;
   const applyOwnerFilters=(explorer:string)=>{
     // Owner collection scope has changed. Clear selection and opened detail
@@ -238,6 +248,16 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
   return <div ref={root} onFocusCapture={event=>{const control=event.target.closest<HTMLElement>('[data-focus-token]');if(control)store.dispatch({focusToken:control.dataset.focusToken??null});}}>
     {notice&&<p role="status">{notice}</p>}<p>Contextual explorer. Physical placement, containment, and Cloud assignment represent separate facts.</p>
     <InfrastructureExplorerFilters path={path} onApply={applyOwnerFilters}/>
+    <div role="group" aria-label="Infrastructure relationship lens" className="soma-infra-lens">
+      <span>Current owner page:</span>
+      {([['all','All source rows'],['physical','Physical structure'],
+        ['logical','Cloud and containment']] as const).map(([lens,label])=><button
+        type="button" key={lens} aria-pressed={relationshipLens===lens}
+        onClick={()=>changeRelationshipLens(lens)}>{label}</button>)}
+      <p>Physical structure is Site / Room / Rack / Network Element.
+        Cloud Deployments and containment are separate logical relationships.
+        These lenses cannot discover records on unvisited owner pages.</p>
+    </div>
     <button type="button" data-focus-token="infrastructure:refresh" onClick={()=>setRefreshKey(value=>value+1)}>Refresh explorer</button>
     <button type="button" className="soma-structure-trigger" ref={structureButton}
       data-focus-token="infrastructure:structure" aria-haspopup="dialog"
@@ -251,7 +271,7 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
       <OwnerProjection<Explorer> path={path} refreshKey={refreshKey} render={page=>{
         verifyInfrastructureExplorerPage(page);
         const next=withCursor(path,page.next_cursor);if(!infrastructureQuery(next,'explorer'))throw new Error('Invalid explorer continuation');
-        const nodes:readonly Node[]=projectStructureRows(page.nodes,structureView);
+        const nodes:readonly Node[]=projectInfrastructureLens(projectStructureRows(page.nodes,structureView),relationshipLens);
         const byId=new Map(nodes.map(node=>[`${node.kind}:${node.id}`,node]));
         const levels=[
           ...structureView.order.filter(level=>nodes.some(node=>node.kind===level)),
@@ -269,17 +289,21 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
           </div>}
           {nodes.length!==page.nodes.length&&<p role="status">
           Showing {nodes.length} of {page.nodes.length} current owner page rows.
-          Hidden display levels have not been deleted.</p>}
+          {relationshipLens==='all'?' Hidden display levels have not been deleted.':
+            ' The relationship lens hides other owner rows on this page; no source data was deleted.'}</p>}
           {nodes.length===0&&<p role="status">
             {page.nodes.length===0?'No Infrastructure owner nodes on this page.':
-              'Every owner row on this page is hidden by the current Structure view.'}
+              relationshipLens==='all'?'Every owner row on this page is hidden by the current Structure view.':
+              'The current relationship lens has no matching visible owner rows on this page.'}
             {page.next_cursor!==null?' Continue to the next owner page to inspect additional records.':
               ' No further owner page was supplied.'}
           </p>}
-          {nodes.length===0&&page.nodes.length>0&&<button type="button"
+          {nodes.length===0&&page.nodes.length>0&&(relationshipLens==='all'?<button type="button"
             onClick={()=>setStructureView(applySessionStructure(FULL_STRUCTURE))}>
             Show hidden Structure levels
-          </button>}
+          </button>:<button type="button" onClick={()=>changeRelationshipLens('all')}>
+            Show all owner row kinds
+          </button>)}
           <SelectableCollection store={store} rows={nodes.map(node=>({id:`${node.kind}:${node.id}`,eligible:true,
             route:node.kind==='site'?{record_type:'INFRASTRUCTURE_SITE',record_id:node.id,revision_token:null}:
               node.kind==='rack'?{record_type:'INFRASTRUCTURE_RACK',record_id:node.id,revision_token:null}:
