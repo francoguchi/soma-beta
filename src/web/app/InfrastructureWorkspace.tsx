@@ -113,6 +113,12 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
   const [structureView,setStructureView]=useState<StructureView>(()=>
     restoredIntent&&restored?.infrastructureStructure&&validStructure(restored.infrastructureStructure)
       ?restored.infrastructureStructure:currentSessionStructure());
+  useEffect(()=>{
+    // Browser Back restores the earlier applied display preference as the
+    // current document-session choice, without persisting domain owner DTOs.
+    if(restoredIntent&&restored?.infrastructureStructure&&validStructure(restored.infrastructureStructure))
+      applySessionStructure(restored.infrastructureStructure);
+  },[]);
   const [structureOpen,setStructureOpen]=useState(false);
   const structureButton=useRef<HTMLButtonElement>(null);
   const closeStructure=()=>{
