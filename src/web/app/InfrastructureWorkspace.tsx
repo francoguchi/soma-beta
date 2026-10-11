@@ -68,7 +68,8 @@ function HistoryView({id,path,onPath}:{id:string;path:string;onPath:(path:string
         <ul>{item.summary.changes.map((change,index)=><li key={index}>{change.field}: {historyValue(change.prior)} → {historyValue(change.new)}</li>)}</ul>]}))} next={page.next_cursor!==null} returnScrollToken="history" nextFocusToken="infrastructure:history:next" onNext={()=>onPath(next)}/></>;
   }}/>;
 }
-function NetworkElement({intent,onIntent}:{intent:InfrastructureIntent;onIntent:(intent:InfrastructureIntent)=>void}) {
+function NetworkElement({intent,onIntent,onBrowseSite}:{intent:InfrastructureIntent;onIntent:(intent:InfrastructureIntent)=>void;
+  onBrowseSite:(customer:string,site:string)=>void}) {
   const id=intent.openedId!;const tab=intent.tab;const prefix=useId();
   function activate(name:typeof tabs[number]) {onIntent({...intent,tab:name,workbook:name==='Workbook Activity'&&intent.workbook===null?
     {history:'/api/v1/infrastructure/workbooks/history?limit=200',run:null,proposalId:null,candidatePage:0}:intent.workbook});}
@@ -77,6 +78,9 @@ function NetworkElement({intent,onIntent}:{intent:InfrastructureIntent;onIntent:
       verifyNetworkElement(value,id);
       return <><h2>{value.operational_name}</h2><p>Network Element identity: {value.network_element_id}. Lifecycle: {value.lifecycle}. Accepted revision: {value.revision}.</p>
         <p>Site identity: {value.site.id}. Customer Organization: {value.customer_org_id}.</p>
+        <button type="button" onClick={()=>onBrowseSite(value.customer_org_id,value.site.id)}>
+          Explore parent Site in owner collection
+        </button>
         {value.warning_codes.map(warning=><p className="warning" key={warning}>{warning}</p>)}
         <div role="tablist" aria-label="Network Element sections">{tabs.map((name,index)=><button type="button" role="tab" key={name} aria-selected={tab===name} tabIndex={tab===name?0:-1}
           data-focus-token={'infrastructure:tab:'+name} id={`${prefix}-tab-${index}`} aria-controls={`${prefix}-panel-${index}`} onClick={()=>activate(name)} onKeyDown={event=>{
@@ -276,5 +280,9 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
           (intent.openedKind==='room'||intent.openedKind==='cloud_deployment')?
           <InfrastructureContextHistory key={intent.openedKind+':'+intent.openedId}
             id={intent.openedId} kind={intent.openedKind}/>:
-          <NetworkElement key={'ne:'+intent.openedId} intent={intent} onIntent={setIntent}/>):<section aria-label="Infrastructure detail"><h2>Select and open a Network Element</h2><p>A single click changes selection. Enter, double-click, or Open record opens its owner detail.</p></section>}</div></div>;
+          <NetworkElement key={'ne:'+intent.openedId} intent={intent} onIntent={setIntent}
+            onBrowseSite={(customer,site)=>{
+              const next=buildExplorerQuery({customerOrgId:customer,siteId:site,nodeKind:'',lifecycle:''});
+              if(next!==null)applyOwnerFilters(next);
+            }}/>):<section aria-label="Infrastructure detail"><h2>Select and open a Network Element</h2><p>A single click changes selection. Enter, double-click, or Open record opens its owner detail.</p></section>}</div></div>;
 }
