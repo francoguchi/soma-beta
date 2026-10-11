@@ -7,6 +7,7 @@ import {InfrastructureWorkbookActivity} from './InfrastructureWorkbookActivity';
 import {InfrastructureSiteDetails} from './InfrastructureSiteDetails';
 import {InfrastructureRackOccupancy} from './InfrastructureRackOccupancy';
 import {InfrastructureModelEvidence} from './InfrastructureModelEvidence';
+import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
@@ -164,9 +165,12 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
           <SelectableCollection store={store} rows={nodes.map(node=>({id:`${node.kind}:${node.id}`,eligible:true,
             route:node.kind==='site'?{record_type:'INFRASTRUCTURE_SITE',record_id:node.id,revision_token:null}:
               node.kind==='rack'?{record_type:'INFRASTRUCTURE_RACK',record_id:node.id,revision_token:null}:
+              node.kind==='room'?{record_type:'INFRASTRUCTURE_ROOM',record_id:node.id,revision_token:null}:
+              node.kind==='cloud_deployment'?{record_type:'INFRASTRUCTURE_CLOUD',record_id:node.id,revision_token:null}:
               node.kind==='network_element'||node.kind==='containment'?{record_type:'INFRASTRUCTURE',record_id:node.id,revision_token:null}:null}))}
             open={ref=>{
-              const simpleKind=ref.record_type==='INFRASTRUCTURE_SITE'?'site':ref.record_type==='INFRASTRUCTURE_RACK'?'rack':null;
+              const simpleKind=ref.record_type==='INFRASTRUCTURE_SITE'?'site':ref.record_type==='INFRASTRUCTURE_RACK'?'rack':
+                ref.record_type==='INFRASTRUCTURE_ROOM'?'room':ref.record_type==='INFRASTRUCTURE_CLOUD'?'cloud_deployment':null;
               setIntent({...intent,openedId:ref.record_id,openedKind:simpleKind??'network_element',tab:'Summary',
                 components:simpleKind?null:`/api/v1/infrastructure/network-elements/${ref.record_id}/components?limit=200`,
                 history:simpleKind?null:`/api/v1/infrastructure/history?target_kind=network_element&target_id=${ref.record_id}&limit=5`,
@@ -178,5 +182,8 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
       }}/></section>{intent.openedId?(intent.openedKind==='site'?
           <InfrastructureSiteDetails key={'site:'+intent.openedId} id={intent.openedId}/>:
           intent.openedKind==='rack'?<InfrastructureRackOccupancy key={'rack:'+intent.openedId} id={intent.openedId}/>:
+          (intent.openedKind==='room'||intent.openedKind==='cloud_deployment')?
+          <InfrastructureContextHistory key={intent.openedKind+':'+intent.openedId}
+            id={intent.openedId} kind={intent.openedKind}/>:
           <NetworkElement key={'ne:'+intent.openedId} intent={intent} onIntent={setIntent}/>):<section aria-label="Infrastructure detail"><h2>Select and open a Network Element</h2><p>A single click changes selection. Enter, double-click, or Open record opens its owner detail.</p></section>}</div></div>;
 }
