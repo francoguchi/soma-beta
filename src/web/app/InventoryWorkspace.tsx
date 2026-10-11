@@ -5,6 +5,7 @@ import {OwnerProjection} from '../components/OwnerProjection';
 import {BoundedCollection} from '../components/BoundedCollection';
 import {InventorySpareNeeds} from './InventorySpareNeeds';
 import {InventorySpareRequests} from './InventorySpareRequests';
+import {InventoryFaultTags} from './InventoryFaultTags';
 
 type StockUnit = Readonly<{spare_part_unit_id:string;local_tracking_id:string|null;bom_code:string;manufacturer_serial:string|null;
   condition_token:string;disposition_token:string;location_kind:string|null;location_ref_id:string|null;custody_text:string|null;
@@ -65,6 +66,7 @@ export function InventoryWorkspace({restored=null,onReturnState}:{restored?:Retu
   const [notice,setNotice]=useState<string|null>(restored&&!intent?'The previous Inventory query is unavailable; the first current pages are shown.':null);
   const [needsOpen,setNeedsOpen]=useState(false);
   const [requestsOpen,setRequestsOpen]=useState(false);
+  const [faultTagsOpen,setFaultTagsOpen]=useState(false);
   const root=useRef<HTMLDivElement>(null);const focus=useRef<string|null>(intent?restored?.focusToken??null:null);
   const fingerprint=useRef<{stock:string;attention:string;value:string}|null>(null);
   const stock=queryPath('stock',stockCursor);const attention=queryPath('attention',attentionCursor,asOf);
@@ -132,6 +134,15 @@ export function InventoryWorkspace({restored=null,onReturnState}:{restored?:Retu
         {requestsOpen?'Hide':'Inspect'} Spare Requests
       </button>
       {requestsOpen&&<InventorySpareRequests/>}
+    </section>
+    <section aria-label="Fault Tags Desk" className="soma-v2-rfc-links">
+      <h2>Fault Tags</h2>
+      <p>Return documentation and warehouse receipt decisions are distinct. Archived Fault Tags
+        remain historical evidence, not candidates for automatic cleanup.</p>
+      <button type="button" aria-expanded={faultTagsOpen} onClick={()=>setFaultTagsOpen(open=>!open)}>
+        {faultTagsOpen?'Hide':'Inspect'} Fault Tags
+      </button>
+      {faultTagsOpen&&<InventoryFaultTags/>}
     </section>
   </div>;
 }
