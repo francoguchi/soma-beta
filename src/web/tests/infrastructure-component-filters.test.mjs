@@ -15,6 +15,11 @@ test('LLD08 Installed Component filters preserve exact owner keys and existing p
    'A plain canonical empty filter must open the first component owner page');
  assert.equal(buildComponentQuery(id,EMPTY_COMPONENT_FILTERS),base,
    'The immutable empty filter must build the same first-page owner query');
+ const letterId='aabbccdd-aabb-4aab-8aab-aabbccddeeff';
+ const letterPath='/api/v1/infrastructure/network-elements/'+letterId+'/components?limit=200';
+ assert.equal(buildComponentQuery(letterId,EMPTY_COMPONENT_FILTERS),letterPath,
+   'A canonical lowercase UUID4 containing letters is a valid Component owner identity');
+ assert.deepEqual(readComponentFilters(letterPath,letterId),EMPTY_COMPONENT_FILTERS);
  const path=buildComponentQuery(id,filters);
  assert.equal(path,base+'&state=removed&bom_key=exact-bom-key&slot_match_key=slot%2FA');
  assert.deepEqual(readComponentFilters(path,id),filters);

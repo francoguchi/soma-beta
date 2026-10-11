@@ -4,7 +4,7 @@
 export type ComponentFilters=Readonly<{state:string;bomKey:string;slotKey:string}>;
 export const EMPTY_COMPONENT_FILTERS:ComponentFilters=Object.freeze({state:'',bomKey:'',slotKey:''});
 export const COMPONENT_STATES=['installed','removed','unknown'] as const;
-const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{12}$/u;
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const keys=['limit','cursor','state','bom_key','slot_match_key'] as const;
 const bounded=(value:string,limit:number)=>new TextEncoder().encode(value).length<=limit;
 function valid(filters:ComponentFilters):boolean {

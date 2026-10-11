@@ -20,6 +20,11 @@ test('Accepted physical and logical relationship navigation preserves only exact
     assert.equal(target.history,kind==='network_element'?
       '/api/v1/infrastructure/history?target_kind=network_element&target_id='+id(2)+'&limit=5':null);
   }
+  const letterId='aabbccdd-aabb-4aab-8aab-aabbccddeeff';
+  const letterRelation=openInfrastructureRelated(old,'network_element',letterId);
+  assert.equal(letterRelation?.openedId,letterId,
+    'An accepted lowercase alphabetic UUID4 may be opened through existing owner routes');
+  assert.ok(infrastructureIntent(letterRelation));
   assert.equal(old.openedId,id(1));assert.equal(old.tab,'Relationships');
 });
 test('Untrusted identities or foreign/stale source intents cannot open a plausible Infrastructure relation',()=>{
