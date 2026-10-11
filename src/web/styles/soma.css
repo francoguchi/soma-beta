@@ -395,6 +395,8 @@ dialog.soma-structure-dialog::backdrop{background:rgba(0,0,0,.72)}
 .soma-structure-levels{margin:0;padding:0;list-style:none}
 .soma-structure-level{display:flex;align-items:center;justify-content:space-between;gap:10px;
   min-width:0;border:1px solid var(--line,var(--border));padding:8px 10px;margin-block-end:5px}
+ .soma-structure-levels .soma-structure-level[draggable="true"]{cursor:grab}
+.soma-structure-levels .soma-structure-level[draggable="true"]:active{cursor:grabbing}
 .soma-structure-level label{display:flex;align-items:center;gap:8px;min-width:0}
 .soma-structure-level.pinned{color:var(--secondary,var(--muted));background:var(--surface2,var(--surface))}
 .soma-structure-level.pinned span{font-size:11px}
