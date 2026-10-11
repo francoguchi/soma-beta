@@ -77,3 +77,17 @@ test('Foreign Site blocker cursor prevents displaying any apparently reliable ro
   await expect(evidence).not.toContainText('rack-001');
   await expect(evidence.getByRole('table',{name:'Site archive dependency rows'})).toHaveCount(0);
 });
+
+test('A Site blocker response cannot replay the cursor boundary on the next page',async({page})=>{
+  const reads=[];
+  await arrange(page,url=>url.searchParams.has('cursor')
+    ?{items:[row(25)],next_cursor:null,exact_count:26,indeterminate:false}
+    :{items:Array.from({length:25},(_,i)=>row(i+1)),next_cursor:cursor(25),
+      exact_count:26,indeterminate:false},reads);
+  const pane=await openSite(page);
+  await pane.getByRole('button',{name:'Inspect Site archive blockers'}).click();
+  const evidence=pane.getByRole('region',{name:'Site blocker evidence'});
+  await evidence.getByRole('button',{name:'Next page'}).click();
+  await expect(evidence.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(evidence.getByRole('table',{name:'Site archive dependency rows'})).toHaveCount(0);
+});
