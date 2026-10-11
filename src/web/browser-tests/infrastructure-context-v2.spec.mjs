@@ -3,6 +3,9 @@ import {createHash} from 'node:crypto';
 const room='11111111-1111-4111-8111-111111111111';
 const cloud='22222222-2222-4222-8222-222222222222';
 const site='33333333-3333-4333-8333-333333333333';
+const customer='66666666-6666-4666-8666-666666666666';
+const cloudType='77777777-7777-4777-8777-777777777777';
+const rack='88888888-8888-4888-8888-888888888888';
 const cmd='44444444-4444-4444-8444-444444444444';
 const id=n=>'55555555-5555-4555-8555-'+String(n).padStart(12,'0');
 const row=(kind,n,at)=>({event_id:id(n),event_kind:kind==='room'?'room_moved':'cloud_assigned',
@@ -24,6 +27,14 @@ async function fixtures(page,resolve,requests){
         {kind:'cloud_deployment',id:cloud,label:'Cloud C',parent_context_id:site,
           lifecycle:'active',warning_codes:[]},
       ],next_cursor:null}});
+    if(url.pathname==='/api/v1/infrastructure/rooms/'+room)return route.fulfill({json:{
+      room_id:room,site_id:site,customer_org_id:customer,name:'Room R',
+      lifecycle:'active',revision:2,rack_count:1,
+    }});
+    if(url.pathname==='/api/v1/infrastructure/cloud-deployments/'+cloud)return route.fulfill({json:{
+      cloud_deployment_id:cloud,cloud_type_id:cloudType,site_id:site,customer_org_id:customer,
+      name:'Cloud C',lifecycle:'active',revision:3,assigned_network_element_count:1,
+    }});
     if(url.pathname==='/api/v1/infrastructure/history'){
       requests.push(url);
       return route.fulfill({json:resolve(url)});
@@ -34,6 +45,7 @@ async function fixtures(page,resolve,requests){
 const open=async(page,label)=>{
   await page.goto('http://127.0.0.1:4174/infrastructure');
   await page.getByRole('listitem').filter({hasText:label}).press('Enter');
+  await page.getByRole('tab',{name:'History',exact:true}).click();
   return page.getByRole('region',{name:'Opened Infrastructure context'});
 };
 test('Room and Cloud are separate exact owner history reads without invented detail endpoints',async({page})=>{
@@ -43,12 +55,17 @@ test('Room and Cloud are separate exact owner history reads without invented det
   const roomItem=page.getByRole('listitem').filter({hasText:'Room R'});
   await roomItem.click();expect(calls).toHaveLength(0);
   await roomItem.press('Enter');
+  await expect(page.getByRole('region',{name:'Opened Room'})).toContainText('Room identity');
+  expect(calls).toHaveLength(0); // Current Room point does not fetch history eagerly.
+  await page.getByRole('tab',{name:'History',exact:true}).click();
   const panel=page.getByRole('region',{name:'Opened Infrastructure context'});
   await expect(panel).toContainText('Room context');
   await expect(panel.getByRole('table',{name:'Infrastructure context history (local time)'})).toContainText('room_moved');
   expect(calls.at(-1).searchParams.get('target_kind')).toBe('room');
   expect(calls.at(-1).searchParams.get('target_id')).toBe(room);
   await page.getByRole('listitem').filter({hasText:'Cloud C'}).press('Enter');
+  await expect(page.getByRole('region',{name:'Opened Cloud Deployment'})).toContainText('Cloud C');
+  await page.getByRole('tab',{name:'History',exact:true}).click();
   await expect(panel).toContainText('Cloud Deployment context');
   await expect(panel.getByRole('table',{name:'Infrastructure context history (local time)'})).toContainText('cloud_assigned');
   expect(calls.at(-1).searchParams.get('target_kind')).toBe('cloud_deployment');
@@ -129,6 +146,42 @@ test('Room and Cloud paged context survives browser return with exact owner curs
   expect(calls.at(-1)).not.toContain('cursor=');
 });
 
+test('Room and Cloud current owner details are separate from lazy member and history reads',async({page})=>{
+  const historyReads=[],memberReads=[];
+  await fixtures(page,u=>({events:[row(u.searchParams.get('target_kind'),1,1700000000)],next_cursor:null}),historyReads);
+  await page.route('**/api/v1/infrastructure/related-children?**',route=>{
+    const url=new URL(route.request().url());
+    memberReads.push(url);
+    const isRoom=url.searchParams.get('parent_kind')==='room';
+    const parent=isRoom?room:cloud;
+    return route.fulfill({json:{items:[{
+      kind:isRoom?'rack':'network_element',id:rack,label:isRoom?'Rack R':'Server R',
+      lifecycle:'active',site_id:site,parent_id:parent,
+      relationship:isRoom?'room_racks':'cloud_assigned_elements',
+    }],next_cursor:null}});
+  });
+  await page.goto('http://127.0.0.1:4174/infrastructure');
+  await page.getByRole('listitem').filter({hasText:'Room R'}).press('Enter');
+  const roomPanel=page.getByRole('region',{name:'Opened Room'});
+  await expect(roomPanel).toContainText('Direct Racks (all lifecycles)');
+  expect(historyReads).toHaveLength(0);expect(memberReads).toHaveLength(0);
+  await roomPanel.getByRole('tab',{name:'Racks'}).click();
+  await expect(roomPanel.getByRole('table',{name:'Room Rack members'})).toContainText('Rack R');
+  expect(memberReads).toHaveLength(1);expect(historyReads).toHaveLength(0);
+  expect(memberReads[0].searchParams.get('parent_id')).toBe(room);
+  await roomPanel.getByRole('tab',{name:'History'}).click();
+  await expect(roomPanel).toContainText('room_moved');
+  expect(historyReads).toHaveLength(1);
+  await page.getByRole('listitem').filter({hasText:'Cloud C'}).press('Enter');
+  const cloudPanel=page.getByRole('region',{name:'Opened Cloud Deployment'});
+  await expect(cloudPanel).toContainText('Cloud Type reference');
+  await expect(cloudPanel).toContainText('Current directly assigned Network Elements (all lifecycles)');
+  await cloudPanel.getByRole('tab',{name:'Assigned Elements'}).click();
+  await expect(cloudPanel.getByRole('table',{name:'Cloud assigned Network Elements'})).toContainText('Server R');
+  expect(memberReads.at(-1).searchParams.get('parent_kind')).toBe('cloud_deployment');
+  expect(memberReads.at(-1).searchParams.get('parent_id')).toBe(cloud);
+  expect(historyReads).toHaveLength(1);
+});
 const historyValue=(kind,item)=>({
   kind,text_value:kind==='text'?item:null,integer_value:kind==='integer'?item:null,
   boolean_value:kind==='boolean'?item:null,entity_ref:null,
@@ -148,7 +201,7 @@ test('Typed Room historical changes can be inspected without inventing current R
   await expect(panel).toContainText('name: Previous owner room → Current owner room');
   await expect(panel).toContainText('revision: 2 → 3');
   await expect(panel).toContainText('Owner warnings: REVIEW_HISTORY');
-  await expect(panel).toContainText('not a full Room or Cloud Deployment detail response');
+  await expect(panel).toContainText('current Room and Cloud Deployment properties come from separate');
   expect(calls).toHaveLength(1);
 });
 test('Invalid typed history change rejects the complete context page',async({page})=>{
