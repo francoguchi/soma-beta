@@ -36,7 +36,7 @@ where = ["src"]
 "soma" = ["schema_manifest.json", "fk_index_exceptions.json"]
 "soma.reference.assets" = ["*.json"]
 "soma.migrations" = ["*.sql", "manifest.json"]
-"soma.infrastructure.contracts" = ["registry.json"]
+"soma.infrastructure.contracts" = ["registry.json", "room_cloud_reads_v1.json"]
 "soma.communications.contracts" = ["registry.json"]
 "soma.ui" = ["registry.json", "static/*", "static/assets/*", "static/brand/*.svg"]
 
