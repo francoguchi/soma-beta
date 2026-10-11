@@ -6,6 +6,7 @@ import {BoundedCollection} from '../components/BoundedCollection';
 import {InventorySpareNeeds} from './InventorySpareNeeds';
 import {InventorySpareRequests} from './InventorySpareRequests';
 import {InventoryFaultTags} from './InventoryFaultTags';
+import {InventoryWarehouseDesk} from './InventoryWarehouseDesk';
 
 type StockUnit = Readonly<{spare_part_unit_id:string;local_tracking_id:string|null;bom_code:string;manufacturer_serial:string|null;
   condition_token:string;disposition_token:string;location_kind:string|null;location_ref_id:string|null;custody_text:string|null;
@@ -67,6 +68,7 @@ export function InventoryWorkspace({restored=null,onReturnState}:{restored?:Retu
   const [needsOpen,setNeedsOpen]=useState(false);
   const [requestsOpen,setRequestsOpen]=useState(false);
   const [faultTagsOpen,setFaultTagsOpen]=useState(false);
+  const [warehouseOpen,setWarehouseOpen]=useState(false);
   const root=useRef<HTMLDivElement>(null);const focus=useRef<string|null>(intent?restored?.focusToken??null:null);
   const fingerprint=useRef<{stock:string;attention:string;value:string}|null>(null);
   const stock=queryPath('stock',stockCursor);const attention=queryPath('attention',attentionCursor,asOf);
@@ -143,6 +145,15 @@ export function InventoryWorkspace({restored=null,onReturnState}:{restored?:Retu
         {faultTagsOpen?'Hide':'Inspect'} Fault Tags
       </button>
       {faultTagsOpen&&<InventoryFaultTags/>}
+    </section>
+    <section aria-label="Warehouse Returns Desk" className="soma-v2-rfc-links">
+      <h2>Warehouse and Returns</h2>
+      <p>Read-only inspection of open return obligations and submitted Fault Tag memberships
+        requiring a warehouse stage. Eligibility is not approval, physical receipt, or final acceptance.</p>
+      <button type="button" aria-expanded={warehouseOpen} onClick={()=>setWarehouseOpen(open=>!open)}>
+        {warehouseOpen?'Hide':'Inspect'} Warehouse and returns
+      </button>
+      {warehouseOpen&&<InventoryWarehouseDesk/>}
     </section>
   </div>;
 }
