@@ -489,3 +489,8 @@ dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-arrows 
 .soma-infra-history-changes li{margin-block:5px;overflow-wrap:anywhere}
 .soma-infra-history-changes p{font-size:11px;line-height:1.5}
 @media(max-width:580px){.soma-infra-history-changes{max-width:75vw}}
+
+.soma-infra-component-filter-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
+.soma-infra-owner-filters>p{font-size:11px;color:var(--secondary,var(--muted));line-height:1.5;margin:0 0 9px}
+@media(max-width:990px){.soma-infra-component-filter-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.soma-infra-component-filter-fields{grid-template-columns:minmax(0,1fr)}}
