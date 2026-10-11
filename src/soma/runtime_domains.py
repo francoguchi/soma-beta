@@ -97,12 +97,14 @@ class DomainRoutes:
         from soma.inventory.queries.stock_needs import InventoryNeedsQueryService
         from soma.inventory.queries.attention_history import InventoryAttentionHistoryQuery
         from soma.inventory.queries.requests_rma import InventoryRequestsRmaQueryService
+        from soma.inventory.queries.task_context import TaskInventoryContextQuery
         from soma.inventory.queries.fault_tags import InventoryFaultTagQueryService
         from soma.inventory.api.routes_inventory import build_route_adapter
         from soma.inventory.api.routes_fault_tags import build_route_adapter as build_fault_tag_route_adapter
         stock = InventoryNeedsQueryService(factory)
         attention = InventoryAttentionHistoryQuery(factory)
         requests = InventoryRequestsRmaQueryService(factory)
+        task_inventory_context = TaskInventoryContextQuery(factory)
         def inventory_history_query(route, values):
             # The path alone owns the Inventory target identity. A query may
             # supply only the existing owner's bounded paging parameters.
@@ -120,6 +122,10 @@ class DomainRoutes:
             "StockEligibilityQuery": lambda route, values: asdict(stock.stock_eligibility(**values)),
             "InventoryAttentionQuery": lambda route, values: attention.attention(**values),
             "InventoryNeedsQuery": lambda route, values: stock.list_needs(**values),
+            "TaskInventoryContextQuery": lambda route, values: (
+                task_inventory_context.get(route.path_parameters["task_id"])
+                if not values else self._bad_query()
+            ),
             "InventoryHistoryQuery": inventory_history_query,
             "SpareRequestListQuery": lambda route, values: requests.list_requests(**values),
             "SpareRequestDetailQuery": lambda route, values: (

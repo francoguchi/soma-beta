@@ -62,6 +62,25 @@ def test_source_runtime_binds_existing_inventory_need_request_and_rma_read_owner
                     forbidden,
                 )
 
+    # This evidence query does not prove Task existence. Missing but valid
+    # Task identity has an empty owner projection, not an invented NOT_FOUND.
+    task_context = domains.inventory.dispatch(
+        "GET", "/api/v1/inventory/tasks/" + missing, {}
+    )
+    assert task_context is not None and task_context.status == 200
+    assert task_context.body == {
+        "task_id": missing,
+        "allocation_history": [],
+        "local_fulfillment_history": [],
+        "physical_consequences": [],
+        "return_obligations": [],
+    }
+    for forbidden in ({"unsupported": "foreign"}, {"task_id": missing}):
+        with pytest.raises(ValidationError):
+            domains.inventory.dispatch(
+                "GET", "/api/v1/inventory/tasks/" + missing, forbidden
+            )
+
     # Declared mutation routes remain uncomposed; no accidental write handler.
     with pytest.raises(Exception, match="not assembled"):
         domains.inventory.dispatch("POST", "/api/v1/inventory/requests", {})
