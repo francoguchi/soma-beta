@@ -83,3 +83,15 @@ test('An NE without primary IP never queries candidate reuse or fabricates conne
   await expect(panel.getByRole('button',{name:'Inspect primary IP reuse evidence'})).toHaveCount(0);
   expect(calls).toHaveLength(0);
 });
+
+test('A repeated IP candidate key across owner pages fails closed instead of reusing stale evidence',async({page})=>{
+  await base(page,url=>url.searchParams.has('cursor')
+    ?{items:[candidate(25)],next_cursor:null,exact_count:26}
+    :{items:Array.from({length:25},(_,i)=>candidate(i+1)),next_cursor:cursor(25),exact_count:26});
+  const panel=await open(page);
+  await panel.getByRole('button',{name:'Inspect primary IP reuse evidence'}).click();
+  const evidence=panel.getByRole('region',{name:'IP reuse evidence'});
+  await evidence.getByRole('button',{name:'Next page'}).click();
+  await expect(evidence.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(evidence.getByRole('table',{name:'IP identity candidates'})).toHaveCount(0);
+});
