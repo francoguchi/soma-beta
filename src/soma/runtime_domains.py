@@ -101,15 +101,24 @@ class DomainRoutes:
         stock = InventoryNeedsQueryService(factory)
         attention = InventoryAttentionHistoryQuery(factory)
         requests = InventoryRequestsRmaQueryService(factory)
+        def inventory_history_query(route, values):
+            # The path alone owns the Inventory target identity. A query may
+            # supply only the existing owner's bounded paging parameters.
+            # Reject unknown/path-colliding fields as ValidationError rather
+            # than leaking a Python TypeError through direct route dispatch.
+            if set(values) - {"cursor", "limit"}:
+                raise ValidationError("Inventory history query fields are invalid")
+            return attention.history(
+                target_kind=route.path_parameters["target_kind"],
+                target_id=route.path_parameters["target_id"],
+                **values,
+            )
+
         self.inventory = build_route_adapter({
             "StockEligibilityQuery": lambda route, values: asdict(stock.stock_eligibility(**values)),
             "InventoryAttentionQuery": lambda route, values: attention.attention(**values),
             "InventoryNeedsQuery": lambda route, values: stock.list_needs(**values),
-            "InventoryHistoryQuery": lambda route, values: attention.history(
-                target_kind=route.path_parameters["target_kind"],
-                target_id=route.path_parameters["target_id"],
-                **values
-            ),
+            "InventoryHistoryQuery": inventory_history_query,
             "SpareRequestListQuery": lambda route, values: requests.list_requests(**values),
             "SpareRequestDetailQuery": lambda route, values: (
                 requests.request_detail(route.path_parameters["request_id"])

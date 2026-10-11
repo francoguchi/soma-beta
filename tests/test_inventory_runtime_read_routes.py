@@ -48,12 +48,19 @@ def test_source_runtime_binds_existing_inventory_need_request_and_rma_read_owner
         )
         assert history is not None and history.status == 200
         assert history.body == {"items": [], "continuation": None}
-        with pytest.raises(ValidationError):
-            domains.inventory.dispatch(
-                "GET",
-                f"/api/v1/inventory/history/{kind}/{missing}",
-                {"unaccepted_field": "no"},
-            )
+        # Neither unknown query fields nor values that shadow owner-scoped
+        # path parameters may reach the Python owner as stray **kwargs.
+        for forbidden in (
+            {"unaccepted_field": "no"},
+            {"target_kind": "rma"},
+            {"target_id": missing},
+        ):
+            with pytest.raises(ValidationError, match="Inventory history query fields"):
+                domains.inventory.dispatch(
+                    "GET",
+                    f"/api/v1/inventory/history/{kind}/{missing}",
+                    forbidden,
+                )
 
     # Declared mutation routes remain uncomposed; no accidental write handler.
     with pytest.raises(Exception, match="not assembled"):
