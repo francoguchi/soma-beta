@@ -384,3 +384,22 @@ test('Infrastructure Site return intent remains closed, explicit and independent
   ])assert.equal(infrastructureIntent(invalid),null);
   assert.equal(infrastructureIntent({...site,openedKind:'invalid'}),null);
 });
+
+test('Infrastructure Rack occupancy has closed identity-only return intent without cached owner DTO',()=>{
+  const id='11111111-1111-4111-8111-111111111111';
+  const rack={explorer:'/api/v1/infrastructure/tree?limit=200',openedId:id,openedKind:'rack',
+    tab:'Summary',components:null,history:null,workbook:null};
+  assert.equal(infrastructureIntent(rack),rack);
+  const history=new NavigationHistory();const token=history.remember({
+    route:'/infrastructure',filterFingerprint:'a'.repeat(64),activeId:'rack:'+id,
+    selectedId:'rack:'+id,memberIds:[],scrollAnchor:null,focusToken:'row:rack:'+id,infrastructure:rack});
+  assert.deepEqual(history.restore(token).infrastructure,rack);
+  for(const invalid of [
+    {...rack,openedId:null},{...rack,openedId:'invalid'}, {...rack,tab:'Placement'},
+    {...rack,openedKind:'network_element'},
+    {...rack,components:'/api/v1/infrastructure/network-elements/'+id+'/components?limit=200'},
+    {...rack,history:'/api/v1/infrastructure/history?target_kind=network_element&target_id='+id+'&limit=5'},
+    {...rack,workbook:{history:'/api/v1/infrastructure/workbooks/history?limit=200',run:null,proposalId:null,candidatePage:0}},
+    {...rack,openedKind:'invented'}, {...rack,cache:{occupants:[1,2,3]}},
+  ])assert.equal(infrastructureIntent(invalid),null);
+});
