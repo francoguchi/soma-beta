@@ -3,10 +3,11 @@ import {OwnerProjection} from '../components/OwnerProjection';
 import {BoundedCollection} from '../components/BoundedCollection';
 import {filterFingerprint} from '../data/query-controller';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
+import {historyValueText,verifyHistoryValue,type HistoryValue} from '../presentation/infrastructure-history';
 import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
 
 type Kind='room'|'cloud_deployment';
-type Change=Readonly<{field:string;prior:unknown;new:unknown}>;
+type Change=Readonly<{field:string;prior:HistoryValue;new:HistoryValue}>;
 type Event=Readonly<{event_id:string;event_kind:string;recorded_at_utc:number;
   effective_at_utc:number|null;command_id:string;
   summary:Readonly<{reason_code:string|null;changes:readonly Change[];warning_codes:readonly string[]}>}>;
@@ -23,15 +24,22 @@ function validate(page:Page,id:string,kind:Kind,digest:string,path:string):void{
     ||!Array.isArray(page.events)||page.events.length>5||!Object.hasOwn(page,'next_cursor'))
     throw new Error('Invalid context owner history');
   const url=new URL(path,'http://127.0.0.1');
-  if(url.pathname!=='/api/v1/infrastructure/history'||url.searchParams.get('target_kind')!==kind
+  if(url.pathname!=='/api/v1/infrastructure/history'||url.hash||url.searchParams.get('target_kind')!==kind
     ||url.searchParams.get('target_id')!==id||url.searchParams.get('limit')!=='5'
-    ||[...url.searchParams.keys()].some(k=>!['target_kind','target_id','limit','cursor'].includes(k)))
+    ||[...url.searchParams.keys()].some(k=>!['target_kind','target_id','limit','cursor'].includes(k))
+    ||['target_kind','target_id','limit','cursor'].some(k=>url.searchParams.getAll(k).length>1))
     throw new Error('Foreign Infrastructure context history query');
   const seek=url.searchParams.get('cursor');
   let prior:readonly [number,string]|null=null;
   if(seek){
     const c=JSON.parse(seek) as Cursor;
-    if(c.filter_fingerprint!==digest)throw new Error('Foreign history cursor');
+    if(!c||typeof c!=='object'||Array.isArray(c)||Object.keys(c).length!==6
+      ||c.version!==1||c.query_id!=='InfrastructureHistoryQuery'
+      ||c.sort_registry_id!=='InfrastructureHistoryQuery_ORDER_V1'
+      ||c.null_order!=='NOT_APPLICABLE'||c.filter_fingerprint!==digest
+      ||!Array.isArray(c.last_key_tuple)||c.last_key_tuple.length!==2
+      ||!validSeconds(c.last_key_tuple[0])||!uuid.test(c.last_key_tuple[1]))
+      throw new Error('Foreign history cursor');
     prior=c.last_key_tuple;
   }
   const seen=new Set<string>();
@@ -44,7 +52,8 @@ function validate(page:Page,id:string,kind:Kind,digest:string,path:string):void{
       ||!Array.isArray(event.summary.warning_codes)||event.summary.warning_codes.length>16
       ||event.summary.warning_codes.some((w:string)=>!bounded(w,128))
       ||!(event.summary.reason_code===null||bounded(event.summary.reason_code,384))
-      ||event.summary.changes.some((change:Change)=>!change||!bounded(change.field,256))
+      ||event.summary.changes.some((change:Change)=>!change||!bounded(change.field,128)
+        ||!verifyHistoryValue(change.prior)||!verifyHistoryValue(change.new))
       ||prior&&(event.recorded_at_utc>prior[0]||
         event.recorded_at_utc===prior[0]&&event.event_id>=prior[1]))
       throw new Error('Invalid context history evidence');
@@ -88,7 +97,14 @@ export function InfrastructureContextHistory({id,kind}:{id:string;kind:Kind}){
             rows={page.events.map(event=>({id:event.event_id,cells:[
               formatOwnerLocalTime(event.recorded_at_utc),
               event.event_kind,event.summary.reason_code??'No reason recorded',
-              event.summary.changes.length+' changed fields',event.event_id]}))}
+              <details><summary>{event.summary.changes.length} changed fields · inspect evidence</summary>
+                {event.summary.changes.length===0?
+                  <p>No structured changes recorded for this event.</p>:
+                  <ul>{event.summary.changes.map((change,index)=><li key={index}>
+                    {change.field}: {historyValueText(change.prior)} → {historyValueText(change.new)}
+                  </li>)}</ul>}
+                {event.summary.warning_codes.length>0&&<p>Owner warnings: {event.summary.warning_codes.join(', ')}</p>}
+              </details>,event.event_id]}))}
             next={false} onNext={()=>{}}/>
           <div className="soma-v2-sr-pager">
             <button type="button" disabled={history.page===history.first}
