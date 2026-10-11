@@ -1,4 +1,4 @@
-import {verifyHistoryValue,type HistoryValue} from './infrastructure-history';
+import {verifyHistoryValue,type HistoryValue} from './infrastructure-history.js';
 /** LLD-08 Network Element's bounded InfrastructureHistoryQuery projection. The
  * owner response is historical evidence, not current relationships.
  */
