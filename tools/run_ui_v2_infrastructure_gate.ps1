@@ -1,4 +1,4 @@
-# SOMA UI V2 — consolidated Windows acceptance gate.
+# SOMA UI V2 - consolidated Windows acceptance gate.
 # Read-only verification except for the intentional Vite-generated static files.
 # Never resets, cleans, commits or overwrites unrelated local changes.
 [CmdletBinding()]
@@ -35,7 +35,7 @@ function Invoke-Checked {
 }
 Push-Location $root
 try {
-    Write-Host 'SOMA UI V2 — source-matched Infrastructure gate' -ForegroundColor Green
+    Write-Host 'SOMA UI V2 - source-matched Infrastructure gate' -ForegroundColor Green
     Write-Host 'WARNING: Production build regenerates src/soma/ui/static assets in this worktree.'
     Write-Host 'This script never runs git reset/clean, never commits, and never updates the branch.'
     Invoke-Checked 'LOCAL GIT STATUS' 'git' @('status','-sb')
@@ -69,7 +69,7 @@ try {
     Invoke-Checked 'FULL INFRASTRUCTURE / STUDY29 EDGE REGRESSION' $venvPython (@(
         'tools\run_ui_browser_tests.py'
     ) + $specs)
-    Invoke-Checked 'FINAL LOCAL STATUS — GENERATED ASSETS ARE EXPECTED' 'git' @('status','-sb')
+    Invoke-Checked 'FINAL LOCAL STATUS - GENERATED ASSETS ARE EXPECTED' 'git' @('status','-sb')
     Write-Host "`nALL SELECTED CHECKS PASSED. Review warnings and generated assets separately." -ForegroundColor Green
 }
 finally {
