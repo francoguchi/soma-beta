@@ -23,7 +23,7 @@ test('Accepted physical and logical relationship navigation preserves only exact
   assert.equal(old.openedId,id(1));assert.equal(old.tab,'Relationships');
 });
 test('Untrusted identities or foreign/stale source intents cannot open a plausible Infrastructure relation',()=>{
-  for(const invalid of ['bad',id(2).toUpperCase(),id(1).replace('-4','-1')])
+  for(const invalid of ['bad',id(2).replace('11111111','AAAAAAAA'),id(1).replace('-4','-1')])
     assert.equal(openInfrastructureRelated(old,'rack',invalid),null);
   assert.equal(openInfrastructureRelated(old,'unknown',id(2)),null);
   assert.equal(openInfrastructureRelated({...old,explorer:'/api/v1/infrastructure/tree?limit=201'},'rack',id(2)),null);
