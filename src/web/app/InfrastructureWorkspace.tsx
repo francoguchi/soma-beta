@@ -17,6 +17,7 @@ import {InfrastructureComponentFilters} from './InfrastructureComponentFilters';
 import {buildExplorerQuery} from '../presentation/infrastructure-explorer-filters';
 import {verifyInstalledComponentPage,type InstalledComponentPage} from '../presentation/infrastructure-components';
 import {verifyInfrastructureExplorerPage,type InfrastructureExplorerNode,type InfrastructureExplorerPage} from '../presentation/infrastructure-explorer-page';
+import {verifyNetworkHistoryPage,type NetworkHistoryPage} from '../presentation/infrastructure-network-history';
 import {FULL_STRUCTURE,LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
@@ -30,8 +31,7 @@ type Element = Readonly<{network_element_id:string;revision:number;lifecycle:str
   containment_child_count:number;device_reference_count:number;installed_component_count:number;warning_codes:readonly string[]}>;
 type Components=InstalledComponentPage;
 type HistoryValue = Readonly<{kind:'null'|'text'|'integer'|'boolean'|'entity_ref';text_value:string|null;integer_value:number|null;boolean_value:boolean|null;entity_ref:Ref|null}>;
-type History = Readonly<{events:readonly {event_id:string;event_kind:string;recorded_at_utc:number;effective_at_utc:number|null;
-  summary:Readonly<{changes:readonly {field:string;prior:HistoryValue;new:HistoryValue}[];reason_code:string|null;warning_codes:readonly string[]}>}[];next_cursor:unknown|null}>;
+type History=NetworkHistoryPage;
 function historyValue(value:HistoryValue):string {
   switch(value.kind) {
     case 'null':return 'None';case 'text':return value.text_value??'Unknown text';case 'integer':return String(value.integer_value);
@@ -57,7 +57,7 @@ function HistoryView({id,path,onPath}:{id:string;path:string;onPath:(path:string
   // Five events with 32 maximally escaped old/new field values remain below
   // the existing transport bound. Continuation preserves the complete history.
   return <OwnerProjection<History> path={path} render={page=>{
-    if (!Array.isArray(page.events)||page.events.length>5||page.events.some(item=>!Array.isArray(item.summary.changes)||item.summary.changes.length>32)) throw new Error('Invalid history page');
+    verifyNetworkHistoryPage(page);
     const next=withCursor(path,page.next_cursor);
     if(!infrastructureQuery(next,'history',id))throw new Error('Invalid history continuation');
     const events:History['events']=page.events;
