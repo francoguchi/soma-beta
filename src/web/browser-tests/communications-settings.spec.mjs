@@ -29,7 +29,8 @@ test('Communications Settings consumes bounded scopes, coverage, exact jobs and 
   await page.getByRole('button',{name:'View coverage for Synthetic Scope'}).click();
   const coverage=page.getByRole('region',{name:'Selected Source coverage'});await expect(coverage.getByText('Forward coverage: UNKNOWN')).toBeAttached();
   await expect(coverage.getByText('Historical coverage: BOUNDED_COMPLETE')).toBeAttached();
-  await expect(page.getByText('Message content is unavailable')).toBeAttached();await expect(page.getByText('Purge due (UTC): Unknown')).toBeAttached();
+  await expect(page.getByText('Message content is unavailable')).toBeAttached();await expect(page.getByText('Purge due (local time): Unknown')).toBeAttached();
+  await expect(page.getByText('Purge due (UTC): Unknown')).toHaveCount(0);
   await jobs.getByRole('button',{name:'Next page'}).click();await expect.poll(()=>jobPages.length).toBe(2);
   expect(jobPages[1].searchParams.get('cursor')).toBe(JSON.stringify({version:1,query_id:'ListCommunicationJobs',sort_registry_id:'ListCommunicationJobs_ORDER_V1',last_key_tuple:[0,scope],filter_fingerprint:'a'.repeat(64),null_order:'none'}));expect(requests.every(request=>request.method==='GET')).toBe(true);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
