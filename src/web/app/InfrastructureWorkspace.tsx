@@ -13,6 +13,7 @@ import {verifyNetworkElement} from '../presentation/infrastructure-element';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
 import {InfrastructureExplorerFilters} from './InfrastructureExplorerFilters';
+import {InfrastructureComponentFilters} from './InfrastructureComponentFilters';
 import {buildExplorerQuery} from '../presentation/infrastructure-explorer-filters';
 import {FULL_STRUCTURE,LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
@@ -39,7 +40,8 @@ function historyValue(value:HistoryValue):string {
   }
 }
 function ComponentsView({id,path,onPath}:{id:string;path:string;onPath:(path:string)=>void}) {
-  return <OwnerProjection<Components> path={path} render={page=>{
+  return <><InfrastructureComponentFilters id={id} path={path} onApply={onPath}/>
+    <OwnerProjection<Components> path={path} render={page=>{
     if (!Array.isArray(page.items)||page.items.length>200) throw new Error('Invalid component page');
     const next=withCursor(path,page.next_cursor);
     if(!infrastructureQuery(next,'components',id))throw new Error('Invalid component continuation');
@@ -49,7 +51,7 @@ function ComponentsView({id,path,onPath}:{id:string;path:string;onPath:(path:str
         item.installed_component_id,item.bom_code??'No BOM code',item.manufacturer_serial??'Unknown serial',item.slot_label??'Unknown slot',item.state,item.condition,
         `Device Part Unit: ${item.device_part_unit_id??'Unresolved'}`,`Inventory physical consequence: ${item.physical_consequence_id??'None'}`]}))}
         next={page.next_cursor!==null} returnScrollToken="components" nextFocusToken="infrastructure:components:next" onNext={()=>onPath(next)}/></>;
-  }}/>;
+  }}/></>;
 }
 function HistoryView({id,path,onPath}:{id:string;path:string;onPath:(path:string)=>void}) {
   // Five events with 32 maximally escaped old/new field values remain below
