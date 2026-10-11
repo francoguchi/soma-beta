@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {
-  FULL_STRUCTURE,INTERMEDIATE_LEVELS,LEVEL_NAMES,moveStructureLevel,
+  FULL_STRUCTURE,LEVEL_NAMES,moveStructureLevel,dropStructureLevel,
   structurePath,structurePreset,toggleStructureLevel,validStructure,
   type StructureLevel,type StructurePreset,type StructureView,
 } from '../presentation/infrastructure-structure';
@@ -21,6 +21,7 @@ export function InfrastructureStructureDialog({current,onApply,onDismiss}:Props)
   }));
   const modal=useRef<HTMLDialogElement>(null);
   const firstButton=useRef<HTMLButtonElement>(null);
+  const dragging=useRef<StructureLevel|null>(null);
   useEffect(()=>{
     const dialog=modal.current;
     if(!dialog)return;
@@ -59,12 +60,18 @@ export function InfrastructureStructureDialog({current,onApply,onDismiss}:Props)
           aria-pressed={JSON.stringify(draft)===JSON.stringify(structurePreset(preset.key))}
           onClick={()=>setDraft(structurePreset(preset.key))}>{preset.label}</button>)}
       </div>
-      <h3>Visible levels · reorder with arrows</h3>
+      <h3>Visible levels · drag or use arrows to reorder</h3>
       <div className="soma-structure-level pinned">
         <strong>Customer</strong><span>Always first · locked</span>
       </div>
       <ol className="soma-structure-levels" aria-label="Reorder intermediate levels">
-        {draft.order.map((level,index)=><li className="soma-structure-level" key={level}>
+        {draft.order.map((level,index)=><li className="soma-structure-level" key={level}
+          draggable onDragStart={event=>{dragging.current=level;event.dataTransfer.effectAllowed='move';
+            event.dataTransfer.setData('text/plain',level);}}
+          onDragOver={event=>{if(dragging.current&&dragging.current!==level)event.preventDefault();}}
+          onDrop={event=>{event.preventDefault();const source=dragging.current;dragging.current=null;
+            if(source)setDraft(view=>dropStructureLevel(view,source,level));}}
+          onDragEnd={()=>{dragging.current=null;}}>
           <label><input type="checkbox" checked={draft.visible.includes(level)}
             onChange={()=>setDraft(view=>toggleStructureLevel(view,level))}/>
             <span>Show {LEVEL_NAMES[level]}</span></label>
