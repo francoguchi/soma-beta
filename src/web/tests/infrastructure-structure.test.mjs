@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {NavigationHistory} from '../.test-build/app/router.js';
 import {
  FULL_STRUCTURE,applySessionStructure,currentSessionStructure,structurePreset,structurePath,moveStructureLevel,dropStructureLevel,toggleStructureLevel,
- projectStructureRows,validStructure,
+ projectStructureRows,projectInfrastructureLens,validStructure,
 } from '../.test-build/presentation/infrastructure-structure.js';
 
 const owner=[
@@ -102,4 +102,19 @@ test('Study29 session Apply persists only closed Structure choices; fresh defaul
     applySessionStructure(FULL_STRUCTURE);
   }
   assert.deepEqual(currentSessionStructure(),FULL_STRUCTURE);
+});
+
+test('Physical and logical Infrastructure lenses partition only already proven owner rows',()=>{
+ const projected=projectStructureRows(owner,FULL_STRUCTURE);
+ const physical=projectInfrastructureLens(projected,'physical');
+ const logical=projectInfrastructureLens(projected,'logical');
+ assert.deepEqual(physical.map(node=>node.kind),['site','room','rack','network_element']);
+ assert.deepEqual(logical.map(node=>node.kind),['cloud_deployment','containment']);
+ assert.equal(projectInfrastructureLens(projected,'all'),projected);
+ assert.deepEqual([...physical,...logical].map(node=>node.kind).sort(),
+   projected.map(node=>node.kind).sort());
+ assert.equal(owner[4].parent_context_id,'rack');
+ assert.equal(owner[5].parent_context_id,'other-ne');
+ assert.throws(()=>projectInfrastructureLens(projected,'made-up'),/Invalid bounded/u);
+ assert.throws(()=>projectInfrastructureLens(Array.from({length:201},()=>owner[0]),'all'),/Invalid bounded/u);
 });
