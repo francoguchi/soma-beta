@@ -450,3 +450,34 @@ dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-arrows 
 .soma-structure-page-jumps span{font-size:11px;color:var(--secondary,var(--muted))}
 .soma-structure-page-jumps button{font-size:11px;min-height:32px;max-width:100%;
   white-space:normal;overflow-wrap:anywhere}
+
+/* LLD-08 exact owner query scopes. This is a bounded filter form, NOT a
+ * client-side search across unvisited cursor pages. */
+.soma-infra-owner-filters{
+  margin:10px 0 12px;padding:12px;min-width:0;
+  border:1px solid var(--line,var(--border));background:var(--surface,var(--panel));
+}
+.soma-infra-owner-filter-fields{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;min-width:0;
+}
+.soma-infra-owner-filter-fields label{
+  display:flex;flex-direction:column;gap:5px;min-width:0;
+  color:var(--secondary,var(--muted));font-size:11px;
+}
+.soma-infra-owner-filter-fields input,.soma-infra-owner-filter-fields select{
+  box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-height:32px;
+  padding:6px 7px;border:1px solid var(--line,var(--border));border-radius:0;
+  background:var(--surface2,var(--surface));color:var(--text,#e6eaee);
+  font:inherit;font-size:11px;
+}
+.soma-infra-owner-filter-fields input{font-family:"Cascadia Mono",Consolas,monospace}
+.soma-infra-owner-filter-actions{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px;min-width:0;
+}
+.soma-infra-owner-filter-actions button{min-height:32px}
+.soma-infra-owner-filter-actions span{
+  color:var(--secondary,var(--muted));font-size:11px;overflow-wrap:anywhere;
+}
+.soma-infra-owner-filters [role="alert"]{overflow-wrap:anywhere;font-size:11px}
+@media(max-width:990px){.soma-infra-owner-filter-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.soma-infra-owner-filter-fields{grid-template-columns:minmax(0,1fr)}}
