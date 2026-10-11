@@ -98,3 +98,20 @@ export function projectStructureRows<T extends ExplorerNode>(nodes:readonly T[],
     .sort((a,b)=>rank(a.node.kind)-rank(b.node.kind)||a.index-b.index)
     .map(({node})=>node);
 }
+/** Distinguish physical Site/Room/Rack/NE from logical Cloud and containment.
+ * This is a local current-page lens, NOT a claim that the physical descendants
+ * or all Cloud assignments have been loaded across cursor pages.
+ */
+export type InfrastructureLens='all'|'physical'|'logical';
+export function projectInfrastructureLens<T extends ExplorerNode & {kind:string}>(
+  nodes:readonly T[],lens:InfrastructureLens,
+):readonly T[] {
+  if(!Array.isArray(nodes)||nodes.length>200||!['all','physical','logical'].includes(lens))
+    throw new Error('Invalid bounded Infrastructure relationship lens');
+  if(lens==='all')return nodes;
+  // NE physical identity is not the same owner row as its containment alias.
+  const kinds=lens==='physical'
+    ?new Set(['site','room','rack','network_element'])
+    :new Set(['cloud_deployment','containment']);
+  return nodes.filter(node=>kinds.has(node.kind));
+}
