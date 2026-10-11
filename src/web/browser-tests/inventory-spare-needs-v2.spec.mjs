@@ -84,3 +84,25 @@ test('Invalid Spare Need owner cursor fails closed and exposes no synthetic row'
   await expect(needs.getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(needs.getByText('UNTRUSTED-SOURCE')).toHaveCount(0);
 });
+
+test('Spare Need history is separately opened and never confused with planning selection',async({page})=>{
+  await otherOwnerRoutes(page);const calls=[];
+  await page.route('**/api/v1/inventory/needs?*',route=>route.fulfill({json:{
+    items:[need(need1)],exact_total:1,continuation:null,
+  }}));
+  await page.route('**/api/v1/inventory/history/spare_need/'+need1+'?*',route=>{
+    calls.push(route.request().url());
+    return route.fulfill({json:{items:[],continuation:null}});
+  });
+  await page.goto('http://127.0.0.1:4174/inventory');
+  await page.getByRole('button',{name:'Inspect Spare Needs'}).click();
+  await page.getByRole('button',{name:'Inspect Spare Need '+need1}).click();
+  const selected=page.getByRole('complementary',{name:'Selected Spare Need'});
+  await expect(selected.getByRole('button',{name:'Inspect Spare Need history'})).toBeVisible();
+  expect(calls).toHaveLength(0);
+  await selected.getByRole('button',{name:'Inspect Spare Need history'}).click();
+  await expect(selected.getByRole('region',{name:'Immutable Inventory history'}))
+    .toContainText('No owner history events returned');
+  expect(calls).toHaveLength(1);
+  expect(new URL(calls[0]).pathname).toBe('/api/v1/inventory/history/spare_need/'+need1);
+});

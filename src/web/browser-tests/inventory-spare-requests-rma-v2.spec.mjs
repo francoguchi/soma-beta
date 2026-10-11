@@ -150,3 +150,90 @@ test('Cross-request RMA point response fails closed rather than claiming receipt
   await expect(panel.getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(panel).not.toContainText('UNTRUSTED-ACTUAL-RECEIPT');
 });
+
+// Inventory history belongs to each immutable owner target, not to the list cursor.
+const historyDigest=(kind,id)=>digest({schema:'SOMA_INVENTORY_HISTORY_FILTER_V1',
+  target_kind:kind,target_id:id});
+const event=(id,seconds=100,authority='domain_lifecycle_event')=>({
+  recorded_at_utc:seconds,authority_kind:authority,
+  immutable_event_or_relation_id:id,event_kind:'accepted_owner_event',
+  command_id:null,source_ref:null,
+});
+const historyCursor=(kind,id,last)=>({
+  version:1,query_id:'InventoryHistoryQuery',
+  sort_registry_id:'INVENTORY_HISTORY_CANONICAL_V1',
+  last_key_tuple:[last.recorded_at_utc,last.authority_kind,last.immutable_event_or_relation_id],
+  filter_fingerprint:historyDigest(kind,id),null_order:'not applicable',
+});
+test('Selected Request history stays lazy, preserves tie-break ordering and paginates',async({page})=>{
+  await base(page);const urls=[];
+  await page.route('**/api/v1/inventory/requests?*',route=>{
+    const asOf=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+    return route.fulfill({json:{items:[request(reqA)],exact_total:1,continuation:null,as_of_utc:asOf}});
+  });
+  await page.route('**/api/v1/inventory/requests/'+reqA,route=>route.fulfill({json:detail}));
+  const firstRows=Array.from({length:25},(_,i)=>event('history-'+String(25-i).padStart(2,'0')));
+  const historyLast=firstRows.at(-1);
+  await page.route('**/api/v1/inventory/history/spare_request/'+reqA+'?*',route=>{
+    const u=new URL(route.request().url());urls.push(u);
+    return route.fulfill({json:u.searchParams.has('cursor')
+      ?{items:[event('history-older',99)],continuation:null}
+      :{items:firstRows,continuation:historyCursor('spare_request',reqA,historyLast)}});
+  });
+  const register=await showRequests(page);
+  await register.getByRole('button',{name:'Inspect Spare Request '+reqA}).click();
+  const selected=register.getByRole('complementary',{name:'Selected Spare Request'});
+  await expect(selected.getByRole('button',{name:'Inspect Spare Request history'})).toBeVisible();
+  expect(urls).toHaveLength(0);
+  await selected.getByRole('button',{name:'Inspect Spare Request history'}).click();
+  const timeline=selected.getByRole('region',{name:'Immutable Inventory history'});
+  await expect(timeline).toContainText('25 recorded events on this page');
+  await timeline.getByRole('button',{name:'Next page'}).click();
+  await expect(timeline).toContainText('history-older');
+  expect(JSON.parse(urls[1].searchParams.get('cursor'))).toEqual(
+    historyCursor('spare_request',reqA,historyLast));
+  await timeline.getByRole('button',{name:'Previous page'}).click();
+  await expect(timeline).toContainText('25 recorded events on this page');
+});
+test('RMA history uses exact RMA identity rather than inheriting request history',async({page})=>{
+  await base(page);const urls=[];
+  await page.route('**/api/v1/inventory/requests?*',route=>{
+    const asOf=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+    return route.fulfill({json:{items:[request(reqA)],exact_total:1,continuation:null,as_of_utc:asOf}});
+  });
+  await page.route('**/api/v1/inventory/requests/'+reqA,route=>route.fulfill({json:detail}));
+  await page.route('**/api/v1/inventory/rmas/'+rma,route=>route.fulfill({json:rmaDetail}));
+  await page.route('**/api/v1/inventory/history/**',route=>{
+    urls.push(route.request().url());return route.fulfill({json:{
+      items:[event('rma-authorized',100,'relationship_change')],continuation:null}});
+  });
+  const register=await showRequests(page);
+  await register.getByRole('button',{name:'Inspect Spare Request '+reqA}).click();
+  await register.getByRole('button',{name:'Inspect RMA '+rma}).click();
+  const selected=register.getByRole('complementary',{name:'Selected RMA'});
+  await expect(selected.getByRole('button',{name:'Inspect RMA history'})).toBeVisible();
+  expect(urls).toHaveLength(0);
+  await selected.getByRole('button',{name:'Inspect RMA history'}).click();
+  await expect(selected.getByRole('region',{name:'Immutable Inventory history'})).toContainText('rma-authorized');
+  expect(urls).toHaveLength(1);
+  expect(new URL(urls[0]).pathname).toBe('/api/v1/inventory/history/rma/'+rma);
+});
+test('Inventory history cursor owner mismatch refuses rows without trusted-looking timeline',async({page})=>{
+  await base(page);
+  await page.route('**/api/v1/inventory/requests?*',route=>{
+    const asOf=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+    return route.fulfill({json:{items:[request(reqA)],exact_total:1,continuation:null,as_of_utc:asOf}});
+  });
+  await page.route('**/api/v1/inventory/requests/'+reqA,route=>route.fulfill({json:detail}));
+  const row=event('UNTRUSTED-OWNER-HISTORY');
+  await page.route('**/api/v1/inventory/history/spare_request/'+reqA+'?*',route=>route.fulfill({json:{
+    items:[row],continuation:historyCursor('rma',rma,row),
+  }}));
+  const register=await showRequests(page);
+  await register.getByRole('button',{name:'Inspect Spare Request '+reqA}).click();
+  const selected=register.getByRole('complementary',{name:'Selected Spare Request'});
+  await selected.getByRole('button',{name:'Inspect Spare Request history'}).click();
+  const timeline=selected.getByRole('region',{name:'Immutable Inventory history'});
+  await expect(timeline.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(timeline).not.toContainText('UNTRUSTED-OWNER-HISTORY');
+});
