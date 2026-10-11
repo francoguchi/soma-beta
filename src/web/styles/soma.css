@@ -367,3 +367,55 @@ h1 {font-size: 24px;} h2 {font-size: 20px;} h3 {font-size: 16px;} .metadata {fon
 .soma-v2-register-empty h3{margin:12px 0 9px;font-size:16px;font-weight:700}
 .soma-v2-register-empty p{margin:7px 0;font-size:12px;line-height:1.65;color:var(--secondary,#b2bbc4)}
 @media(max-width:600px){.soma-v2-register-empty{padding:16px}}
+
+/* Study 29 · Structure projection. Native <dialog> keeps a focus-isolated modal.
+ * The footer remains present at 200% browser zoom; only the body scrolls.
+ */
+.soma-structure-trigger{margin-inline-start:8px}
+.soma-structure-applied{overflow-wrap:anywhere;color:var(--secondary,var(--muted));font-size:11px}
+dialog.soma-structure-dialog{
+  position:fixed;box-sizing:border-box;inset:0;margin:auto;padding:0;
+  width:min(760px,calc(100vw - 16px));max-width:calc(100vw - 16px);
+  max-height:calc(100dvh - 12px);height:min(670px,calc(100dvh - 12px));
+  border:1px solid var(--line,var(--border));border-radius:0;
+  background:var(--surface,#111518);color:var(--text,#e6eaee);overflow:hidden;
+}
+dialog.soma-structure-dialog[open]{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+dialog.soma-structure-dialog::backdrop{background:rgba(0,0,0,.72)}
+.soma-structure-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;
+  min-width:0;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line,var(--border));background:var(--surface2,var(--surface))}
+.soma-structure-dialog-head h2{margin:0 0 2px;font-size:15px}
+.soma-structure-dialog-head p{margin:0;color:var(--secondary,var(--muted));font-size:11px}
+.soma-structure-dialog-body{min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;
+  padding:14px 16px;overscroll-behavior:contain;overflow-wrap:anywhere}
+.soma-structure-dialog-body>p,.soma-structure-preview p{font-size:12px;line-height:1.5}
+.soma-structure-dialog-body h3{font-size:12px;margin:16px 0 8px}
+.soma-structure-presets{display:flex;flex-wrap:wrap;gap:6px}
+.soma-structure-presets button[aria-pressed="true"]{border-color:var(--current-edge,var(--focus));background:var(--selected);color:var(--selected-text)}
+.soma-structure-levels{margin:0;padding:0;list-style:none}
+.soma-structure-level{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  min-width:0;border:1px solid var(--line,var(--border));padding:8px 10px;margin-block-end:5px}
+.soma-structure-level label{display:flex;align-items:center;gap:8px;min-width:0}
+.soma-structure-level.pinned{color:var(--secondary,var(--muted));background:var(--surface2,var(--surface))}
+.soma-structure-level.pinned span{font-size:11px}
+.soma-structure-arrows{display:flex;gap:5px;flex-shrink:0}
+.soma-structure-arrows button{min-width:36px;min-height:36px;padding:4px 8px}
+.soma-structure-preview{border:1px solid var(--line,var(--border));padding:10px 12px;margin-top:10px}
+.soma-structure-preview h3{margin-top:0}
+.soma-structure-dialog-footer{min-width:0;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;border-top:1px solid var(--line,var(--border));
+  padding:10px 16px;background:var(--surface2,var(--surface))}
+.soma-structure-dialog-footer small{color:var(--secondary,var(--muted));font-size:10px}
+.soma-structure-dialog-actions{display:flex;gap:8px;flex-wrap:wrap}
+.soma-structure-dialog-actions button{min-height:36px;white-space:nowrap}
+.soma-structure-dialog-actions .primary{background:var(--accent,#0b66d6);color:#fff;border-color:var(--accent,#0b66d6)}
+@media(max-width:500px){
+  .soma-structure-dialog-head{padding:8px 10px}
+  .soma-structure-dialog-body{padding:10px}
+  .soma-structure-dialog-footer{padding:8px 10px}
+}
+@media(max-height:410px){
+  dialog.soma-structure-dialog{height:calc(100dvh - 8px);max-height:calc(100dvh - 8px)}
+  .soma-structure-dialog-head{padding-block:6px}
+  .soma-structure-dialog-footer{padding-block:6px}
+}
