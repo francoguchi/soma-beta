@@ -16,7 +16,8 @@ REGISTRY = json.loads(files(__package__).joinpath("registry.json").read_text(enc
 # intact. Reject collisions or a foreign design pin rather than overriding owners.
 _READ_EXTENSION = json.loads(files(__package__).joinpath("room_cloud_reads_v1.json").read_text(encoding="utf-8"))
 if (_READ_EXTENSION.get("schema") != "SOMA_LLD08_OWNER_ACCEPTED_READ_EXTENSION_V1"
-        or _READ_EXTENSION.get("pinned_design_ref") != "9a0e891127a771251afccca1a281b7ef7dde9e5f"):
+        or _READ_EXTENSION.get("pinned_design_ref") != "9a0e891127a771251afccca1a281b7ef7dde9e5f"
+        or _READ_EXTENSION.get("pinned_design_ref") != REGISTRY.get("design_ref")):
     raise IntegrityFailure("LLD-08 read extension authority does not match pinned design")
 for _family, _identity in (("types", "id"), ("queries", "name"), ("routes", "path")):
     _incoming = _READ_EXTENSION[_family]

@@ -1,6 +1,6 @@
 # Infrastructure physical and logical relationship plan — 2026-10-11
 
-Status: **user-approved product direction; new backend read DTOs remain DESIGN PROPOSALS**, not existing normative LLD-08 contracts. Keep Study30 primary and Study29 as interaction support.
+Status: **operator accepted D1–D4 read-only clarification on 2026-10-11; additive runtime queries and Room/Cloud UI workbenches now implemented in SOURCE, not yet operator-tested.** Historic pinned design-branch LLD-08 still lacks the new normative leaves: formal promotion remains separately pending. Keep Study30 primary and Study29 as interaction support.
 
 ## Accepted choices
 
@@ -13,7 +13,7 @@ Status: **user-approved product direction; new backend read DTOs remain DESIGN P
 
 Pinned LLD-08 `ui/workspace-state.json` distinguishes Rack placement, Cloud assignment and containment. `schema/site-placement.json` owns Site, Room, Rack and NE physical identity; `schema/relationships.json` owns Cloud Type, Site-scoped Cloud Deployment, Cloud assignments and containment. `queries/v2/explorer.json` is a flat, cursor-paginated contextual projection with exact Customer/Site/kind/lifecycle filters. Existing point reads: Site details, Rack occupancy, Network Element details. **No normative current Room/Cloud Deployment detail GET currently exists.** Historical events must not be presented as current entity metadata.
 
-## Proposed LLD-08 new read contracts (NOT yet implemented)
+## Historical proposed LLD-08 read contracts (superseded by accepted focused clarification below)
 
 **RoomDetailQuery**: exact Room UUID4; accepted Room ID/name/state/revision; parent Site ID and derived Customer ID; indexed current Rack count. Read in one stable snapshot, return owner not-found if target missing. Revisions and byte bounds from owning schema.
 
