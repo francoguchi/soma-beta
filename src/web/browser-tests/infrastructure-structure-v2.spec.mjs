@@ -36,7 +36,7 @@ test('Study29 Structure Apply changes real explorer presentation, never mutates 
   await modal.getByRole('button',{name:'Apply view'}).click();
   await expect(modal).toHaveCount(0);
   await expect(trigger).toBeFocused();
-  await expect(page.getByLabel('Applied Structure view'))
+  await expect(page.locator('[aria-label="Applied Structure view"]'))
     .toContainText('Customer → Site → Cloud → Room → Rack → Network Element');
   const order=await rowNames(page);
   expect(order.join('|').indexOf('SITE OWNER')).toBeLessThan(order.join('|').indexOf('CLOUD OWNER'));
@@ -105,7 +105,7 @@ test('At 200% zoom the Structure footer remains reachable and keyboard focus ret
   await expect(dialog.getByRole('button',{name:'Close Structure view'})).toBeFocused();
   for(let press=0;press<15;press++){
     await page.keyboard.press('Tab');
-    const inside=await page.evaluate(()=>document.activeElement?.closest('dialog.soma-structure-dialog')!==null);
+    const inside=await page.evaluate(()=>Boolean(document.activeElement?.closest('dialog.soma-structure-dialog')));
     expect(inside).toBe(true);
   }
   const visibility=await dialog.evaluate(element=>{
@@ -138,7 +138,7 @@ test('Applied Structure survives browser Back and still refetches owner page wit
  await expect(page.getByRole('listitem')).toHaveCount(2);
  await page.getByRole('link',{name:'Objectives',exact:true}).click();
  await page.goBack();
- await expect(page.getByLabel('Applied Structure view'))
+ await expect(page.locator('[aria-label="Applied Structure view"]'))
    .toContainText('Customer → Network Element');
  await expect(page.getByRole('listitem')).toHaveCount(2);
  expect(reads.length).toBeGreaterThanOrEqual(2);
