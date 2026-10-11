@@ -4,6 +4,7 @@ import {SelectableCollection} from '../components/SelectableCollection';
 import {BoundedCollection} from '../components/BoundedCollection';
 import {UiStore, emptySelection} from '../state/ui-store';
 import {InfrastructureWorkbookActivity} from './InfrastructureWorkbookActivity';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
 type Ref = Readonly<{kind:string;id:string}>;
@@ -48,8 +49,8 @@ function HistoryView({id,path,onPath}:{id:string;path:string;onPath:(path:string
     if(!infrastructureQuery(next,'history',id))throw new Error('Invalid history continuation');
     const events:History['events']=page.events;
     return <>{page.events.length===0&&<p>No owner history events in this page.</p>}
-      <BoundedCollection caption="Infrastructure event chronology (UTC)" rows={events.map(item=>({id:item.event_id,cells:[item.event_kind,
-        new Date(item.recorded_at_utc*1000).toISOString(),item.effective_at_utc===null?'Unknown effective time':new Date(item.effective_at_utc*1000).toISOString(),
+      <BoundedCollection caption="Infrastructure event chronology (local time)" rows={events.map(item=>({id:item.event_id,cells:[item.event_kind,
+        formatOwnerLocalTime(item.recorded_at_utc),item.effective_at_utc===null?'Unknown effective time':formatOwnerLocalTime(item.effective_at_utc),
         item.summary.reason_code??'No reason code',item.summary.warning_codes.join(', '),
         <ul>{item.summary.changes.map((change,index)=><li key={index}>{change.field}: {historyValue(change.prior)} → {historyValue(change.new)}</li>)}</ul>]}))} next={page.next_cursor!==null} returnScrollToken="history" nextFocusToken="infrastructure:history:next" onNext={()=>onPath(next)}/></>;
   }}/>;

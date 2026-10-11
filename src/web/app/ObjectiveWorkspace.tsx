@@ -6,6 +6,7 @@ import {SelectableCollection} from '../components/SelectableCollection';
 import {BoundedCollection} from '../components/BoundedCollection';
 import {UiStore, emptySelection} from '../state/ui-store';
 import {GroupingProposalList} from './GroupingProposalList';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 
 type Interval = Readonly<{start_utc: number; end_utc: number}>;
 type Aggregate = Readonly<{execution_state: string; aggregate_outcome: string | null; actual_start_utc: number | null;
@@ -34,7 +35,7 @@ function objectiveReview(review:Detail['review']) {
   return <section aria-label="Objective review evidence"><h2>Objective review evidence</h2>
     <p>{review.current===null?'No currently valid Objective review.':`Current owner-reviewed outcome: ${review.current.derived_outcome}. Review event: ${review.current.objective_review_event_id}.`}</p>
     {review.latest===null?<p>No Objective review event recorded.</p>:<>
-      <p>Latest review event: {review.latest.objective_review_event_id}. Recorded outcome: {review.latest.derived_outcome}. Reviewed at (UTC): {instant(review.latest.reviewed_at_utc)}.</p>
+      <p>Latest review event: {review.latest.objective_review_event_id}. Recorded outcome: {review.latest.derived_outcome}. Reviewed locally: {instant(review.latest.reviewed_at_utc)}.</p>
       <p>Owner freshness: {review.latest.stale?'Stale':'Current'}. Reason: {review.latest.reason_code??'None recorded'}.</p>
       {review.latest.stale&&<p className="warning">This preserved review is stale and does not establish the current reviewed outcome.</p>}
     </>}
@@ -42,8 +43,7 @@ function objectiveReview(review:Detail['review']) {
 }
 function instant(value: number | null): string {
   if (value === null) return 'Unknown';
-  if (!Number.isSafeInteger(value) || value < 0) throw new Error('Invalid owner instant');
-  return new Date(value * 1000).toISOString();
+  return formatOwnerLocalTime(value);
 }
 function interval(value: Interval | null): string {return value ? `${instant(value.start_utc)} to ${instant(value.end_utc)}` : 'No accepted interval';}
 function readTime(value: ReadTime | null, asOf: number) {
@@ -108,7 +108,7 @@ export function ObjectiveWorkspace({navigate,restored=null,onReturnState}: {navi
   },[]);
   return <div ref={root} onFocusCapture={event=>{const control=event.target.closest<HTMLElement>('[data-focus-token]');
     if(control&&event.currentTarget.contains(control))store.dispatch({focusToken:control.dataset.focusToken??null});}}>
-    {notice&&<p role="status">{notice}</p>}<h2>Accepted Objective list</h2><p>Envelope and execution remain separate owner projections. Times below are labelled UTC.</p>
+    {notice&&<p role="status">{notice}</p>}<h2>Accepted Objective list</h2><p>Envelope and execution remain separate owner projections. Times below use this device's local time. Authoritative instants remain UTC in the backend.</p>
     <button type="button" data-focus-token="objective:refresh" onClick={() => {setCursor(null); setAsOf(Math.floor(Date.now() / 1000));setRefreshKey(value=>value+1);}}>Refresh Objective attention</button>
     <OwnerProjection<ObjectivePage> path={path} refreshKey={refreshKey} render={page => {
       if (!Array.isArray(page.items) || page.items.length > 200 || page.as_of_utc !== asOf || !Number.isSafeInteger(page.exact_total) || page.exact_total < page.items.length) throw new Error('Invalid owner Objective page');
@@ -135,7 +135,7 @@ export function ObjectiveDetail({id}: {id: string}) {
     if (value.objective_id !== id || !Array.isArray(value.membership) || value.membership.length > 200 || !Number.isSafeInteger(value.member_exact_count) || value.member_exact_count < value.membership.length) throw new Error('Invalid owner Objective detail');
     return <><h2>Objective {value.tracking_handle}</h2><p>Accepted revision: {value.revision}. Archived: {String(value.archive.archived)}.</p>
       {value.superseded_by_objective_id && <p>Superseded by Objective {value.superseded_by_objective_id}.</p>}
-      <h2>Objective envelope</h2><p>Membership-pinned interval (UTC): {interval(value.derived_envelope)}</p>
+      <h2>Objective envelope</h2><p>Membership-pinned interval (local time): {interval(value.derived_envelope)}</p>
       <h2>Actual execution</h2><p>Accepted aggregate state: {value.aggregate_state?.execution_state ?? 'Unavailable'}.</p>
       <p>Actual start: {instant(value.aggregate_state?.actual_start_utc ?? null)}. Actual end: {instant(value.aggregate_state?.actual_end_utc ?? null)}.</p>
       <p>Reviewed aggregate outcome: {value.aggregate_state?.aggregate_outcome ?? 'Unreviewed'}. Starting selected Tasks records Task execution only.</p>
@@ -143,7 +143,7 @@ export function ObjectiveDetail({id}: {id: string}) {
       {objectiveReview(value.review)}
       <h2>Member Tasks</h2><p>{value.member_exact_count} accepted members; {value.membership.length} on this page. This page does not define the complete membership.</p>
       <BoundedCollection caption="Membership-pinned plans and current revision context" rows={value.membership.map(member => ({id:member.task_id,
-        cells:[member.display_name,member.task_kind,`Membership-pinned Task plan (UTC): ${interval(member.accepted_plan)}`,
+        cells:[member.display_name,member.task_kind,`Membership-pinned Task plan (local time): ${interval(member.accepted_plan)}`,
           `Current operational Task plan revision: ${member.current_plan_revision}`,member.plan_membership_mismatch ? 'PLAN_MEMBERSHIP_MISMATCH: reviewed regrouping is required to change the pin.' : 'Current operational plan matches the membership pin.']}))}
         next={value.member_continuation !== null} onNext={() => setCursor(value.member_continuation)}/>
     </>;
