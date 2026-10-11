@@ -35,8 +35,9 @@ test('Infrastructure preserves contextual identity, explicit opening and physica
   await page.getByRole('tab',{name:'IP Addresses',exact:true}).click();await expect(page.getByRole('heading',{name:'Descriptive IP inventory'})).toBeVisible();
   await expect(page.getByText('No automatic primary promotion is implied.',{exact:false})).toBeVisible();
   await page.getByRole('tab',{name:'Components',exact:true}).click();await expect(page.locator('tbody tr').filter({hasText:'SYNTHETIC-SERIAL'})).toHaveCount(1);
-  await expect(page.getByRole('button',{name:'Next page'})).toBeVisible();expect(reads).toBe(4);
+  await expect(page.getByRole('button',{name:'Next page'})).toBeVisible();expect(reads).toBe(3);
   await page.getByRole('tab',{name:'History',exact:true}).click();await expect(page.getByText('operational_name: Synthetic old name → Synthetic new name')).toBeVisible();
+  expect(reads).toBe(4); // History read occurs only after opening its tab.
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 test('Infrastructure oversized owner explorer is rejected with bounded error',async({page})=>{
