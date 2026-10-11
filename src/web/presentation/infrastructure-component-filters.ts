@@ -8,12 +8,13 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{12}$/u;
 const keys=['limit','cursor','state','bom_key','slot_match_key'] as const;
 const bounded=(value:string,limit:number)=>new TextEncoder().encode(value).length<=limit;
 function valid(filters:ComponentFilters):boolean {
-  return !!filters&&typeof filters==='object'&&!Array.isArray(filters)
-    &&Object.keys(filters).length===3
-    &&Object.keys(filters).every(key=>['state','bomKey','slotKey'].includes(key))
-    &&Object.values(filters).every(value=>typeof value==='string')
-    &&(filters.state===''||(COMPONENT_STATES as readonly string[]).includes(filters.state))
-    &&bounded(filters.bomKey,640)&&bounded(filters.slotKey,384);
+  if(!filters||typeof filters!=='object'||Array.isArray(filters))return false;
+  const props=Object.keys(filters);
+  if(props.length!==3||props.some(key=>!['state','bomKey','slotKey'].includes(key)))return false;
+  const {state,bomKey,slotKey}=filters;
+  return typeof state==='string'&&typeof bomKey==='string'&&typeof slotKey==='string'
+    &&(state===''||(COMPONENT_STATES as readonly string[]).includes(state))
+    &&bounded(bomKey,640)&&bounded(slotKey,384);
 }
 export function buildComponentQuery(id:string,filters:ComponentFilters):string|null {
   if(!uuid.test(id)||!valid(filters))return null;
