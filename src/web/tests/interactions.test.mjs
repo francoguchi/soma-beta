@@ -403,3 +403,24 @@ test('Infrastructure Rack occupancy has closed identity-only return intent witho
     {...rack,openedKind:'invented'}, {...rack,cache:{occupants:[1,2,3]}},
   ])assert.equal(infrastructureIntent(invalid),null);
 });
+
+test('Room and Cloud explorer opens are closed contextual histories rather than invented detail DTOs',()=>{
+  const id='11111111-1111-4111-8111-111111111111';
+  const root={explorer:'/api/v1/infrastructure/tree?limit=200',openedId:id,
+    tab:'Summary',components:null,history:null,workbook:null};
+  for(const kind of ['room','cloud_deployment']){
+    const opened={...root,openedKind:kind};
+    assert.equal(infrastructureIntent(opened),opened);
+    const nav=new NavigationHistory();
+    const token=nav.remember({route:'/infrastructure',filterFingerprint:'a'.repeat(64),
+      activeId:kind+':'+id,selectedId:kind+':'+id,memberIds:[],scrollAnchor:null,
+      focusToken:'row:'+kind+':'+id,infrastructure:opened});
+    assert.deepEqual(nav.restore(token).infrastructure,opened);
+    for(const bad of [{...opened,openedId:null},{...opened,tab:'History'},
+      {...opened,history:'/api/v1/infrastructure/history?target_kind='+kind+'&target_id='+id+'&limit=5'},
+      {...opened,components:'/api/v1/infrastructure/network-elements/'+id+'/components?limit=200'},
+      {...opened,ownerResponse:{name:'forbidden cache'}},{...opened,openedKind:'unrelated'}]){
+      assert.equal(infrastructureIntent(bad),null);
+    }
+  }
+});
