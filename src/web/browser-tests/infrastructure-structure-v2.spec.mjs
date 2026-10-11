@@ -159,3 +159,21 @@ test('Study29 pointer drag reorders only intermediate display levels with unchan
  expect(order.join('|').indexOf('RACK OWNER')).toBeLessThan(order.join('|').indexOf('SITE OWNER'));
  expect(reads).toHaveLength(1);
 });
+
+test('Structure Apply persists within document session on ordinary workspace navigation without copying owner records',async({page})=>{
+ const reads=[];await fixture(page,reads);
+ await page.route('**/api/v1/objectives?*',route=>{
+   const asOf=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+   return route.fulfill({json:{items:[],continuation:null,exact_total:0,as_of_utc:asOf}});
+ });
+ await page.getByRole('button',{name:'Structure',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Direct to Network Element'}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Apply view'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(2);
+ await page.getByRole('link',{name:'Objectives',exact:true}).click();
+ await page.getByRole('link',{name:'Infrastructure',exact:true}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(2);
+ await expect(page.locator('[aria-label="Applied Structure view"]'))
+   .toContainText('Customer → Network Element');
+ expect(reads.length).toBeGreaterThanOrEqual(2);
+});
