@@ -182,6 +182,46 @@ test('Room and Cloud current owner details are separate from lazy member and his
   expect(memberReads.at(-1).searchParams.get('parent_id')).toBe(cloud);
   expect(historyReads).toHaveLength(1);
 });
+test('Room direct member cursor and section survive browser Back with fresh current owner evidence',async({page})=>{
+  const requests=[];let changed=false;
+  await fixtures(page,()=>({events:[],next_cursor:null}),[]);
+  await page.route('**/api/v1/infrastructure/related-children?**',route=>{
+    const url=new URL(route.request().url());requests.push(url.search);
+    const isNext=url.searchParams.has('cursor');
+    const row=(n,label)=>({kind:'rack',id:id(n),label,lifecycle:'active',
+      site_id:site,parent_id:room,relationship:'room_racks'});
+    const digest=createHash('sha256').update(JSON.stringify({
+      lifecycle:null,limit:100,parent_id:room,parent_kind:'room',relationship:'room_racks',
+    })).digest('hex');
+    return route.fulfill({json:isNext?{
+      items:[row(101,changed?'Fresh current Room member':'Original Room member')],next_cursor:null,
+    }:{
+      items:Array.from({length:100},(_,i)=>row(i+1,'Room Rack '+(i+1))),
+      next_cursor:{version:1,query_id:'InfrastructureRelationshipChildrenQuery',
+        sort_registry_id:'InfrastructureRelationshipChildrenQuery_ORDER_V1',
+        last_key_tuple:[id(100)],filter_fingerprint:digest,
+        null_order:'NOT_APPLICABLE'},
+    }});
+  });
+  await page.route('**/api/v1/objectives?**',route=>route.fulfill({json:{
+    items:[],continuation:null,exact_total:0,
+    as_of_utc:Number(new URL(route.request().url()).searchParams.get('as_of_utc')),
+  }}));
+  await page.goto('http://127.0.0.1:4174/infrastructure');
+  await page.getByRole('listitem').filter({hasText:'Room R'}).press('Enter');
+  const opened=page.getByRole('region',{name:'Opened Room'});
+  await opened.getByRole('tab',{name:'Racks'}).click();
+  await opened.getByRole('button',{name:'Next member page'}).click();
+  await expect(opened).toContainText('Member page 2');
+  await expect(opened).toContainText('Original Room member');
+  const cursorPath=requests.at(-1);
+  await page.getByRole('link',{name:'Objectives',exact:true}).click();
+  changed=true;await page.goBack();
+  await expect(page.getByRole('region',{name:'Opened Room'})).toContainText('Fresh current Room member');
+  await expect(opened).toContainText('Member page 2');
+  expect(requests.at(-1)).toBe(cursorPath);
+  expect(JSON.stringify(await page.evaluate(()=>history.state))).not.toContain('Original Room member');
+});
 const historyValue=(kind,item)=>({
   kind,text_value:kind==='text'?item:null,integer_value:kind==='integer'?item:null,
   boolean_value:kind==='boolean'?item:null,entity_ref:null,
