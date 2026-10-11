@@ -177,3 +177,47 @@ test('Structure Apply persists within document session on ordinary workspace nav
    .toContainText('Customer → Network Element');
  expect(reads.length).toBeGreaterThanOrEqual(2);
 });
+
+test('Hidden-only owner page does not suppress authoritative cursor or invent missing NEs',async({page})=>{
+ const calls=[];
+ const site=nodes[0],ne=nodes[4];
+ const next={version:1,query_id:'InfrastructureExplorerQuery',
+   sort_registry_id:'InfrastructureExplorerQuery_ORDER_V1',
+   null_order:'NULLS_LAST',last_key_tuple:[id(1),id(1),0,id(1)],
+   filter_fingerprint:'a'.repeat(64)};
+ await page.route('**/api/v1/infrastructure/tree?*',route=>{
+   const url=new URL(route.request().url());calls.push(url);
+   return route.fulfill({json:url.searchParams.has('cursor')
+     ?{nodes:[ne],next_cursor:null}
+     :{nodes:[site],next_cursor:next}});
+ });
+ await page.goto('http://127.0.0.1:4174/infrastructure');
+ await expect(page.getByRole('listitem')).toHaveCount(1);
+ await page.getByRole('button',{name:'Structure',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Direct to Network Element'}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Apply view'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(0);
+ await expect(page.getByRole('status').filter({hasText:'Every owner row on this page is hidden'}))
+   .toContainText('Continue to the next owner page');
+ await page.getByRole('button',{name:'Next explorer page'}).click();
+ await expect(page.getByRole('listitem').filter({hasText:'NE OWNER'})).toHaveCount(1);
+ expect(calls).toHaveLength(2);
+ expect(JSON.parse(calls[1].searchParams.get('cursor'))).toEqual(next);
+});
+test('Structure footer remains visually reachable when viewport shrinks while 200% modal is open',async({page})=>{
+ await fixture(page,[]);
+ await page.setViewportSize({width:960,height:820});
+ await page.evaluate(()=>{document.documentElement.style.zoom='200%';});
+ await page.getByRole('button',{name:'Structure',exact:true}).click();
+ const modal=page.getByRole('dialog',{name:'Infrastructure / Structure view'});
+ await expect(modal.getByRole('button',{name:'Apply view'})).toBeVisible();
+ await page.setViewportSize({width:460,height:550});
+ await expect.poll(async()=>modal.evaluate(el=>{
+   const bounds=el.getBoundingClientRect();
+   const apply=el.querySelector('.soma-structure-dialog-actions .primary').getBoundingClientRect();
+   return bounds.top>=-1&&bounds.bottom<=innerHeight+1&&bounds.left>=-1&&bounds.right<=innerWidth+1
+     &&apply.top>=-1&&apply.bottom<=innerHeight+1;
+ })).toBe(true);
+ await modal.getByRole('button',{name:'Apply view'}).click();
+ await expect(page.getByRole('button',{name:'Structure',exact:true})).toBeFocused();
+});
