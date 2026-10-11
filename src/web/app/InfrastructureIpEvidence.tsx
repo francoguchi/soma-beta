@@ -10,18 +10,32 @@ type Cursor=Readonly<{version:1;query_id:'IpCandidateQuery';sort_registry_id:'Ip
   null_order:'NOT_APPLICABLE';last_key_tuple:readonly [string,string];filter_fingerprint:string}>;
 type Page=Readonly<{items:readonly Row[];next_cursor:Cursor|null;exact_count:number}>;
 const first=(ip:string)=>'/api/v1/infrastructure/ip-candidates?canonical_address='+encodeURIComponent(ip)+'&limit=25';
-function validate(page:Page,hash:string,ip:string):void{
+function validate(page:Page,hash:string,ip:string,path:string):void{
   if(typeof ip!=='string'||ip.length===0||new TextEncoder().encode(ip).length>256
     ||!page||!Array.isArray(page.items)||page.items.length>25
     ||!whole(page.exact_count)||page.exact_count<page.items.length
     ||!Object.hasOwn(page,'next_cursor'))
     throw new Error('Invalid IP candidate owner projection');
+  const encoded=new URL(path,'http://127.0.0.1').searchParams.get('cursor');
+  let seek:readonly [string,string]|null=null;
+  if(encoded!==null){
+    const cursor=JSON.parse(encoded) as Cursor;
+    if(!cursor||cursor.version!==1||cursor.query_id!=='IpCandidateQuery'
+      ||cursor.sort_registry_id!=='IpCandidateQuery_ORDER_V1'
+      ||cursor.null_order!=='NOT_APPLICABLE'||cursor.filter_fingerprint!==hash
+      ||!Array.isArray(cursor.last_key_tuple)||cursor.last_key_tuple.length!==2
+      ||!uuid.test(cursor.last_key_tuple[0])||!uuid.test(cursor.last_key_tuple[1]))
+      throw new Error('Foreign requested IP candidate cursor');
+    seek=cursor.last_key_tuple;
+  }
   let last:readonly [string,string]|null=null;
   const seen=new Set<string>();
   for(const item of page.items){
     if(!item||!uuid.test(item.network_element_ip_id)||!uuid.test(item.network_element_id)
       ||!uuid.test(item.site_id)||typeof item.is_primary!=='boolean'
       ||seen.has(item.network_element_ip_id)
+      ||seek&&(item.network_element_id<seek[0]||
+        item.network_element_id===seek[0]&&item.network_element_ip_id<=seek[1])
       ||last&&(item.network_element_id<last[0]||
         item.network_element_id===last[0]&&item.network_element_ip_id<=last[1]))
       throw new Error('Invalid IP owner candidate or ordering');
@@ -62,7 +76,7 @@ export function InfrastructureIpEvidence({address,elementId}:{address:string;ele
         descriptive. They do not establish connectivity, routing, duplication policy or reachable hosts.</p>
       {hash===null?<p role="status">Preparing IP owner filter.</p>:
         <OwnerProjection<Page> path={ownerPagePath(history)} render={page=>{
-          validate(page,hash,address);
+          validate(page,hash,address,ownerPagePath(history));
           const selected=page.items.some(item=>item.network_element_id===elementId);
           return <>
             <p>Owner-reported active address matches: {page.exact_count}. Current page: {page.items.length}.</p>
