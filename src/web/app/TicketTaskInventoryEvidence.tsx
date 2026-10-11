@@ -4,7 +4,7 @@ import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection'
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const sha=/^[0-9a-f]{64}$/u;
 const whole=(value:unknown):value is number=>typeof value==='number'&&
-  Number.isSafeInteger(value)&&value>=0&&value<=8640000000000;
+  Number.isSafeInteger(value)&&value>=0&&value<=8640000000;
 const positive=(value:unknown)=>whole(value)&&value>=1;
 const text=(value:unknown)=>typeof value==='string'&&value.length>0&&
   new TextEncoder().encode(value).length<=1024;
