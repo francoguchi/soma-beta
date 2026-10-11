@@ -2,6 +2,7 @@ import {useContext,useState} from 'react';
 import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection';
 import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
 import {TicketTaskEvidence} from './TicketTaskEvidence';
+import {TicketTaskInventoryEvidence} from './TicketTaskInventoryEvidence';
 
 type TicketType='service_request'|'rfc';
 type Plan=Readonly<{plan_revision_id:string;revision:number;start_utc:number;end_utc:number;origin:string}>;
@@ -97,6 +98,7 @@ function TaskDetails({id,summary,navigate}:{id:string;summary:Task;navigate:(pat
       {detail.attention_summary.warning_codes.map(code=><p key={code} className="warning">{code}</p>)}
       <p>Plan occupancy, actual execution, and reviewed outcome are separate accepted owner facts.</p>
       <TicketTaskEvidence taskId={id} navigate={navigate}/>
+      <TicketTaskInventoryEvidence taskId={id}/>
     </aside>;
   }}/>;
 }
