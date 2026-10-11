@@ -34,7 +34,7 @@ export function verifyInfrastructureExplorerPage(page:InfrastructureExplorerPage
         &&uuid.test(node.parent_context_id))
       ||!(node.lifecycle===null||node.lifecycle==='active'||node.lifecycle==='archived')
       ||!Array.isArray(node.warning_codes)||node.warning_codes.length>16
-      ||node.warning_codes.some(code=>!bounded(code,128)))
+      ||node.warning_codes.some((code:string)=>!bounded(code,128)))
       throw new Error('Invalid Infrastructure explorer owner node');
     const identity=node.kind+':'+node.id;
     if(identities.has(identity))throw new Error('Duplicate Infrastructure explorer owner context');
