@@ -1,0 +1,252 @@
+{
+  "schema": "SOMA_UI_V2_LLD08_PROPOSED_READ_CONTRACTS_V1",
+  "status": "PROPOSAL_ONLY_NOT_NORMATIVE_OR_IMPLEMENTED",
+  "repository": "francoguchi/soma-beta",
+  "design_pin": "9a0e891127a771251afccca1a281b7ef7dde9e5f",
+  "implementation_baseline": "7c263a80e850f353eb1f8ed50ea75bdd3acbd50b",
+  "owner": "LLD-08 Infrastructure, review by product/design owner required before provider changes",
+  "auth": "LOCAL_ADMIN_AUTHENTICATED_V1 supplied by LLD-12; all new reads are GET with no body or CSRF command action",
+  "read_consistency": "one LLD-01 stable ReadSnapshot per request; cursor pages are fresh snapshots, not a pinned transaction across navigations",
+  "identity": "canonical lowercase UUIDv4; no approximate name, serial or descriptive identity lookup",
+  "unknown_fields": "reject both request and response; no transport-derived ownership",
+  "detail_queries": [
+    {
+      "name": "RoomDetailQuery",
+      "input_type": "INFRA_ROOM_DETAIL_QUERY_V1",
+      "response_type": "INFRA_ROOM_DETAIL_RESPONSE_V1",
+      "route": "GET /api/v1/infrastructure/rooms/{room_id}",
+      "request": {
+        "room_id": "uuid4 path-only"
+      },
+      "response": {
+        "room_id": "uuid4",
+        "site_id": "uuid4",
+        "customer_org_id": "uuid4 (derived via sites)",
+        "name": "nonblank <=640 UTF-8 bytes / 160 graphemes",
+        "lifecycle": "active|archived",
+        "revision": "integer>=1",
+        "rack_count": "integer>=0, all persisted Racks regardless lifecycle (decision pending owner sign-off)"
+      },
+      "sources": [
+        "rooms PRIMARY KEY",
+        "sites PRIMARY KEY via rooms.site_id",
+        "racks(room_id,lifecycle_state,rack_id) COUNT, no child materialization"
+      ],
+      "error_candidates": [
+        "INFRA_NOT_FOUND",
+        "INFRA_STALE"
+      ],
+      "notes": [
+        "No assumed room move or site customer correction",
+        "No current Rack DTOs, occupancy layout, Cloud or network ancestry inferred",
+        "Archived Room remains readable"
+      ]
+    },
+    {
+      "name": "CloudDeploymentDetailQuery",
+      "input_type": "INFRA_CLOUD_DEPLOYMENT_DETAIL_QUERY_V1",
+      "response_type": "INFRA_CLOUD_DEPLOYMENT_DETAIL_RESPONSE_V1",
+      "route": "GET /api/v1/infrastructure/cloud-deployments/{cloud_deployment_id}",
+      "request": {
+        "cloud_deployment_id": "uuid4 path-only"
+      },
+      "response": {
+        "cloud_deployment_id": "uuid4",
+        "cloud_type_id": "uuid4 reference; not a physical parent",
+        "site_id": "uuid4",
+        "customer_org_id": "uuid4 (derived via sites)",
+        "name": "nonblank <=800 UTF-8 bytes / 200 graphemes",
+        "lifecycle": "active|archived",
+        "revision": "integer>=1",
+        "assigned_network_element_count": "integer>=0, direct current assignments including archived NE (decision pending owner sign-off)"
+      },
+      "sources": [
+        "cloud_deployments PRIMARY KEY",
+        "cloud_types PRIMARY KEY existence/FK",
+        "sites PRIMARY KEY",
+        "cloud_assignment_current(cloud_deployment_id,network_element_id) COUNT; cross-Site consistency validation"
+      ],
+      "error_candidates": [
+        "INFRA_NOT_FOUND",
+        "INFRA_STALE"
+      ],
+      "notes": [
+        "Cloud Type reusable independent reference",
+        "Cloud Deployment scoped to Site, never physical ancestor",
+        "No Cloud assignment implied by Site membership",
+        "Archived Deployment remains readable; no mutation authority"
+      ]
+    }
+  ],
+  "relationship_children": {
+    "name": "InfrastructureRelationshipChildrenQuery",
+    "input_type": "INFRA_RELATIONSHIP_CHILDREN_QUERY_V1",
+    "response_type": "INFRA_RELATIONSHIP_CHILDREN_RESPONSE_V1",
+    "route": "GET /api/v1/infrastructure/related-children",
+    "request": {
+      "parent_kind": "enum:site|room|cloud_deployment|network_element",
+      "parent_id": "uuid4",
+      "relationship": "enum:site_unracked_elements|room_racks|cloud_assigned_elements|element_contained_elements",
+      "lifecycle": "optional enum:active|archived; omitted means both",
+      "limit": "int:1..200, default 100",
+      "cursor": "CURSOR_V1 optional"
+    },
+    "pairs": [
+      {
+        "parent_kind": "site",
+        "relationship": "site_unracked_elements",
+        "child_kind": "network_element",
+        "predicate": "network_elements.site_id = parent AND network_element_placement_current.rack_id IS NULL with existing current placement row",
+        "join": "network_elements(site_id,lifecycle_state,network_element_id) then network_element_placement_current PK",
+        "link": "physical_site; explicit unracked, never Cloud assignment"
+      },
+      {
+        "parent_kind": "room",
+        "relationship": "room_racks",
+        "child_kind": "rack",
+        "predicate": "racks.room_id = parent",
+        "join": "racks(room_id,lifecycle_state,rack_id)",
+        "link": "physical_room"
+      },
+      {
+        "parent_kind": "cloud_deployment",
+        "relationship": "cloud_assigned_elements",
+        "child_kind": "network_element",
+        "predicate": "cloud_assignment_current.cloud_deployment_id = parent with NE.site_id = deployment.site_id",
+        "join": "cloud_assignment_current(cloud_deployment_id,network_element_id), network_elements PK",
+        "link": "cloud_assignment; never Rack/containment"
+      },
+      {
+        "parent_kind": "network_element",
+        "relationship": "element_contained_elements",
+        "child_kind": "network_element",
+        "predicate": "network_element_containment_current.parent_network_element_id = parent",
+        "join": "network_element_containment_current(parent_network_element_id,child_network_element_id), network_elements PK",
+        "link": "direct containment only; child may belong to a different Site unless a separately accepted rule says otherwise"
+      }
+    ],
+    "response": {
+      "items": "array<INFRA_RELATIONSHIP_CHILD_ROW_V1>, max 200",
+      "next_cursor": "CURSOR_V1|null"
+    },
+    "row": {
+      "kind": "rack|network_element according to selected relationship",
+      "id": "canonical uuid4",
+      "label": "nonblank UTF-8 <=800 bytes (rack <=640)",
+      "lifecycle": "active|archived",
+      "site_id": "uuid4 derived from current Site owner relationship; may differ for containment child",
+      "parent_id": "exact requested owner parent UUID4",
+      "relationship": "exact requested relationship"
+    },
+    "sort": "child UUID4 ASC (unique within given relationship and parent); no locale-dependent labels",
+    "cursor": {
+      "version": 1,
+      "query_id": "InfrastructureRelationshipChildrenQuery",
+      "sort_registry_id": "InfrastructureRelationshipChildrenQuery_ORDER_V1",
+      "null_order": "NOT_APPLICABLE",
+      "last_key_tuple": [
+        "child_uuid4"
+      ],
+      "filter_fingerprint": "sha256 of canonical versioned {parent_kind,parent_id,relationship,lifecycle:null|value,limit} input; bind across pages; query/ordering shape follows LLD-01 CURSOR_V1"
+    },
+    "pagination": "keyset; fetch limit+1, emit at most limit; no exact_total unless separately approved; first page empty does not imply other relation families are empty",
+    "validation": "reject invalid parent-kind/relationship pairs, duplicates, forged/foreign cursors, wrong digest, unexpected keys, missing/archived parent guessing, duplicate rows and contradictory Site joins",
+    "error_candidates": [
+      "CURSOR_INVALID",
+      "INFRA_NOT_FOUND",
+      "INFRA_STALE"
+    ],
+    "integrity": "Cross-Site Cloud assignment is corruption (fail whole page, do not hide invalid row); cross-Site containment is not automatically invalid under current schema. Missing current placement for an active NE is integrity error, not implicit unracked evidence.",
+    "performance": "Use accepted FK/parent indexes; prove EXPLAIN QUERY PLAN for dense parents (>=10000 children). If child_uuid ordering needs additional index, separately allocate a forward migration; never rewrite existing migrations."
+  },
+  "reuse_existing": [
+    {
+      "relation": "customer_org -> site",
+      "owner": "InfrastructureExplorerQuery",
+      "filters": [
+        "customer_org_id",
+        "node_kind=site"
+      ]
+    },
+    {
+      "relation": "site -> room",
+      "owner": "InfrastructureExplorerQuery",
+      "filters": [
+        "site_id",
+        "node_kind=room"
+      ]
+    },
+    {
+      "relation": "site -> cloud_deployment",
+      "owner": "InfrastructureExplorerQuery",
+      "filters": [
+        "site_id",
+        "node_kind=cloud_deployment"
+      ]
+    },
+    {
+      "relation": "site -> all network_elements",
+      "owner": "InfrastructureExplorerQuery",
+      "filters": [
+        "site_id",
+        "node_kind=network_element"
+      ]
+    },
+    {
+      "relation": "rack -> placed network_elements, U intervals",
+      "owner": "RackOccupancyQuery",
+      "caveat": "already explicitly bounded <=4096, not a 200-row paginated children list; do not masquerade as paginated"
+    },
+    {
+      "relation": "room/cloud historical owner events",
+      "owner": "InfrastructureHistoryQuery",
+      "caveat": "historical evidence is not a current entity detail"
+    }
+  ],
+  "owner_choices_required": [
+    "Ratify proposed all-lifecycle rack_count / assigned_network_element_count semantics (or change DTO naming to explicit filtered counts).",
+    "Confirm whether unified related-children route and four owner relation kinds are preferable to four dedicated family endpoints.",
+    "Confirm UUID4 child order and index/EXPLAIN performance gate; do not silently add unallocated indexes/migrations.",
+    "Choose error-code bindings and DTO prefixes through accepted LLD-08 types/errors/route ownership.",
+    "Confirm freshness semantics across page boundaries: per-request stable snapshot, no fictional pinned multi-page snapshot."
+  ],
+  "design_promotion_targets": [
+    "spec/lld/infrastructure/queries/v2/room-detail.json",
+    "spec/lld/infrastructure/queries/v2/cloud-deployment-detail.json",
+    "spec/lld/infrastructure/queries/v2/relationship-children.json",
+    "spec/lld/infrastructure/types/queries.json",
+    "spec/lld/infrastructure/routes/site-placement.json",
+    "spec/lld/infrastructure/routes/relationships-models.json",
+    "spec/lld/infrastructure/routes/relationship-children.json (if accepted; also routes.json)",
+    "spec/lld/infrastructure/implementation/module-map.json",
+    "spec/lld/infrastructure/_index.json",
+    "spec/lld/infrastructure/tests/{acceptance,failure-injection,traceability}.json and corresponding query traceability",
+    "global design integrity gate and revision pin update only after owner acceptance"
+  ],
+  "implementation_sequence": [
+    "Accept the read contract on design authority; do NOT implement endpoint based solely on this proposal.",
+    "Add focused owner query DTO/ReadSnapshot services and route adapters, no writer UnitOfWork, audit, replay, or migration unless separately allocated.",
+    "Implement Room and Cloud workbench summary read and strict fail-closed DTO validation; historical tabs use existing InfrastructureHistoryQuery.",
+    "Add lazy parent children with exact owner cursor and browser return intent, never cache owner DTO or prefetch across unfetched pages.",
+    "Run deterministic Python owner/transport tests, Node contracts, Edge 200%-zoom/keyboard/return tests, then Vite frozen source/build and security/live acceptance."
+  ],
+  "acceptance_cases": [
+    "Room exact active and archived point, derived parent Site/Customer, correct revision/name/rack count",
+    "Room foreign/missing/malformed identity and unexpected DTO fields fail closed",
+    "Room same-name counterpart remains distinct",
+    "Cloud Deployment exact active/archived, Cloud Type reference, derived Site/Customer, assignment count",
+    "Cloud Type shared across Sites never implies a common physical parent",
+    "Missing Cloud/foreign Site or corrupted cross-Site assignment fails whole read",
+    "Parent kind and relationship incompatible, invalid UUID/unknown query keys rejected before read",
+    "Room Rack list includes only direct room children, excludes sibling rooms",
+    "Site explicitly unracked NE returns only those with real null current placement; missing placement is not null",
+    "Cloud direct assignment excludes Site peers with no accepted assignment; cross-Site joins rejected",
+    "Containment direct children only; no implicit descendants or inferred same-Site child rule",
+    "Fully populated 200-item page and true next cursor; last page null cursor; no silent 200-item truncation",
+    "Tampered cursor ID/order/fingerprint/parent/relationship/lifecycle/limit fails closed",
+    "Stable UUID4 ordering and deterministic tie-breakers; no inconsistent or duplicated row identity",
+    "10000-child parent indexed keyset EXPLAIN/query-count bound; no O(N^2) ancestry walks",
+    "Browser Back/Forward restores only identity, filter, page cursor, focus and scroll, refetches current owner",
+    "Narrow/200%-zoom, keyboard and error/empty states; no fabricated topology or mock owner data"
+  ]
+}

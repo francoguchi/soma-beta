@@ -28,3 +28,8 @@ Design authority work required before new routes: add accepted LLD-08 query/type
 Real exact Site/Customer explorer filters; read-only NE → accepted Site point, Rack occupancy, Cloud history and containment parent NE; Rack occupancy → occupant NE; independent physical vs logical current-owner-page lens, Study29 presentation view and focus/return state. All target detail reads validate their own owner responses. A user may expand only pages actually fetched; empty current page does not prove globally empty membership.
 
 Do not claim native Windows certification for source changes after prior verified HEAD `39963ad2`. Draft PR #80 and protected implementation donor remain unchanged.
+
+
+## Detailed owner-read proposal prepared (2026-10-11)
+
+The review-ready **non-normative** machine-readable contract is [LLD08_ROOM_CLOUD_READ_CONTRACT_PROPOSAL.json](LLD08_ROOM_CLOUD_READ_CONTRACT_PROPOSAL.json), with [human rationale and decisions](LLD08_ROOM_CLOUD_READ_CONTRACT_PROPOSAL.md). It refines the older broad ideas above into **two proposed exact point reads plus one four-edge children read**, deliberately **reusing** the current filtered Explorer for Customer→Sites, Site→Rooms/Cloud/NE and the existing RackOccupancyQuery rather than creating duplicated owner queries. The draft identifies exact proposed DTOs/route families, cursor binding, density/index gates, owner choices D1–D4 and design promotion checklist. **None** of these proposed endpoints exists until accepted in the pinned normative design; the implemented Room/Cloud UI continues to show explicitly marked historical context only. Focused Windows tests on `b26a04e` and its frozen-assets-only successor `7c263a80` are green; they do not certify candidate future owner GETs.
