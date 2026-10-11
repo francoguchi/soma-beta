@@ -13,6 +13,7 @@ import {verifyNetworkElement} from '../presentation/infrastructure-element';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
 import {InfrastructureExplorerFilters} from './InfrastructureExplorerFilters';
+import {buildExplorerQuery} from '../presentation/infrastructure-explorer-filters';
 import {LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
@@ -260,7 +261,11 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
               {node.warning_codes.map(warning=><p className="warning" key={warning}>{warning}</p>)}</>;}}/>
           {page.next_cursor!==null&&<button type="button" data-focus-token="infrastructure:explorer:next" onClick={()=>{store.dispatch({selection:emptySelection});setIntent({...intent,explorer:next});}}>Next explorer page</button>}</>;
       }}/></section>{intent.openedId?(intent.openedKind==='site'?
-          <InfrastructureSiteDetails key={'site:'+intent.openedId} id={intent.openedId}/>:
+          <InfrastructureSiteDetails key={'site:'+intent.openedId} id={intent.openedId}
+            onBrowseSite={(customer,site)=>{
+              const next=buildExplorerQuery({customerOrgId:customer,siteId:site,nodeKind:'',lifecycle:''});
+              if(next!==null)applyOwnerFilters(next);
+            }}/>:
           intent.openedKind==='rack'?<InfrastructureRackOccupancy key={'rack:'+intent.openedId} id={intent.openedId}/>:
           (intent.openedKind==='room'||intent.openedKind==='cloud_deployment')?
           <InfrastructureContextHistory key={intent.openedKind+':'+intent.openedId}
