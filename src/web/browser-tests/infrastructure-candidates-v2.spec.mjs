@@ -49,7 +49,7 @@ test('Candidate evidence opens lazily with separate exact Site/Model filters and
   await panel.getByRole('button',{name:'Inspect related Network Element candidates'}).click();
   const evidence=panel.getByRole('region',{name:'Related NE candidate evidence'});
   await expect(evidence.getByRole('table',{name:'Network Element owner candidates'})).toContainText('MODEL_EXACT');
-  await expect(evidence).toContainText('not a verified');
+  await expect(evidence).toContainText('NOT a verified');
   expect(reads).toHaveLength(1);
   expect(reads[0].searchParams.get('model_id')).toBe(model);
   expect(reads[0].searchParams.get('site_id')).toBe(site);
