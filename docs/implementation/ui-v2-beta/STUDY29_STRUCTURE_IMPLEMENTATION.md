@@ -1,6 +1,6 @@
 # SOMA UI V2 — Study 29 Structure interaction integration
 
-Status: **implemented in `feat/beta-ui-v2` as source, NOT YET verified in the Windows operator bundle**.
+Status: **implemented on `feat/beta-ui-v2`; operator verified 11/11 Study29 Edge on source HEAD `39963ad2`**. Later Structure lens/recovery changes are **source-only, not yet Windows verified**. See `CONTINUE.md`.
 Study 30 remains the primary visual/interaction design; Study 29 is supporting prototype interaction evidence.
 
 ## Implemented on real Infrastructure surface
@@ -43,3 +43,25 @@ No Infrastructure mutation endpoint, database model, security policy, migration,
 - Following that verification, a **source-only** usability refinement lets the operator explicitly press `Show hidden Structure levels` on a current owner page where the active projection hid every available row. It calls the existing document-session `applySessionStructure(FULL_STRUCTURE)` and changes no owner data or query. Added a **12th** Study29 Edge test verifying the same owner rows are revealed without another owner request and without opening a detail.
 - Study29 remains an *owner-page display view*, not a true cross-page structural hierarchy. The new LLD08 exact Customer/Site/kind/lifecycle filters and Site owner-backed drill-down also use original owner query keys, not invented Customer/Cloud ancestor rows. Full Room/Cloud current-detail and multi-page ancestry remain future explicit LLD08 read contracts; do not interpret the prototype as authority to fabricate them.
 - Updated consolidated operator gate in `CONTINUE.md`. All post-`39963ad2` source requires a new Windows frontend test/build/asset verification and Edge regression; **latest source not yet certified**.
+
+## Approved separation — 2026-10-11
+
+The operator approved two independent but connected relationship views: **physical**
+Customer → Site → Room → Rack → Network Element; **logical** Site-scoped Cloud
+Deployment assignments and Network Element containment. Cloud Type remains a
+different reusable reference. The Study29 Customer→Cloud→Site display path is
+a configurable **example order**, not a claim that Cloud owns Sites.
+
+On the real Infrastructure page, the separately labelled Physical structure
+vs Cloud and containment owner-page lenses make that distinction explicit.
+These filters preserve original row identities, the authoritative next-page
+cursor, and the presentation-only Structure controls. New browser Back
+intent carries only the closed three-value lens; both Structure and lens
+preferences remain document-session-only. Accepted NE relationship links
+open Site, Rack occupancy, Cloud history or containment-parent NE owner reads
+**only on explicit action**, and Rack owner occupancy can open a validated
+occupant NE point. Full Room/Cloud point DTOs and lazy children query owners
+require normative LLD-08 design approval before implementation:
+`INFRASTRUCTURE_RELATIONSHIP_PLAN.md`.
+
+Current overall 83 Node/80 Edge test targets are NOT yet verified on Windows.
