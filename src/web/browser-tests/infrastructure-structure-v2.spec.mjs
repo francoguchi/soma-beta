@@ -71,7 +71,7 @@ test('Intermediate levels can be hidden, reordered and revealed using keyboard-a
   await dialog.getByRole('button',{name:'Move Site up'}).click();
   await dialog.getByRole('button',{name:'Move Rack up'}).click();
   await expect(dialog.getByRole('region',{name:'Structure example path'}))
-    .toContainText('Customer → Site → Rack → Cloud → Network Element');
+    .toContainText('Customer → Site → Cloud → Rack → Network Element');
   await dialog.getByRole('button',{name:'Apply view'}).click();
   await expect(page.getByRole('listitem').filter({hasText:'ROOM OWNER'})).toHaveCount(0);
   await trigger.click();dialog=page.getByRole('dialog');
