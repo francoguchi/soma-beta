@@ -25,10 +25,16 @@ test('accepted Room member cursor preserves 51 identity paths with exact filters
  for(const bad of [
    {...history,page:30},{...history,paths:[first,first]},
    {...history,paths:[first,second+'&evil=1']},{...history,extra:1},
-   {...history,paths:[first,nextMembersPath('room',room,{...cursor(),filter_fingerprint:'A'.repeat(64)})]},
+   // A forged cursor must enter through an untrusted raw path, not through
+   // nextMembersPath(), which correctly refuses to construct it.
+   {...history,paths:[first,first+'&cursor='+encodeURIComponent(JSON.stringify({
+     ...cursor(),filter_fingerprint:'A'.repeat(64),
+   }))]},
  ]){
    assert.equal(validMembersHistory(bad,'room',room),false);
  }
+ assert.throws(()=>nextMembersPath('room',room,{...cursor(),filter_fingerprint:'A'.repeat(64)}),
+   /Invalid direct-member continuation/u);
  assert.equal(validRoomCloudState({section:'Members',members:null},'room',room),false);
  assert.equal(validRoomCloudState({section:'Summary',members:null},'room',room),true);
  assert.equal(validMembersHistory(history,'cloud_deployment',room),false);
