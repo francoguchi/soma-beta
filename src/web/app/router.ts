@@ -32,7 +32,7 @@ export type ReturnState = Readonly<{route: string; filterFingerprint: string; ac
   inventoryQueries?:Readonly<{stock:string;attention:string}>;infrastructure?:InfrastructureIntent;settings?:SettingsIntent;ticketNotesQuery?:string}>;
 export const infrastructureTabs=['Summary','Placement','Components','IP Addresses','Relationships','History','Workbook Activity'] as const;
 export type WorkbookIntent=Readonly<{history:string;run:string|null;proposalId:string|null;candidatePage:number}>;
-export type InfrastructureIntent=Readonly<{explorer:string;openedId:string|null;openedKind?:'site'|'rack'|'network_element';tab:typeof infrastructureTabs[number];
+export type InfrastructureIntent=Readonly<{explorer:string;openedId:string|null;openedKind?:'site'|'room'|'rack'|'cloud_deployment'|'network_element';tab:typeof infrastructureTabs[number];
   components:string|null;history:string|null;workbook:WorkbookIntent|null}>;
 type InfrastructureQuery='explorer'|'components'|'history'|'workbookHistory'|'workbookRun';
 const infraUuid=(value:unknown):value is string=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value);
@@ -69,11 +69,11 @@ export function infrastructureQuery(path:string,kind:InfrastructureQuery,id:stri
 export function infrastructureIntent(value:InfrastructureIntent|undefined):InfrastructureIntent|null {
   if(!value||![6,7].includes(Object.keys(value).length)
     ||Object.keys(value).some(key=>!['explorer','openedId','openedKind','tab','components','history','workbook'].includes(key))
-    ||(value.openedKind!==undefined&&!['site','rack','network_element'].includes(value.openedKind))
+    ||(value.openedKind!==undefined&&!['site','room','rack','cloud_deployment','network_element'].includes(value.openedKind))
     ||!infrastructureQuery(value.explorer,'explorer')||!infrastructureTabs.includes(value.tab)
     ||(value.openedId!==null&&!infraUuid(value.openedId)))return null;
   if(value.openedId===null) return value.openedKind===undefined&&value.components===null&&value.history===null&&value.workbook===null&&value.tab==='Summary'?value:null;
-  if(value.openedKind==='site'||value.openedKind==='rack')
+  if(['site','room','rack','cloud_deployment'].includes(value.openedKind??''))
     return value.tab==='Summary'&&value.components===null&&value.history===null&&value.workbook===null?value:null;
   if(typeof value.components!=='string'||!infrastructureQuery(value.components,'components',value.openedId)
     ||typeof value.history!=='string'||!infrastructureQuery(value.history,'history',value.openedId))return null;
