@@ -25,9 +25,32 @@ export function InfrastructureStructureDialog({current,onApply,onDismiss}:Props)
   useEffect(()=>{
     const dialog=modal.current;
     if(!dialog)return;
+    // Study 29 demonstrated that CSS root zoom does NOT reduce 100dvh.
+    // Native dialog sits in the top layer but inherits that zoom. Size it in
+    // unzoomed layout pixels so its visual footer is always on-screen.
+    const sizeToVisibleViewport=()=>{
+      const zoom=Number.parseFloat(getComputedStyle(document.documentElement).zoom);
+      const scale=Number.isFinite(zoom)&&zoom>0?zoom:1;
+      const visualWidth=window.visualViewport?.width??window.innerWidth;
+      const visualHeight=window.visualViewport?.height??window.innerHeight;
+      const width=Math.max(80,Math.min(760,(visualWidth-16)/scale));
+      const height=Math.max(80,Math.min(670,(visualHeight-12)/scale));
+      dialog.style.width=width+'px';
+      dialog.style.maxWidth=width+'px';
+      dialog.style.height=height+'px';
+      dialog.style.maxHeight=height+'px';
+      dialog.classList.toggle('soma-structure-zoom-compact',visualWidth/scale<520);
+    };
     dialog.showModal();
+    sizeToVisibleViewport();
+    window.addEventListener('resize',sizeToVisibleViewport);
+    window.visualViewport?.addEventListener('resize',sizeToVisibleViewport);
     firstButton.current?.focus();
-    return()=>{if(dialog.open)dialog.close();};
+    return()=>{
+      window.removeEventListener('resize',sizeToVisibleViewport);
+      window.visualViewport?.removeEventListener('resize',sizeToVisibleViewport);
+      if(dialog.open)dialog.close();
+    };
   },[]);
   function dismiss(){
     if(modal.current?.open)modal.current.close();
