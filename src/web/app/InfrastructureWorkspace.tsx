@@ -12,7 +12,7 @@ import {InfrastructureCandidateEvidence} from './InfrastructureCandidateEvidence
 import {verifyNetworkElement} from '../presentation/infrastructure-element';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
-import {applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
+import {LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
@@ -178,6 +178,21 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
     for(const event of ['pointerdown','keydown','wheel','touchstart'])node.addEventListener(event,stop,{capture:true,once:true});
     return()=>{stop();for(const event of ['pointerdown','keydown','wheel','touchstart'])node.removeEventListener(event,stop,true);};
   },[]);
+  const jumpToDisplayedLevel=(nodes:readonly Node[],level:string)=>{
+    // These shortcuts select a real row from the current owner page only.
+    // They do not synthesize Customer ancestry, cross-page descendants,
+    // parentage or registration and never invoke an owner write.
+    const target=nodes.find(node=>node.kind===level||
+      level==='network_element'&&node.kind==='containment');
+    if(!target)return;
+    const key=target.kind+':'+target.id;
+    const element=Array.from(root.current?.querySelectorAll<HTMLElement>('[data-row-id]')??[])
+      .find(row=>row.dataset.rowId===key);
+    if(!element)return;
+    element.focus({preventScroll:true});
+    element.scrollIntoView({block:'nearest',inline:'nearest'});
+    element.click();
+  };
   const path=intent.explorer;
   return <div ref={root} onFocusCapture={event=>{const control=event.target.closest<HTMLElement>('[data-focus-token]');if(control)store.dispatch({focusToken:control.dataset.focusToken??null});}}>
     {notice&&<p role="status">{notice}</p>}<p>Contextual explorer. Physical placement, containment, and Cloud assignment represent separate facts.</p>
@@ -196,7 +211,21 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
         const next=withCursor(path,page.next_cursor);if(!infrastructureQuery(next,'explorer'))throw new Error('Invalid explorer continuation');
         const nodes:readonly Node[]=projectStructureRows(page.nodes,structureView);
         const byId=new Map(nodes.map(node=>[`${node.kind}:${node.id}`,node]));
-        return <>{nodes.length!==page.nodes.length&&<p role="status">
+        const levels=[
+          ...structureView.order.filter(level=>nodes.some(node=>node.kind===level)),
+          ...(nodes.some(node=>node.kind==='network_element'||node.kind==='containment')
+            ?['network_element' as const]:[]),
+        ];
+        return <>
+          {levels.length>0&&<div role="group" aria-label="Structure current-page shortcuts"
+            className="soma-structure-page-jumps">
+            <span>Jump to displayed level on this owner page:</span>
+            {levels.map(level=><button type="button" key={level}
+              onClick={()=>jumpToDisplayedLevel(nodes,level)}>
+              {level==='network_element'?'Network Element':LEVEL_NAMES[level]}
+            </button>)}
+          </div>}
+          {nodes.length!==page.nodes.length&&<p role="status">
           Showing {nodes.length} of {page.nodes.length} current owner page rows.
           Hidden display levels have not been deleted.</p>}
           {nodes.length===0&&<p role="status">
