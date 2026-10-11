@@ -16,13 +16,14 @@ import {InfrastructureExplorerFilters} from './InfrastructureExplorerFilters';
 import {InfrastructureComponentFilters} from './InfrastructureComponentFilters';
 import {buildExplorerQuery} from '../presentation/infrastructure-explorer-filters';
 import {verifyInstalledComponentPage,type InstalledComponentPage} from '../presentation/infrastructure-components';
+import {verifyInfrastructureExplorerPage,type InfrastructureExplorerNode,type InfrastructureExplorerPage} from '../presentation/infrastructure-explorer-page';
 import {FULL_STRUCTURE,LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
 type Ref = Readonly<{kind:string;id:string}>;
-type Node = Readonly<{kind:'site'|'room'|'rack'|'cloud_deployment'|'network_element'|'containment';id:string;label:string;parent_context_id:string|null;lifecycle:string|null;warning_codes:readonly string[]}>;
-type Explorer = Readonly<{nodes:readonly Node[];next_cursor:unknown|null}>;
+type Node=InfrastructureExplorerNode;
+type Explorer=InfrastructureExplorerPage;
 type Element = Readonly<{network_element_id:string;revision:number;lifecycle:string;operational_name:string;site:Ref;customer_org_id:string;
   placement:Readonly<{rack_id:string|null;u_start:number|null;u_span:number|null;revision:number;explicit_unracked:boolean}>;
   model:Ref|null;cloud_deployment:Ref|null;primary_ip:string|null;ip_count:number;containment_parent:Ref|null;
@@ -217,7 +218,7 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
       onApply={applyStructure} onDismiss={closeStructure}/>}
     <div className="infrastructure-workspace"><section aria-label="Infrastructure contextual explorer" data-scroll-owner="y" data-return-scroll="explorer" className="infrastructure-explorer">
       <OwnerProjection<Explorer> path={path} refreshKey={refreshKey} render={page=>{
-        if (!Array.isArray(page.nodes)||page.nodes.length>200) throw new Error('Invalid explorer page');
+        verifyInfrastructureExplorerPage(page);
         const next=withCursor(path,page.next_cursor);if(!infrastructureQuery(next,'explorer'))throw new Error('Invalid explorer continuation');
         const nodes:readonly Node[]=projectStructureRows(page.nodes,structureView);
         const byId=new Map(nodes.map(node=>[`${node.kind}:${node.id}`,node]));
