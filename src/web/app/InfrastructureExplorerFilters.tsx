@@ -31,6 +31,7 @@ export function InfrastructureExplorerFilters({path,onApply}:Props){
     onApply(next);
   };
   const filtered=Object.values(applied).some(Boolean);
+  const continued=new URL(path,'http://127.0.0.1').searchParams.has('cursor');
   return <form className="soma-infra-owner-filters" aria-label="Infrastructure owner filters"
     onSubmit={apply} noValidate>
     <div className="soma-infra-owner-filter-fields">
@@ -60,6 +61,10 @@ export function InfrastructureExplorerFilters({path,onApply}:Props){
     </div>
     <div className="soma-infra-owner-filter-actions">
       <button type="submit">Apply owner filters</button>
+      {continued&&<button type="button" onClick={()=>{
+        const first=buildExplorerQuery(applied);
+        if(first!==null)onApply(first);
+      }}>First owner page</button>}
       <button type="button" disabled={!filtered&&Object.values(draft).every(value=>value==='')}
         onClick={()=>{setDraft(EMPTY_EXPLORER_FILTERS);setError(null);
           onApply(buildExplorerQuery(EMPTY_EXPLORER_FILTERS)!);}}>Clear filters</button>
