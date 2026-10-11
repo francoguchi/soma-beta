@@ -12,8 +12,8 @@ from soma.infrastructure.api.routes_infrastructure import (
 
 
 def test_route_inventory_matches_pinned_packet_and_resolves_literal_first():
-    assert len(INFRASTRUCTURE_ROUTE_SPECS) == 49
-    assert len({(spec.method, spec.path) for spec in INFRASTRUCTURE_ROUTE_SPECS}) == 49
+    assert len(INFRASTRUCTURE_ROUTE_SPECS) == 52
+    assert len({(spec.method, spec.path) for spec in INFRASTRUCTURE_ROUTE_SPECS}) == 52
     route = resolve_route("GET", "/api/v1/infrastructure/workbooks/history")
     assert route is not None and route.spec.handler == "InfrastructureWorkbookHistoryQuery"
     assert resolve_route("GET", "/api/v1/infrastructure/unknown") is None
