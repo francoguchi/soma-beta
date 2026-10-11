@@ -46,3 +46,11 @@ test('LLD-07 Inventory history cursor hash binds exact target kind and UUID',asy
   assert.notEqual(await filterFingerprint({...filters,target_kind:'spare_request'}),digest(canonical));
   assert.notEqual(await filterFingerprint({...filters,target_id:'22222222-2222-4222-8222-222222222222'}),digest(canonical));
 });
+
+test('LLD-07 Fault Tag list fingerprint binds archived null/false/true separately',async()=>{
+  const owner={schema:'SOMA_FAULT_TAG_LIST_FILTER_V1',state:null,archived:null};
+  const canonical='{"archived":null,"schema":"SOMA_FAULT_TAG_LIST_FILTER_V1","state":null}';
+  assert.equal(await filterFingerprint(owner),digest(canonical));
+  assert.notEqual(await filterFingerprint({...owner,archived:false}),digest(canonical));
+  assert.notEqual(await filterFingerprint({...owner,archived:true}),digest(canonical));
+});
