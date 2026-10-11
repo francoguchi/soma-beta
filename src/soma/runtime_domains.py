@@ -135,12 +135,24 @@ class DomainRoutes:
         # routes. Compose only existing LLD-07 query owners, never its declared
         # mutation authority.
         fault_tags = InventoryFaultTagQueryService(factory)
+        def eligible_fault_tag_memberships_query(route, values):
+            if set(values) - {"after_rma_id", "limit"}:
+                raise ValidationError("Eligible Fault Tag query fields are invalid")
+            return fault_tags.eligible_memberships(**values)
+
+        def warehouse_queue_query(route, values):
+            if set(values) - {"after_membership_id", "limit"}:
+                raise ValidationError("Warehouse queue query fields are invalid")
+            return fault_tags.warehouse_queue(**values)
+
         self.fault_tags = build_fault_tag_route_adapter({
             "FaultTagListQuery": lambda route, values: fault_tags.list_query(dict(values)),
             "FaultTagDetailQuery": lambda route, values: (
                 fault_tags.detail(route.path_parameters["fault_tag_id"])
                 if not values else self._bad_query()
             ),
+            "EligibleFaultTagMembershipQuery": eligible_fault_tag_memberships_query,
+            "WarehouseQueueQuery": warehouse_queue_query,
         })
         from soma.product_line_sla.queries.catalog import ProductLineSlaCatalogQueryService
         from soma.product_line_sla.queries.classification import ProductLineSlaClassificationQueryService

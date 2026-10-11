@@ -84,5 +84,33 @@ def test_fault_tag_registry_is_composed_without_mutation_routes(initialized_data
     assert exc.value.code == "NOT_FOUND"
     with pytest.raises(ValidationError):
         domains.fault_tags.dispatch("GET", "/api/v1/inventory/fault-tags/" + missing, {"wrong": True})
+    eligible = domains.fault_tags.dispatch(
+        "GET", "/api/v1/inventory/fault-tag-memberships/eligible", {"limit": 25}
+    )
+    assert eligible is not None and eligible.status == 200
+    assert eligible.body == {"items": [], "continuation": None}
+    queue = domains.fault_tags.dispatch(
+        "GET", "/api/v1/inventory/warehouse/queue", {"limit": 25}
+    )
+    assert queue is not None and queue.status == 200
+    assert queue.body == {"items": [], "continuation": None}
+    for endpoint, name in (
+        ("/api/v1/inventory/fault-tag-memberships/eligible", "after_rma_id"),
+        ("/api/v1/inventory/warehouse/queue", "after_membership_id"),
+    ):
+        for rejected in (
+            {"unsupported": "foreign"},
+            {"target_id": missing},
+            {name: "not-a-uuid"},
+            {"limit": 0},
+        ):
+            with pytest.raises(ValidationError):
+                domains.fault_tags.dispatch("GET", endpoint, rejected)
     with pytest.raises(IntegrityFailure, match="not assembled"):
         domains.fault_tags.dispatch("POST", "/api/v1/inventory/fault-tags", {})
+    for endpoint in (
+        "/api/v1/inventory/fault-tag-memberships/warehouse-receipt",
+        "/api/v1/inventory/fault-tag-memberships/final-decision",
+    ):
+        with pytest.raises(IntegrityFailure, match="not assembled"):
+            domains.fault_tags.dispatch("POST", endpoint, {})
