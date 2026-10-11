@@ -7,6 +7,7 @@ import {InfrastructureWorkbookActivity} from './InfrastructureWorkbookActivity';
 import {InfrastructureSiteDetails} from './InfrastructureSiteDetails';
 import {InfrastructureRackOccupancy} from './InfrastructureRackOccupancy';
 import {InfrastructureModelEvidence} from './InfrastructureModelEvidence';
+import {InfrastructureIpEvidence} from './InfrastructureIpEvidence';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
@@ -84,7 +85,9 @@ function NetworkElement({intent,onIntent}:{intent:InfrastructureIntent;onIntent:
             <p>Placement revision: {value.placement.revision}. Physical placement is separate from containment and Cloud assignment.</p></>:
           name==='Components'?<ComponentsView id={id} path={intent.components!} onPath={components=>onIntent({...intent,components})}/>:
           name==='IP Addresses'?<><h3>Descriptive IP inventory</h3><p>Active addresses: {value.ip_count}. Primary IP: {value.primary_ip??'No primary selected'}.</p>
-            <p>Descriptive addresses do not establish connectivity or reachability. No automatic primary promotion is implied.</p></>:
+            <p>Descriptive addresses do not establish connectivity or reachability. No automatic primary promotion is implied.</p>
+            {value.primary_ip&&<InfrastructureIpEvidence key={id+':'+value.primary_ip}
+              address={value.primary_ip} elementId={id}/>}</>:
           name==='Relationships'?<><h3>Containment</h3><p>Parent Network Element: {value.containment_parent?.id??'None'}. Child count: {value.containment_child_count}.</p>
             <h3>Cloud assignment</h3><p>Cloud Deployment: {value.cloud_deployment?.id??'Unassigned'}. Cloud is separate from physical placement.</p>
             <h3>Model relation</h3><p>Model identity: {value.model?.id??'Unassigned'}.</p></>:
