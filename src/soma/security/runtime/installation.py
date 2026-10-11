@@ -5,6 +5,7 @@ from soma.foundation.errors import SecurityNotReady
 from soma.foundation.identifiers import new_uuid4, require_uuid4
 from soma.security.auth.sessions import SessionSecurityProvider
 from soma.security.crypto.dpapi import WindowsDpapiProvider
+from soma.security.crypto.auth_fingerprint import AuthenticationFingerprintKey
 from soma.security.crypto.live_key import LiveDataKeyProvider
 from soma.security.crypto.sqlcipher_provider import SqlCipherConnectionSecurityProvider
 from soma.security.runtime.control import RunControlProvider, publish_owned_file, read_owned_file
@@ -51,6 +52,7 @@ class SourceInstallationSecurity:
         self.dpapi = WindowsDpapiProvider()
         self.installation_id = None
         self.cipher, self.control, self.sessions = None, None, None
+        self.auth_fingerprint = None
         self.ownership = lambda: False
 
     def prepare_storage(self, ownership_assertion):
@@ -68,6 +70,8 @@ class SourceInstallationSecurity:
             file_security=self.file_security, dpapi=self.dpapi)
         key.prepare()
         self.cipher = SqlCipherConnectionSecurityProvider(key)
+        self.auth_fingerprint = AuthenticationFingerprintKey(self.root, identifier,
+            ownership_assertion=ownership_assertion, file_security=self.file_security, dpapi=self.dpapi)
         self.control = RunControlProvider(self.root / "runtime", identifier, file_security=self.file_security, dpapi=self.dpapi)
 
     def acquire_live_dek_handle(self):

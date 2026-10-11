@@ -373,3 +373,15 @@ class CommandBoundary:
                 response_schema=result.response_schema, response_version=result.response_version,
                 response=self._decode_stored_response(result),
             )
+
+    def has_committed_command_target(self, *, command_type: str, target_type: str, target_id: str) -> bool:
+        """Read-only history presence; never grants mutation/replay authority.
+
+        LLD-12 uses this only before generating a missing fingerprint key. Keep
+        receipt-table access in Foundation and never enumerate prior results.
+        """
+        with ReadSnapshot(self._connection_factory) as snapshot:
+            return snapshot.connection.execute(
+                "SELECT 1 FROM command_receipts WHERE command_type=? AND target_type=? AND target_id=? LIMIT 1",
+                (command_type, target_type, target_id),
+            ).fetchone() is not None

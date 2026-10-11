@@ -29,7 +29,8 @@ test('Communications Settings consumes bounded scopes, coverage, exact jobs and 
   await page.getByRole('button',{name:'View coverage for Synthetic Scope'}).click();
   const coverage=page.getByRole('region',{name:'Selected Source coverage'});await expect(coverage.getByText('Forward coverage: UNKNOWN')).toBeAttached();
   await expect(coverage.getByText('Historical coverage: BOUNDED_COMPLETE')).toBeAttached();
-  await expect(page.getByText('Message content is unavailable')).toBeAttached();await expect(page.getByText('Purge due (UTC): Unknown')).toBeAttached();
+  await expect(page.getByText('Message content is unavailable')).toBeAttached();await expect(page.getByText('Purge due (local time): Unknown')).toBeAttached();
+  await expect(page.getByText('Purge due (UTC): Unknown')).toHaveCount(0);
   await jobs.getByRole('button',{name:'Next page'}).click();await expect.poll(()=>jobPages.length).toBe(2);
   expect(jobPages[1].searchParams.get('cursor')).toBe(JSON.stringify({version:1,query_id:'ListCommunicationJobs',sort_registry_id:'ListCommunicationJobs_ORDER_V1',last_key_tuple:[0,scope],filter_fingerprint:'a'.repeat(64),null_order:'none'}));expect(requests.every(request=>request.method==='GET')).toBe(true);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -42,6 +43,6 @@ test('Communications Settings rejects unsupported progress percentage with unkno
       counters,percentage:0,diagnostic_code:null}],next_cursor:null}});
     return route.fulfill({json:{items:[],next_cursor:null}});
   });
-  await page.goto('http://127.0.0.1:4174/settings/communications');await expect(page.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await page.goto('http://127.0.0.1:4174/settings/communications');await expect(page.getByRole('region',{name:'Communication Jobs'}).getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(page.getByText('Owner percentage: 0%')).toHaveCount(0);
 });

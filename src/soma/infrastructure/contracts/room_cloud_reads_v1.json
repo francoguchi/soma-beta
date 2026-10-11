@@ -1,0 +1,229 @@
+{
+  "schema": "SOMA_LLD08_OWNER_ACCEPTED_READ_EXTENSION_V1",
+  "approved_at": "2026-10-11",
+  "pinned_design_ref": "9a0e891127a771251afccca1a281b7ef7dde9e5f",
+  "scope": "Room and Cloud Deployment read-only owner clarification",
+  "types": [
+    {
+      "id": "INFRA_ROOM_DETAIL_QUERY_V1",
+      "required": {
+        "room_id": "uuid"
+      }
+    },
+    {
+      "id": "INFRA_ROOM_DETAIL_RESPONSE_V1",
+      "required": {
+        "room_id": "uuid",
+        "site_id": "uuid",
+        "customer_org_id": "uuid",
+        "name": "room_name",
+        "lifecycle": "enum:active|archived",
+        "revision": "rev",
+        "rack_count": "integer>=0"
+      }
+    },
+    {
+      "id": "INFRA_CLOUD_DEPLOYMENT_DETAIL_QUERY_V1",
+      "required": {
+        "cloud_deployment_id": "uuid"
+      }
+    },
+    {
+      "id": "INFRA_CLOUD_DEPLOYMENT_DETAIL_RESPONSE_V1",
+      "required": {
+        "cloud_deployment_id": "uuid",
+        "cloud_type_id": "uuid",
+        "site_id": "uuid",
+        "customer_org_id": "uuid",
+        "name": "cloud_name",
+        "lifecycle": "enum:active|archived",
+        "revision": "rev",
+        "assigned_network_element_count": "integer>=0"
+      }
+    },
+    {
+      "id": "INFRA_RELATIONSHIP_CHILDREN_QUERY_V1",
+      "required": {
+        "parent_kind": "enum:site|room|cloud_deployment|network_element",
+        "parent_id": "uuid",
+        "relationship": "enum:site_unracked_elements|room_racks|cloud_assigned_elements|element_contained_elements"
+      },
+      "optional": {
+        "lifecycle": "enum:active|archived",
+        "limit": "int:1..200",
+        "cursor": "CURSOR_V1"
+      }
+    },
+    {
+      "id": "INFRA_RELATIONSHIP_CHILD_ROW_V1",
+      "required": {
+        "kind": "enum:rack|network_element",
+        "id": "uuid",
+        "label": "string<=800bytes",
+        "lifecycle": "enum:active|archived",
+        "site_id": "uuid",
+        "parent_id": "uuid",
+        "relationship": "enum:site_unracked_elements|room_racks|cloud_assigned_elements|element_contained_elements"
+      }
+    },
+    {
+      "id": "INFRA_RELATIONSHIP_CHILDREN_RESPONSE_V1",
+      "required": {
+        "items": "array<INFRA_RELATIONSHIP_CHILD_ROW_V1>,max200",
+        "next_cursor": "CURSOR_V1|null"
+      }
+    }
+  ],
+  "queries": [
+    {
+      "schema": "SOMA-LLD-QUERY-LEAF-V2",
+      "lld_id": "LLD-08",
+      "name": "RoomDetailQuery",
+      "input_type": "INFRA_ROOM_DETAIL_QUERY_V1",
+      "response_type": "INFRA_ROOM_DETAIL_RESPONSE_V1",
+      "read_consistency": "LLD-01 stable ReadSnapshot",
+      "ordering": "single exact room_id",
+      "pagination": "none; indexed all-lifecycle Rack count",
+      "required_indexes": [
+        "rooms PRIMARY KEY",
+        "sites PRIMARY KEY",
+        "racks(room_id,lifecycle_state,rack_id)"
+      ],
+      "errors": [
+        "INFRA_NOT_FOUND",
+        "INFRA_STALE"
+      ],
+      "acceptance_test_ids": [
+        "UIV2-RC-001",
+        "UIV2-RC-002"
+      ]
+    },
+    {
+      "schema": "SOMA-LLD-QUERY-LEAF-V2",
+      "lld_id": "LLD-08",
+      "name": "CloudDeploymentDetailQuery",
+      "input_type": "INFRA_CLOUD_DEPLOYMENT_DETAIL_QUERY_V1",
+      "response_type": "INFRA_CLOUD_DEPLOYMENT_DETAIL_RESPONSE_V1",
+      "read_consistency": "LLD-01 stable ReadSnapshot",
+      "ordering": "single exact deployment_id",
+      "pagination": "none; indexed all-lifecycle assignment count",
+      "required_indexes": [
+        "cloud_deployments PRIMARY KEY",
+        "sites PRIMARY KEY",
+        "cloud_types PRIMARY KEY",
+        "cloud_assignment_current(cloud_deployment_id,network_element_id)"
+      ],
+      "errors": [
+        "INFRA_NOT_FOUND",
+        "INFRA_STALE"
+      ],
+      "acceptance_test_ids": [
+        "UIV2-RC-003",
+        "UIV2-RC-004"
+      ]
+    },
+    {
+      "schema": "SOMA-LLD-QUERY-LEAF-V2",
+      "lld_id": "LLD-08",
+      "name": "InfrastructureRelationshipChildrenQuery",
+      "input_type": "INFRA_RELATIONSHIP_CHILDREN_QUERY_V1",
+      "response_type": "INFRA_RELATIONSHIP_CHILDREN_RESPONSE_V1",
+      "read_consistency": "one LLD-01 stable ReadSnapshot per page, NOT a multi-page fixed snapshot",
+      "ordering": "child UUID4 ASC within exact direct relation",
+      "pagination": {
+        "contract": "CURSOR_V1",
+        "last_key_tuple": [
+          "child_id:uuid"
+        ],
+        "null_order": "NOT_APPLICABLE",
+        "default_limit": 100,
+        "max_limit": 200
+      },
+      "required_indexes": [
+        "network_elements(site_id,lifecycle_state,network_element_id)",
+        "racks(room_id,lifecycle_state,rack_id)",
+        "cloud_assignment_current(cloud_deployment_id,network_element_id)",
+        "network_element_containment_current(parent_network_element_id,child_network_element_id)"
+      ],
+      "errors": [
+        "CURSOR_INVALID",
+        "INFRA_NOT_FOUND",
+        "INFRA_STALE"
+      ],
+      "acceptance_test_ids": [
+        "UIV2-RC-005",
+        "UIV2-RC-017"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/infrastructure/rooms/{room_id}",
+      "handler_kind": "query",
+      "handler": "RoomDetailQuery",
+      "request_type": "INFRA_ROOM_DETAIL_QUERY_V1",
+      "response_type": "INFRA_ROOM_DETAIL_RESPONSE_V1",
+      "success_status": 200,
+      "max_request_bytes": 8192,
+      "auth_policy": "LOCAL_ADMIN_AUTHENTICATED_V1",
+      "error_codes": [
+        "INFRA_NOT_FOUND",
+        "INFRA_STALE"
+      ],
+      "input_ownership": {
+        "path_fields": [
+          "room_id"
+        ],
+        "query_fields": "all non-path fields declared by query input DTO",
+        "body": "none",
+        "headers": "LLD-12 authenticated-session context only"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/infrastructure/cloud-deployments/{cloud_deployment_id}",
+      "handler_kind": "query",
+      "handler": "CloudDeploymentDetailQuery",
+      "request_type": "INFRA_CLOUD_DEPLOYMENT_DETAIL_QUERY_V1",
+      "response_type": "INFRA_CLOUD_DEPLOYMENT_DETAIL_RESPONSE_V1",
+      "success_status": 200,
+      "max_request_bytes": 8192,
+      "auth_policy": "LOCAL_ADMIN_AUTHENTICATED_V1",
+      "error_codes": [
+        "INFRA_NOT_FOUND",
+        "INFRA_STALE"
+      ],
+      "input_ownership": {
+        "path_fields": [
+          "cloud_deployment_id"
+        ],
+        "query_fields": "all non-path fields declared by query input DTO",
+        "body": "none",
+        "headers": "LLD-12 authenticated-session context only"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/infrastructure/related-children",
+      "handler_kind": "query",
+      "handler": "InfrastructureRelationshipChildrenQuery",
+      "request_type": "INFRA_RELATIONSHIP_CHILDREN_QUERY_V1",
+      "response_type": "INFRA_RELATIONSHIP_CHILDREN_RESPONSE_V1",
+      "success_status": 200,
+      "max_request_bytes": 8192,
+      "auth_policy": "LOCAL_ADMIN_AUTHENTICATED_V1",
+      "error_codes": [
+        "CURSOR_INVALID",
+        "INFRA_NOT_FOUND",
+        "INFRA_STALE"
+      ],
+      "input_ownership": {
+        "path_fields": [],
+        "query_fields": "all non-path fields declared by query input DTO",
+        "body": "none",
+        "headers": "LLD-12 authenticated-session context only"
+      }
+    }
+  ]
+}

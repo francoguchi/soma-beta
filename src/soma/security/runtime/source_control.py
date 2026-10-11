@@ -13,7 +13,7 @@ from soma.security.crypto.dpapi import WindowsDpapiProvider
 from soma.security.runtime.control import direct_request
 from soma.security.runtime.installation import canonical_source_instance, read_installation_id, prepare_instance_directories
 from soma.security.runtime.trust import TrustedInstanceVerifier
-from soma.security.runtime.windows import WindowsAclProvider, process_identity, VerifiedProcessWait, open_verified_origin
+from soma.security.runtime.windows import WindowsAclProvider, process_identity, process_is_absent, VerifiedProcessWait, open_verified_origin
 
 
 class SourceOutcome(str, Enum):
@@ -48,7 +48,7 @@ def verified_instance(root, files, *, require_ready=True):
     return None if reader is None else reader.verify(require_ready=require_ready)
 
 
-def foreground(root):
+def foreground(root, *, open_browser=False):
     from soma.application import SourceApplication
     application = SourceApplication(root)
     try:
@@ -56,8 +56,15 @@ def foreground(root):
         origin = application.security.control._origin
         print(f"SOMA READY: {origin} (encrypted schema {health.migration_sequence})", flush=True)
         print("Open this origin to set up/sign in. Ctrl+C performs owned graceful shutdown.", flush=True)
+        if open_browser:
+            instance = verified_instance(root, application.security.file_security)
+            if instance is None or instance.registry.run_id != health.run_id:
+                raise SecurityNotReady("console readiness identity changed")
+            open_verified_origin(instance.registry.origin)
         while application.host.state == "READY" and not application.server.is_stopped():
             time.sleep(0.05)
+        if application.host.state == "READY":
+            raise SomaError("INTERNAL_ERROR", "source server stopped unexpectedly")
     except KeyboardInterrupt:
         print("SOMA: graceful shutdown requested.", flush=True)
     finally:
@@ -70,7 +77,10 @@ def foreground(root):
 
 
 def stop(root, files):
-    instance = verified_instance(root, files, require_ready=False)
+    try:
+        instance = verified_instance(root, files, require_ready=False)
+    except SecurityNotReady:
+        return cleanup_stopped_run(root, files)
     if instance is None:
         return SourceControlResult(SourceOutcome.NO_VALID_INSTANCE, 0, "SOMA source stop: nothing is running")
     record = instance.registry
@@ -92,6 +102,53 @@ def stop(root, files):
     if (root / "runtime" / "runtime.json").exists() or (root / "runtime" / record.readiness_locator).exists():
         return SourceControlResult(SourceOutcome.FAILED, 32, "SOMA source stop: process stopped, but runtime artifacts require review; nothing was deleted")
     return SourceControlResult(SourceOutcome.STOPPED, 0, "SOMA source stop: graceful shutdown complete")
+
+
+def cleanup_stopped_run(root, files):
+    """Explicit stop only: exact-owned, authenticated dead-run artifacts, never PID reuse."""
+    from soma.foundation.runtime.instance_lock import DataInstanceLock
+    from soma.foundation.runtime.registry import RuntimeRegistry
+    from soma.foundation.persistence.connections import ConnectionFactory
+    from soma.foundation.queries.data_instance_identity import DataInstanceIdentityReader
+    from soma.security.runtime.installation import SourceInstallationSecurity
+    from soma.security.runtime.control import read_owned_file
+    from soma.security.runtime.windows import reject_redirects
+    registry = reject_redirects(root / "runtime/runtime.json")
+    if not registry.is_file():
+        raise SecurityNotReady("stopped runtime registry cannot be verified")
+    raw = read_owned_file(registry, files, limit=16384)
+    record = RuntimeRegistry._parse(raw)
+    if not process_is_absent(record.pid):
+        raise SecurityNotReady("runtime process identity mismatch; live or reused PID preserved")
+    files.verify_data_file(root / "data/soma.instance.lock")
+    with DataInstanceLock.acquire(root / "data/soma.instance.lock", create=False) as lock:
+        if read_owned_file(registry, files, limit=16384) != raw or not process_is_absent(record.pid):
+            raise SecurityNotReady("stopped runtime ownership changed")
+        installation = read_installation_id(root, files)
+        if installation is None:
+            raise SecurityNotReady("stopped runtime has no installation identity")
+        credential = root / "runtime" / record.readiness_locator
+        protected = read_owned_file(credential, files)
+        secret = WindowsDpapiProvider().unprotect_current_user(protected, "run_control", installation)
+        if not isinstance(secret, bytes) or len(secret) != 32:
+            raise SecurityNotReady("stopped runtime credential is invalid")
+        security = SourceInstallationSecurity(root)
+        files.verify_data_file(root / "data/soma.db")
+        files.ensure_owner_only_file(root / "security/live-data-key.dpapi")
+        security.prepare_storage(lambda: lock.held)
+        connection = ConnectionFactory(root / "data/soma.db", security).open_authoritative(read_only=True, require_wal=False)
+        try:
+            if DataInstanceIdentityReader.get(connection) != record.data_instance_id:
+                raise SecurityNotReady("stopped runtime database identity mismatch")
+        finally:
+            connection.close()
+        if not process_is_absent(record.pid) or read_owned_file(credential, files) != protected:
+            raise SecurityNotReady("stopped runtime ownership changed")
+        if not files.remove_exact_file(registry, raw):
+            raise SecurityNotReady("stopped runtime registry changed")
+        if not files.remove_exact_file(credential, protected):
+            raise SecurityNotReady("stopped runtime credential changed")
+    return SourceControlResult(SourceOutcome.STOPPED, 0, "SOMA source stop: cleaned exact-owned dead-run registration; database preserved")
 
 
 def _instance_owned(root, files):
@@ -125,7 +182,7 @@ def _await_ready(root, files, *, child=None, log=None):
             last_error = exc.code
         if child is not None and child.poll() is not None and not _instance_owned(root, files):
             return SourceControlResult(SourceOutcome.FAILED, 30, f"SOMA source run: startup failed; see {log}")
-        if child is None and not (root / "runtime" / "runtime.json").exists():
+        if child is None and not (root / "runtime" / "runtime.json").exists() and not _instance_owned(root, files):
             return SourceControlResult(SourceOutcome.FAILED, 30, "SOMA source run: verified instance stopped before READY; rerun the launcher")
         time.sleep(0.1)
     detail = f"; see {log}" if log is not None else ""
@@ -145,7 +202,7 @@ def detached(root, files):
     with files.create_file(log) as output:
         child = subprocess.Popen([sys.executable, "-I", "-u", str(checkout / "tools" / "source_launcher.py"), "host"],
             cwd=checkout, stdin=subprocess.DEVNULL, stdout=output, stderr=output,
-            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
+            creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
     return _await_ready(root, files, child=child, log=log)
 
 
@@ -160,11 +217,16 @@ def source_action(action):
         if action == "run":
             return detached(root, files)
         if action == "console":
-            existing = verified_instance(root, files)
+            existing = verified_instance(root, files, require_ready=False)
             if existing is not None:
-                return SourceControlResult(SourceOutcome.OPENED, 0, f"SOMA source console: verified instance already running at {existing.registry.origin}")
-        return foreground(root)
+                return _await_ready(root, files)
+        return foreground(root, open_browser=True) if action == "console" else foreground(root)
     except SomaError as exc:
+        if action == "console" and exc.code == "INSTANCE_OWNED":
+            try:
+                return _await_ready(root, files)
+            except SomaError as retry_error:
+                return SourceControlResult(SourceOutcome.FAILED, 31, f"SOMA source console: {retry_error.code}: {retry_error.message}")
         return SourceControlResult(SourceOutcome.FAILED, 31, f"SOMA source {action}: {exc.code}: {exc.message}")
     except (OSError, RuntimeError) as exc:
         return SourceControlResult(SourceOutcome.FAILED, 30, f"SOMA source {action}: startup/control failed ({type(exc).__name__})")

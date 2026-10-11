@@ -1,6 +1,7 @@
 import {OwnerProjection} from '../components/OwnerProjection';
 import {BoundedCollection} from '../components/BoundedCollection';
 import type {WorkbookIntent} from './router';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 
 type Ref=Readonly<{kind:string;id:string}>;
 type Proposal=Readonly<{proposal_id:string;sheet_kind:'network_elements'|'ip_addresses';row_ordinal:number;
@@ -107,8 +108,8 @@ export function InfrastructureWorkbookActivity({intent,onIntent}:{intent:Workboo
         ||typeof item.filename!=='string'||new TextEncoder().encode(item.filename).length>1024||typeof item.state_or_mode!=='string'||new TextEncoder().encode(item.state_or_mode).length>64))throw new Error('Invalid workbook history');
       continuation(value.next_cursor,'history');
       return <>{value.items.length===0&&<p>No workbook activity in this page.</p>}
-        <BoundedCollection caption="Workbook runs and exports (UTC)" rows={value.items.map(item=>({id:item.kind+':'+item.id,cells:[item.kind,item.filename,
-          new Date(item.timestamp_utc*1000).toISOString(),item.state_or_mode,item.sha256,
+        <BoundedCollection caption="Workbook runs and exports (local time)" rows={value.items.map(item=>({id:item.kind+':'+item.id,cells:[item.kind,item.filename,
+          formatOwnerLocalTime(item.timestamp_utc),item.state_or_mode,item.sha256,
           item.kind==='run'?<button type="button" data-focus-token={'infrastructure:run:'+item.id} onClick={()=>onIntent({...intent,
             run:`/api/v1/infrastructure/workbooks/runs/${item.id}?limit=200`,proposalId:null,candidatePage:0})}>Open run {item.id}</button>:<span>Export identity: {item.id}</span>]}))}
           returnScrollToken="workbook-history" nextFocusToken="infrastructure:workbook:history:next"

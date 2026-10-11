@@ -2106,6 +2106,16 @@
           "surface": "ticket_list"
         },
         {
+          "owner": "LLD-03",
+          "path": "/tickets/rfcs",
+          "surface": "rfc_list"
+        },
+        {
+          "owner": "LLD-04",
+          "path": "/tickets/imports",
+          "surface": "import_monitor"
+        },
+        {
           "owner": "LLD-03/04",
           "path": "/tickets/history",
           "surface": "ticket_history"

@@ -87,6 +87,18 @@ class WindowsAclProvider:
         return descriptor
 
     def verify(self, path):
+        self._verify_acl(path, allow_inherited=False)
+
+    def verify_data_file(self, path):
+        # SQLite/Foundation create data files under the protected data directory.
+        # Accept its exact user/SYSTEM inheritance, never broad or redirected ACLs.
+        target = reject_redirects(Path(path))
+        self.verify(target.parent)
+        if not target.is_file() or target.stat(follow_symlinks=False).st_nlink != 1:
+            raise SecurityNotReady("instance data file is unavailable or linked")
+        self._verify_acl(target, allow_inherited=True)
+
+    def _verify_acl(self, path, *, allow_inherited):
         target = reject_redirects(Path(path))
         owner, dacl, descriptor = C.c_void_p(), C.c_void_p(), C.c_void_p()
         result = api("advapi32", "GetNamedSecurityInfoW", W.DWORD, [W.LPCWSTR, C.c_int, W.DWORD, C.POINTER(C.c_void_p), C.c_void_p, C.POINTER(C.c_void_p), C.c_void_p, C.POINTER(C.c_void_p)])(str(target), 1, 5, C.byref(owner), None, C.byref(dacl), None, C.byref(descriptor))
@@ -95,7 +107,7 @@ class WindowsAclProvider:
         try:
             control, revision = W.WORD(), W.DWORD()
             checked(api("advapi32", "GetSecurityDescriptorControl", W.BOOL, [C.c_void_p, C.POINTER(W.WORD), C.POINTER(W.DWORD)])(descriptor, C.byref(control), C.byref(revision)))
-            if sid_string(owner) != self.sid or not control.value & 0x1000 or not dacl.value:
+            if sid_string(owner) != self.sid or (not allow_inherited and not control.value & 0x1000) or not dacl.value:
                 raise SecurityNotReady("security path owner/inheritance is unsafe")
             # ACL header is eight bytes, with WORD AceCount at offset four.
             count = C.c_ushort.from_address(dacl.value + 4).value
@@ -108,7 +120,7 @@ class WindowsAclProvider:
                 kind = C.c_ubyte.from_address(ace.value).value
                 flags = C.c_ubyte.from_address(ace.value + 1).value
                 mask = C.c_uint32.from_address(ace.value + 4).value
-                if kind != 0 or flags & ~3 or mask != 0x1F01FF:
+                if kind != 0 or flags & ~(0x13 if allow_inherited else 3) or mask != 0x1F01FF:
                     raise SecurityNotReady("security path ACE is unsafe")
                 principals.add(sid_string(ace.value + 8))
             if principals != {self.sid, "S-1-5-18"}:
@@ -197,6 +209,24 @@ class ProcessIdentity:
     pid: int
     process_birth_id: str
     image: Path
+
+
+def process_is_absent(pid: int) -> bool:
+    """Prove absent/terminated through native APIs; access denial remains unknown."""
+    if type(pid) is not int or not 0 < pid <= 0xFFFFFFFF:
+        raise SecurityNotReady("process PID is invalid")
+    handle = api("kernel32", "OpenProcess", W.HANDLE, [W.DWORD, W.BOOL, W.DWORD])(0x101000, False, pid)
+    if not handle:
+        if C.get_last_error() == 87:
+            return True
+        raise SecurityNotReady("process absence cannot be proven")
+    try:
+        state = api("kernel32", "WaitForSingleObject", W.DWORD, [W.HANDLE, W.DWORD])(handle, 0)
+        if state not in {0, 258}:
+            raise SecurityNotReady("process termination cannot be proven")
+        return state == 0
+    finally:
+        api("kernel32", "CloseHandle", W.BOOL, [W.HANDLE])(handle)
 
 
 def process_identity(pid: int) -> ProcessIdentity:

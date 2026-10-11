@@ -58,6 +58,19 @@ class UnitOfWork:
         if exit_write is not None:
             exit_write(admitted)
 
+    def _close_connection(self) -> None:
+        connection, self._connection = self._connection, None
+        if connection is not None:
+            connection.close()
+
+    def _release_context(self) -> None:
+        try:
+            if self._token is not None:
+                token, self._token = self._token, None
+                _active_uow.reset(token)
+        finally:
+            self._exit_write_admission()
+
     @property
     def connection(self) -> Any:
         if self._connection is None:
@@ -74,13 +87,12 @@ class UnitOfWork:
             self._connection.execute("BEGIN IMMEDIATE")
             return self
         except BaseException as exc:
-            if self._connection is not None:
-                self._connection.close()
-                self._connection = None
-            if self._token is not None:
-                _active_uow.reset(self._token)
-                self._token = None
-            self._exit_write_admission()
+            try:
+                self._close_connection()
+            except BaseException as cleanup_error:
+                exc.add_note(f"connection cleanup also failed: {type(cleanup_error).__name__}")
+            finally:
+                self._release_context()
             if _is_busy_error(exc):
                 raise PersistenceBusy() from exc
             raise
@@ -106,8 +118,10 @@ class UnitOfWork:
             if bool(getattr(self._connection, "in_transaction", False)):
                 self._connection.execute("ROLLBACK")
         except BaseException as exc:
-            self._connection.close()
-            self._connection = None
+            try:
+                self._close_connection()
+            except BaseException as cleanup_error:
+                exc.add_note(f"connection cleanup also failed: {type(cleanup_error).__name__}")
             raise PersistenceRollbackFailure("authoritative rollback failed") from exc
 
     def __exit__(
@@ -125,13 +139,10 @@ class UnitOfWork:
             if self._connection is not None and bool(getattr(self._connection, "in_transaction", False)):
                 self.rollback()
         finally:
-            if self._connection is not None:
-                self._connection.close()
-                self._connection = None
-            if self._token is not None:
-                _active_uow.reset(self._token)
-                self._token = None
-            self._exit_write_admission()
+            try:
+                self._close_connection()
+            finally:
+                self._release_context()
         return False
 
 
@@ -154,9 +165,9 @@ class ReadSnapshot:
             self._connection.execute("BEGIN")
             return self
         except BaseException:
-            if self._connection is not None:
-                self._connection.close()
-                self._connection = None
+            connection, self._connection = self._connection, None
+            if connection is not None:
+                connection.close()
             raise
 
     def __exit__(
@@ -169,7 +180,7 @@ class ReadSnapshot:
             if self._connection is not None and bool(getattr(self._connection, "in_transaction", False)):
                 self._connection.execute("COMMIT" if exc is None else "ROLLBACK")
         finally:
-            if self._connection is not None:
-                self._connection.close()
-                self._connection = None
+            connection, self._connection = self._connection, None
+            if connection is not None:
+                connection.close()
         return False

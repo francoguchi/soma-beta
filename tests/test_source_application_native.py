@@ -61,6 +61,41 @@ def test_reset_provisioning_rollback_and_validated_orphan_replacement(tmp_path, 
             app.host.shutdown(grace_seconds=10)
 
 
+def test_setup_replay_conflict_and_configured_rejection_skip_argon2(tmp_path, monkeypatch):
+    pytest.importorskip("sqlcipher3")
+    files = WindowsAclProvider()
+    root = tmp_path / "instance"
+    files.ensure_owner_only_directory(root)
+    app = SourceApplication(root)
+    try:
+        app.host.start()
+        body = {"command_id": new_uuid4(), "password": "local native password",
+                "password_confirmation": "local native password"}
+        first, _ = app.auth.setup(body)
+        def unnecessary_hash(*_args):
+            pytest.fail("a committed/configured setup repeated Argon2 work")
+        monkeypatch.setattr(app.auth.passwords, "hash", unnecessary_hash)
+        replay, _ = app.auth.setup(body)
+        assert replay["actor_id"] == first["actor_id"]
+        for fields, code in (
+            ({"password": "different native password", "password_confirmation": "different native password"}, "IDEMPOTENCY_CONFLICT"),
+            ({"command_id": new_uuid4()}, "AUTH_ALREADY_CONFIGURED"),
+            ({"password_confirmation": "different native password"}, "AUTH_PASSWORD_POLICY"),
+        ):
+            with pytest.raises(SomaError) as error:
+                app.auth.setup({**body, **fields})
+            assert error.value.code == code
+        connection = app.factory.open_authoritative(read_only=True)
+        try:
+            assert connection.execute("SELECT COUNT(*) FROM command_receipts WHERE command_type='SetupLocalAdmin'").fetchone() == (1,)
+            assert connection.execute("SELECT COUNT(*) FROM audit_events WHERE action_type='security.local_admin_configured'").fetchone() == (1,)
+        finally:
+            connection.close()
+    finally:
+        if app.host.state in {"READY", "QUIESCING", "LISTENING_NOT_READY"}:
+            app.host.shutdown(grace_seconds=10)
+
+
 def request(origin, method, path, body=None, *, cookie=None, headers=None):
     connection = http.client.HTTPConnection("127.0.0.1", int(origin.rsplit(":", 1)[1]), timeout=5)
     actual = {"Origin": origin, **(headers or {})}
@@ -95,17 +130,18 @@ def test_live_host_packaged_assets_precede_auth_and_closed_spa_fallback(tmp_path
             if cookie:
                 assert html == (app.static / "index.html").read_bytes()
                 assert request(origin, "GET", "/objectives", cookie=cookie)[2] == html
-            for name, content_type in (
-                ("assets/index-CC0C6mm0.js", "text/javascript; charset=utf-8"),
-                ("assets/index-CoKe4wwi.css", "text/css; charset=utf-8"),
-            ):
+            assets = [(name, "text/javascript; charset=utf-8" if name.endswith(".js") else "text/css; charset=utf-8")
+                      for name in manifest if name.endswith((".js", ".css"))]
+            assert any(name.endswith(".js") for name, _ in assets)
+            assert any(name.endswith(".css") for name, _ in assets)
+            for name, content_type in assets:
                 status, headers, body = request(origin, "GET", "/static/ui/" + name, cookie=cookie)
                 assert status == 200 and headers["content-type"] == content_type
                 assert body == (app.static / name).read_bytes()
                 assert len(body) == manifest[name]["bytes"]
                 assert hashlib.sha256(body).hexdigest() == manifest[name]["sha256"]
             for path in ("/static/ui/assets/missing.js", "/static/ui/missing.css", "/unknown", "/assets/missing.js",
-                "/static/ui/assets/%69ndex-CC0C6mm0.js", "/static/ui/../registry.json"):
+                "/static/ui/" + next(name for name, _ in assets if name.endswith(".js")).replace("index-", "%69ndex-"), "/static/ui/../registry.json"):
                 status, _, body = request(origin, "GET", path, cookie=cookie)
                 assert status == 404 and body != html and b"<html" not in body.lower()
             for path in ("/api/v1/no-such-route", "/api/no-such-route"):

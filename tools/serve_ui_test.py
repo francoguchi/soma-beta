@@ -3,6 +3,15 @@ import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from soma.ui.assets import UiAssets
 
+
+class BrowserTestHTTPServer(ThreadingHTTPServer):
+    # TCPServer defaults to a backlog of five. Eight independent Edge workers
+    # load the frozen HTML, JS, CSS and SVGs simultaneously; that tiny queue
+    # can refuse asset connections before a handler gets to accept them.
+    # Test-host only: do not change the actual SOMA runtime's listener.
+    request_queue_size = 128
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=4174)
@@ -20,4 +29,4 @@ if __name__ == '__main__':
             self.wfile.write(resource.body)
         def log_message(self, *args):
             pass
-    ThreadingHTTPServer(('127.0.0.1', args.port), Handler).serve_forever()
+    BrowserTestHTTPServer(('127.0.0.1', args.port), Handler).serve_forever()

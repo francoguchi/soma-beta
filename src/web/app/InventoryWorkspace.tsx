@@ -3,6 +3,11 @@ import {inventoryCollectionQueries,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
 import {OwnerProjection} from '../components/OwnerProjection';
 import {BoundedCollection} from '../components/BoundedCollection';
+import {InventorySpareNeeds} from './InventorySpareNeeds';
+import {InventorySpareRequests} from './InventorySpareRequests';
+import {InventoryFaultTags} from './InventoryFaultTags';
+import {InventoryWarehouseDesk} from './InventoryWarehouseDesk';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 
 type StockUnit = Readonly<{spare_part_unit_id:string;local_tracking_id:string|null;bom_code:string;manufacturer_serial:string|null;
   condition_token:string;disposition_token:string;location_kind:string|null;location_ref_id:string|null;custody_text:string|null;
@@ -43,7 +48,7 @@ function Attention({asOf,setAsOf,cursor,setCursor}:{asOf:number;setAsOf:(time:nu
       if (!Object.hasOwn(page,'continuation')||!Array.isArray(page.items)||page.items.length>200||page.as_of_utc!==asOf||!Number.isSafeInteger(page.exact_total)||page.exact_total<page.items.length) throw new Error('Invalid owner attention page');
       if(inventoryCollectionQueries({stock:queryPath('stock',null),attention:queryPath('attention',page.continuation,asOf)})===null)throw new Error('Invalid owner attention continuation');
       const items:readonly AttentionItem[]=page.items;
-      return <><p>{page.exact_total} owner attention items; {items.length} on this page. Evaluated at {new Date(asOf*1000).toISOString()}.</p>
+      return <><p>{page.exact_total} owner attention items; {items.length} on this page. Evaluated at {formatOwnerLocalTime(asOf)}.</p>
         {items.length===0&&<p>No attention items in this owner page.</p>}
         <BoundedCollection caption="Inventory owner reasons and next governed actions" rows={items.map(item=>({id:item.attention_id,cells:[
           `Severity: ${item.severity}`,item.attention_kind,`${item.target_kind}: ${item.target_id}`,item.reason,`Next governed action: ${item.next_governed_action}`]}))}
@@ -61,6 +66,10 @@ export function InventoryWorkspace({restored=null,onReturnState}:{restored?:Retu
   const [attentionCursor,setAttentionCursor]=useState<unknown|null>(()=>intent?.attentionCursor??null);
   const [asOf,setAsOf]=useState(()=>intent?.asOf??Math.floor(Date.now()/1000));
   const [notice,setNotice]=useState<string|null>(restored&&!intent?'The previous Inventory query is unavailable; the first current pages are shown.':null);
+  const [needsOpen,setNeedsOpen]=useState(false);
+  const [requestsOpen,setRequestsOpen]=useState(false);
+  const [faultTagsOpen,setFaultTagsOpen]=useState(false);
+  const [warehouseOpen,setWarehouseOpen]=useState(false);
   const root=useRef<HTMLDivElement>(null);const focus=useRef<string|null>(intent?restored?.focusToken??null:null);
   const fingerprint=useRef<{stock:string;attention:string;value:string}|null>(null);
   const stock=queryPath('stock',stockCursor);const attention=queryPath('attention',attentionCursor,asOf);
@@ -109,5 +118,43 @@ export function InventoryWorkspace({restored=null,onReturnState}:{restored?:Retu
   },[]);
   return <div ref={root} onFocusCapture={event=>{const control=event.target.closest<HTMLElement>('[data-focus-token]');if(control)focus.current=control.dataset.focusToken??null;}}>
     {notice&&<p role="status">{notice}</p>}<Stock cursor={stockCursor} setCursor={setStockCursor}/>
-    <Attention cursor={attentionCursor} setCursor={setAttentionCursor} asOf={asOf} setAsOf={setAsOf}/></div>;
+    <Attention cursor={attentionCursor} setCursor={setAttentionCursor} asOf={asOf} setAsOf={setAsOf}/>
+    <section aria-label="Spare Needs Desk" className="soma-v2-rfc-links">
+      <h2>Spare Needs</h2>
+      <p>Spare Need intent precedes a Spare Request. Planned quantities, draft allocations,
+        submitted snapshots and local selections are separate owner facts—not accepted receipts,
+        physical fulfillment or LSU registration.</p>
+      <button type="button" aria-expanded={needsOpen} onClick={()=>setNeedsOpen(open=>!open)}>
+        {needsOpen?'Hide':'Inspect'} Spare Needs
+      </button>
+      {needsOpen&&<InventorySpareNeeds/>}
+    </section>
+    <section aria-label="Spare Requests Desk" className="soma-v2-rfc-links">
+      <h2>Spare Requests and RMAs</h2>
+      <p>Separate request drafts and submissions from authorized RMA responses.
+        A submitted request does not itself establish an RMA, physical receipt, or warehouse acceptance.</p>
+      <button type="button" aria-expanded={requestsOpen} onClick={()=>setRequestsOpen(open=>!open)}>
+        {requestsOpen?'Hide':'Inspect'} Spare Requests
+      </button>
+      {requestsOpen&&<InventorySpareRequests/>}
+    </section>
+    <section aria-label="Fault Tags Desk" className="soma-v2-rfc-links">
+      <h2>Fault Tags</h2>
+      <p>Return documentation and warehouse receipt decisions are distinct. Archived Fault Tags
+        remain historical evidence, not candidates for automatic cleanup.</p>
+      <button type="button" aria-expanded={faultTagsOpen} onClick={()=>setFaultTagsOpen(open=>!open)}>
+        {faultTagsOpen?'Hide':'Inspect'} Fault Tags
+      </button>
+      {faultTagsOpen&&<InventoryFaultTags/>}
+    </section>
+    <section aria-label="Warehouse Returns Desk" className="soma-v2-rfc-links">
+      <h2>Warehouse and Returns</h2>
+      <p>Read-only inspection of open return obligations and submitted Fault Tag memberships
+        requiring a warehouse stage. Eligibility is not approval, physical receipt, or final acceptance.</p>
+      <button type="button" aria-expanded={warehouseOpen} onClick={()=>setWarehouseOpen(open=>!open)}>
+        {warehouseOpen?'Hide':'Inspect'} Warehouse and returns
+      </button>
+      {warehouseOpen&&<InventoryWarehouseDesk/>}
+    </section>
+  </div>;
 }

@@ -1,8 +1,9 @@
 import {OwnerProjection} from '../components/OwnerProjection';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 
 const fields=[
   ['summary_text','summary_evidence_id','Summary'],
-  ['external_created_at_utc','external_created_evidence_id','External creation UTC'],
+  ['external_created_at_utc','external_created_evidence_id','External creation (local time)'],
   ['creator_text','creator_evidence_id','Creator'],
   ['customer_account_number_text','customer_account_number_evidence_id','Source Customer account number'],
   ['customer_account_name_text','customer_account_name_evidence_id','Source Customer account name'],
@@ -12,7 +13,7 @@ const fields=[
   ['owner_name_text','owner_name_evidence_id','Owner name'],
   ['l1_handler_name_text','l1_handler_name_evidence_id','L1 handler'],
   ['l2_handler_name_text','l2_handler_name_evidence_id','L2 handler'],
-  ['last_update_utc','last_update_evidence_id','Last source update UTC'],
+  ['last_update_utc','last_update_evidence_id','Last source update (local time)'],
 ] as const;
 type Lifecycle=Readonly<{rfc_id:string;accepted_source_state:Record<string,unknown>;local_archive_state:'active'|'archived';terminal_epoch_id:string|null;warnings:readonly string[]}>;
 const text=(value:unknown):value is string=>typeof value==='string';
@@ -46,7 +47,7 @@ export function RfcLifecycle({id}:{id:string}) {
         {terminal&&<p>Accepted terminal source state does not establish that Task, Objective or Communication consequences have executed. Those consequences require the owner cascade review and command.</p>}
         <p>Source projection revision: {source.revision===null?'No accepted source projection':String(source.revision)}.</p>
         <p>Source Customer labels are descriptive evidence; canonical Customer identity remains a separate owner relationship.</p>
-        <dl>{fields.map(([field,proof,label])=><div key={field}><dt>{label}</dt><dd>{source[field]===null?'Unknown':field==='external_created_at_utc'||field==='last_update_utc'?new Date(Number(source[field])*1000).toISOString():String(source[field])}
+        <dl>{fields.map(([field,proof,label])=><div key={field}><dt>{label}</dt><dd>{source[field]===null?'Unknown':field==='external_created_at_utc'||field==='last_update_utc'?formatOwnerLocalTime(Number(source[field])):String(source[field])}
           {source[proof]!==null&&<p>Source evidence: {String(source[proof])}</p>}</dd></div>)}</dl>
         {value.warnings.map(warning=><p className="warning" key={warning}>{warning}</p>)}</>;
     }}/></section>;

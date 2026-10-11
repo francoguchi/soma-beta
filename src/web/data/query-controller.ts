@@ -22,7 +22,12 @@ export class QueryController {
   cancel(surface_id: string): void { this.current.get(surface_id)?.abort.abort(); this.current.delete(surface_id); }
 }
 
-export async function filterFingerprint(value: Readonly<Record<string, string>>): Promise<string> {
+/** Canonical JSON query fingerprints must retain explicit null filters.
+ * The LLD-04 owner hashes absent severity/state/risk/kind as JSON null,
+ * not the empty string or an omitted key. Existing string-only callers
+ * remain assignable.
+ */
+export async function filterFingerprint(value: Readonly<Record<string, string | number | boolean | null>>): Promise<string> {
   const compare = (a: string, b: string): number => {
     const left = Array.from(a, char => char.codePointAt(0) ?? 0), right = Array.from(b, char => char.codePointAt(0) ?? 0);
     for (let i = 0; i < Math.min(left.length, right.length); i++) {

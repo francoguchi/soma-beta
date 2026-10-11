@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from soma.foundation.errors import SomaError, ValidationError
+from soma.foundation.identifiers import require_uuid4
 from soma.foundation.persistence.connections import ConnectionFactory
 from soma.foundation.persistence.uow import ReadSnapshot
 from soma.reference.domain.matching import normalize_match_key, require_persisted_matching_profile
@@ -34,17 +35,27 @@ class ReferenceMatcher:
             ) from exc
 
     @staticmethod
-    def _page(
-        candidate_ids: set[str], *, after_candidate_id: str | None, limit: int
-    ) -> tuple[tuple[str, ...], str | None]:
+    def _validate_paging(after_candidate_id, limit):
         if type(limit) is not int or limit < 1 or limit > 200:
             raise SomaError("FIELD_BOUND_EXCEEDED", "candidate page limit must be in 1..200")
-        ordered = sorted(candidate_ids)
         if after_candidate_id is not None:
-            ordered = [candidate_id for candidate_id in ordered if candidate_id > after_candidate_id]
-        visible = tuple(ordered[:limit])
-        continuation = visible[-1] if len(ordered) > limit and visible else None
-        return visible, continuation
+            require_uuid4(after_candidate_id)
+
+    @staticmethod
+    def _result(reader, queries, *, after_candidate_id, limit, explanation):
+        sql = " UNION ".join(query for query, _ in queries)
+        parameters = tuple(value for _, values in queries for value in values)
+        count = int(reader.execute(f"SELECT COUNT(*) FROM ({sql})", parameters).fetchone()[0])
+        seek = ""
+        if after_candidate_id is not None:
+            seek = " WHERE candidate_id>?"
+            parameters += (after_candidate_id,)
+        rows = reader.execute(f"SELECT candidate_id FROM ({sql}){seek} ORDER BY candidate_id LIMIT ?",
+            (*parameters, limit + 1)).fetchall()
+        visible = tuple(str(row[0]) for row in rows[:limit])
+        continuation = visible[-1] if len(rows) > limit and visible else None
+        state = "UNRESOLVED" if count == 0 else "UNIQUE_CANDIDATE" if count == 1 else "AMBIGUOUS"
+        return CandidateResult(state, explanation(count), count, visible, continuation)
 
     @classmethod
     def match_customer_org(
@@ -56,6 +67,7 @@ class ReferenceMatcher:
         after_candidate_id: str | None = None,
         limit: int = 50,
     ) -> CandidateResult:
+        cls._validate_paging(after_candidate_id, limit)
         if raw_account_code is None and raw_name is None:
             raise SomaError("MATCH_INPUT_INVALID", "at least one Customer match value is required")
         code_key = (
@@ -69,61 +81,40 @@ class ReferenceMatcher:
             else normalize_match_key(raw_name, raw_max_utf8_bytes=1024)
         )
         cls._require_profile(reader)
-        code_ids: set[str] = set()
-        name_ids: set[str] = set()
-        if code_key is not None:
-            code_ids = {
-                str(row[0])
-                for row in reader.execute(
-                    "SELECT i.customer_org_id FROM customer_org_identifiers i "
+        code_query = ("SELECT DISTINCT i.customer_org_id AS candidate_id FROM customer_org_identifiers i "
                     "JOIN customer_organizations c ON c.customer_org_id=i.customer_org_id "
                     "WHERE i.identifier_type='customer_account_code' AND i.match_key=? "
-                    "AND i.lifecycle_state='active' AND c.lifecycle_state='active'",
-                    (code_key,),
-                ).fetchall()
-            }
-        if name_key is not None:
-            name_ids = {
-                str(row[0])
-                for row in reader.execute(
-                    "SELECT customer_org_id FROM customer_organizations "
-                    "WHERE lifecycle_state='active' AND name_match_key=?",
-                    (name_key,),
-                ).fetchall()
-            }
-
-        if code_key is not None and len(code_ids) == 1:
-            sole_code = next(iter(code_ids))
-            differing_name = name_ids - {sole_code}
+                    "AND i.lifecycle_state='active' AND c.lifecycle_state='active'", (code_key,))
+        name_query = ("SELECT customer_org_id AS candidate_id FROM customer_organizations "
+                      "WHERE lifecycle_state='active' AND name_match_key=?", (name_key,))
+        code_count = 0 if code_key is None else int(reader.execute(
+            f"SELECT COUNT(*) FROM ({code_query[0]})", code_query[1]).fetchone()[0])
+        if code_key is not None and code_count == 1:
+            sole_code = reader.execute(code_query[0] + " LIMIT 1", code_query[1]).fetchone()[0]
+            differing_name = name_key is not None and reader.execute(
+                f"SELECT 1 FROM ({name_query[0]}) WHERE candidate_id<>? LIMIT 1",
+                (*name_query[1], sole_code)).fetchone() is not None
             if differing_name:
-                candidates = code_ids | name_ids
+                queries = (code_query, name_query)
                 explanation = "ACCOUNT_CODE_NAME_CONFLICT"
             else:
-                candidates = code_ids
+                queries = (code_query,)
                 explanation = "ACCOUNT_CODE_MATCH"
-        elif code_key is not None and len(code_ids) > 1:
-            candidates = code_ids | name_ids
+        elif code_key is not None and code_count > 1:
+            queries = (code_query, name_query) if name_key is not None else (code_query,)
             explanation = "ACCOUNT_CODE_MULTIPLE_CLAIMS"
         elif code_key is not None:
-            candidates = name_ids
-            if len(name_ids) == 1:
-                explanation = "ACCOUNT_CODE_UNRESOLVED_NAME_CANDIDATE"
-            elif len(name_ids) > 1:
-                explanation = "ACCOUNT_CODE_UNRESOLVED_NAME_AMBIGUOUS"
-            else:
-                explanation = "NO_CANONICAL_CANDIDATE"
+            queries = (name_query,) if name_key is not None else (code_query,)
+            def unresolved_explanation(count):
+                return ("NO_CANONICAL_CANDIDATE" if count == 0 else "ACCOUNT_CODE_UNRESOLVED_NAME_CANDIDATE"
+                        if count == 1 else "ACCOUNT_CODE_UNRESOLVED_NAME_AMBIGUOUS")
+            return cls._result(reader, queries, after_candidate_id=after_candidate_id, limit=limit,
+                               explanation=unresolved_explanation)
         else:
-            candidates = name_ids
-            explanation = "NAME_MATCH" if candidates else "NO_CANONICAL_CANDIDATE"
-
-        visible, continuation = cls._page(
-            candidates, after_candidate_id=after_candidate_id, limit=limit
-        )
-        count = len(candidates)
-        state: CandidateState = (
-            "UNRESOLVED" if count == 0 else "UNIQUE_CANDIDATE" if count == 1 else "AMBIGUOUS"
-        )
-        return CandidateResult(state, explanation, count, visible, continuation)
+            return cls._result(reader, (name_query,), after_candidate_id=after_candidate_id, limit=limit,
+                               explanation=lambda count: "NAME_MATCH" if count else "NO_CANONICAL_CANDIDATE")
+        return cls._result(reader, queries, after_candidate_id=after_candidate_id, limit=limit,
+                           explanation=lambda _count: explanation)
 
     @classmethod
     def match_contact(
@@ -136,6 +127,7 @@ class ReferenceMatcher:
         after_candidate_id: str | None = None,
         limit: int = 50,
     ) -> CandidateResult:
+        cls._validate_paging(after_candidate_id, limit)
         if not isinstance(scope, str) or not scope:
             raise SomaError("MATCH_INPUT_INVALID", "Contact match scope is required")
         if raw_name is None and raw_email is None:
@@ -168,39 +160,24 @@ class ReferenceMatcher:
             "AND a.is_current=1 AND a.customer_org_id=?)"
         )
         scope_params: tuple[object, ...] = () if scope == "UNBOUND" else (scope,)
-        candidates: set[str] = set()
+        queries = []
         if name_key is not None:
-            rows = reader.execute(
-                "SELECT c.contact_id FROM contacts c WHERE c.lifecycle_state='active' "
+            queries.append((
+                "SELECT c.contact_id AS candidate_id FROM contacts c WHERE c.lifecycle_state='active' "
                 f"AND c.name_match_key=? AND {where_scope}",
                 (name_key, *scope_params),
-            ).fetchall()
-            candidates.update(str(row[0]) for row in rows)
+            ))
         if email_key is not None:
-            rows = reader.execute(
-                "SELECT DISTINCT c.contact_id FROM contacts c "
+            queries.append((
+                "SELECT DISTINCT c.contact_id AS candidate_id FROM contacts c "
                 "JOIN contact_channels ch ON ch.contact_id=c.contact_id "
                 "WHERE c.lifecycle_state='active' AND ch.lifecycle_state='active' "
                 "AND ch.channel_kind='email' AND ch.match_key=? AND "
                 f"{where_scope}",
                 (email_key, *scope_params),
-            ).fetchall()
-            candidates.update(str(row[0]) for row in rows)
-
-        visible, continuation = cls._page(
-            candidates, after_candidate_id=after_candidate_id, limit=limit
-        )
-        count = len(candidates)
-        state: CandidateState = (
-            "UNRESOLVED" if count == 0 else "UNIQUE_CANDIDATE" if count == 1 else "AMBIGUOUS"
-        )
-        return CandidateResult(
-            state,
-            "EXACT_SCOPED_REFERENCE_MATCH" if count else "NO_CANONICAL_CANDIDATE",
-            count,
-            visible,
-            continuation,
-        )
+            ))
+        return cls._result(reader, queries, after_candidate_id=after_candidate_id, limit=limit,
+                           explanation=lambda count: "EXACT_SCOPED_REFERENCE_MATCH" if count else "NO_CANONICAL_CANDIDATE")
 
 
 class ReferenceMatchingQueries:

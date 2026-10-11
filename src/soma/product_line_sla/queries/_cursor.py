@@ -1,5 +1,34 @@
 from __future__ import annotations
 
+from soma.foundation.errors import ValidationError
+
+
+def select_keyset_page(reader, *, columns, source, clauses=(), parameters=(),
+                       order, key=None, descending=False, limit):
+    """Read a bounded page and its full filtered count in the caller's snapshot.
+
+    SQL fragments are owning-query constants; only values are bound parameters.
+    Cursor identity and key types must already be validated by the owning query.
+    """
+    filters = list(clauses)
+    values = tuple(parameters)
+    if key is not None and any(type(value) is int and not -(1 << 63) <= value < (1 << 63) for value in key):
+        raise ValidationError("cursor integer is outside the database ordering range")
+    where = " WHERE " + " AND ".join(filters) if filters else ""
+    total = int(reader.execute(f"SELECT COUNT(*) FROM {source}{where}", values).fetchone()[0])
+    if key is not None:
+        comparison = "<" if descending else ">"
+        filters.append(f"({','.join(order)}) {comparison} ({','.join('?' for _ in order)})")
+        values += tuple(key)
+    where = " WHERE " + " AND ".join(filters) if filters else ""
+    direction = " DESC" if descending else " ASC"
+    ordering = ",".join(column + direction for column in order)
+    rows = reader.execute(
+        f"SELECT {columns} FROM {source}{where} ORDER BY {ordering} LIMIT ?",
+        (*values, limit + 1),
+    ).fetchall()
+    return rows, total
+
 
 def cursor_envelope(
     *,

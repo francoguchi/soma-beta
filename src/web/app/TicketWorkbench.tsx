@@ -1,24 +1,33 @@
-import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useContext, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {ReturnState} from './router';
 import {WorkbenchShell, srTabs, rfcTabs} from '../components/WorkbenchShell';
-import {OwnerProjection} from '../components/OwnerProjection';
+import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection';
 import {UiStore, emptySelection} from '../state/ui-store';
 import {TicketCommunications} from './TicketCommunications';
 import {RfcLifecycle} from './RfcLifecycle';
 import {filterFingerprint} from '../data/query-controller';
 import {ticketNotesQuery,nextTicketNotesQuery,noteIdentity} from './ticket-notes-intent';
 import {ServiceRequestContext,type ServiceRequestContextFacts} from './ServiceRequestContext';
+import {TicketRfcLinks} from './TicketRfcLinks';
+import {RfcRelated,RfcServiceRequests} from './RfcRelations';
+import {TicketDeviceReferences} from './TicketDeviceReferences';
+import {TicketTasks} from './TicketTasks';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 type SrDetail = ServiceRequestContextFacts&Readonly<{service_request_id: string; identity: {official_sr_no: string | null; local_sr_no: string | null}; revision: number;
   linked_root_rfc_count: number; device_reference_count: number; warnings: readonly string[]}>;
 type RfcDetail = Readonly<{rfc_id: string; rfc_no: string; revision: number; hierarchy_role: string; local_archive_state: string;
   customer_org_id:string|null;direct_service_request_count: number; device_reference_count: number; subordinate_count: number; warnings: readonly string[]}>;
 type NotePage = Readonly<{items: readonly {working_note_id: string;body_text: string;revision:number;created_at_utc: number;updated_at_utc: number;created_by_local_user_profile_id: string}[];continuation: unknown | null}>;
 function Notes({path,setPath,route,ownerFingerprint}: {path:string;setPath:(path:string)=>void;route:string;ownerFingerprint:string|null}) {
+  const ownerReturnGeneration=useContext(OwnerReturnRefresh);
   // Ten maximum-size bodies including six-byte JSON escapes fit the existing
   // bounded transport. Paging preserves all owner notes without a global increase.
   if(!ownerFingerprint)return <p role="status">Loading accepted notes context.</p>;
   const input=ticketNotesQuery(path,route);if(!input||input.cursor!==null&&(input.cursor as {filter_fingerprint:string}).filter_fingerprint!==ownerFingerprint)return <><p role="alert">The previous note page does not match this ticket.</p><button type="button" onClick={()=>setPath(path.split('?')[0]+'?limit=10')}>Load first notes page</button></>;
-  return <OwnerProjection<NotePage> path={path} render={page => {
+  // Returning from Settings must not expose a stale pagination control while
+  // the new owner read is pending. Remount only the read projection, not Notes
+  // paging intent or the workbench's unsaved local state.
+  return <OwnerProjection<NotePage> key={ownerReturnGeneration} path={path} render={page => {
     const instant=(value:unknown)=>Number.isSafeInteger(value)&&Number(value)>=0&&Number(value)<=8640000000000;
     if (!Object.hasOwn(page,'continuation')||!Array.isArray(page.items)||page.items.length>10||page.items.some(note=>!noteIdentity(note.working_note_id)||!noteIdentity(note.created_by_local_user_profile_id)
       ||typeof note.body_text!=='string'||new TextEncoder().encode(note.body_text).length>65536||!Number.isSafeInteger(note.revision)||note.revision<1||!instant(note.created_at_utc)||!instant(note.updated_at_utc)||note.updated_at_utc<note.created_at_utc)
@@ -26,12 +35,12 @@ function Notes({path,setPath,route,ownerFingerprint}: {path:string;setPath:(path
     const next=nextTicketNotesQuery(path,route,page.continuation,ownerFingerprint);
     return <><h2>Working Notes</h2>{page.items.length === 0 && <p>No active notes in this page.</p>}
       {page.items.map(note => <article key={note.working_note_id}><p style={{whiteSpace: 'pre-wrap'}}>{note.body_text}</p>
-        <p>Created {new Date(note.created_at_utc * 1000).toISOString()}; updated {new Date(note.updated_at_utc * 1000).toISOString()}.</p>
+        <p>Created {formatOwnerLocalTime(note.created_at_utc)}; updated {formatOwnerLocalTime(note.updated_at_utc)}.</p>
         <p>Creator profile: {note.created_by_local_user_profile_id}. Accepted note revision: {note.revision}.</p></article>)}
       {page.continuation !== null && <button type="button" data-focus-token="notes:next" onClick={() => setPath(next)}>Next notes</button>}</>;
   }}/>;
 }
-export function TicketWorkbench({id, type, onDirtyChange, restored, onReturnState}: {id: string; type: 'service_request' | 'rfc'; onDirtyChange: (dirty: boolean) => void; restored: ReturnState | null; onReturnState: (capture: () => ReturnState | null) => void}) {
+export function TicketWorkbench({id, type, onDirtyChange, restored, onReturnState, navigate}: {id: string; type: 'service_request' | 'rfc'; onDirtyChange: (dirty: boolean) => void; restored: ReturnState | null; onReturnState: (capture: () => ReturnState | null) => void; navigate: (path: string) => void}) {
   const root = useRef<HTMLDivElement>(null); const [returnNotice,setReturnNotice] = useState<string | null>(null);
   const route=(type==='rfc'?'/tickets/rfc/':'/tickets/sr/')+encodeURIComponent(id);
   const firstNotes=`/api/v1/tickets/${type}/${encodeURIComponent(id)}/notes?limit=10`;
@@ -81,15 +90,23 @@ export function TicketWorkbench({id, type, onDirtyChange, restored, onReturnStat
       observer=new MutationObserver(apply);
       observer.observe(node,{childList:true,subtree:true,characterData:true});
     }
-    apply();
+    // A Settings return can reuse already-rendered evidence for one commit.
+    // Delay restoration until owner readers publish their loading transition;
+    // otherwise we can focus a stale Next button that will soon disappear.
+    const frame=requestAnimationFrame(()=>{if(observer)apply();});
     for (const event of ['pointerdown','keydown','wheel','touchstart']) node.addEventListener(event,stop,{capture:true,once:true});
-    return ()=>{stop();for(const event of ['pointerdown','keydown','wheel','touchstart']) node.removeEventListener(event,stop,true);};
+    return ()=>{cancelAnimationFrame(frame);stop();for(const event of ['pointerdown','keydown','wheel','touchstart']) node.removeEventListener(event,stop,true);};
   }, [restored]);
   return <div ref={root} onFocusCapture={event=>{
     const control=event.target.closest<HTMLElement>('[data-focus-token]');
     if (control&&event.currentTarget.contains(control)) store.dispatch({focusToken:control.dataset.focusToken??null});
   }}>{returnNotice&&<p role="status">{returnNotice}</p>}<WorkbenchShell store={store} onDirtyChange={onDirtyChange} tabs={type === 'service_request' ? srTabs : rfcTabs} renderTab={tab => {
     if (tab === 'Notes') return <Notes path={notesPath} setPath={setNotesPath} route={route} ownerFingerprint={ownerFingerprint}/>;
+    if (tab === 'Devices' && type === 'service_request') return <TicketDeviceReferences id={id} type={type}/>;
+    if (tab === 'Tasks') return <TicketTasks id={id} type={type} navigate={navigate}/>;
+    if (tab === 'Service Requests and Devices' && type === 'rfc') return <><RfcServiceRequests id={id} navigate={navigate}/><TicketDeviceReferences id={id} type={type}/></>;
+    if (type === 'service_request' && tab === 'RFCs') return <TicketRfcLinks id={id} navigate={navigate}/>;
+    if (type === 'rfc' && tab === 'Related RFCs') return <RfcRelated id={id} navigate={navigate}/>;
     if (tab !== 'Overview') return <><h2>{tab}</h2><p role="status">This owner projection is not yet bound to this surface.</p></>;
     return type === 'service_request' ? <OwnerProjection<SrDetail> path={'/api/v1/tickets/service-requests/' + encodeURIComponent(id)} render={value => <>
       <h2>Service Request {value.identity.official_sr_no ?? value.identity.local_sr_no}</h2><p>Accepted revision: {value.revision}</p>

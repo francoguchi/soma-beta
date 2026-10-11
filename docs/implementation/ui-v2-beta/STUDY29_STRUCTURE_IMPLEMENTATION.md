@@ -1,0 +1,67 @@
+# SOMA UI V2 — Study 29 Structure interaction integration
+
+Status: **implemented on `feat/beta-ui-v2`; operator verified 11/11 Study29 Edge on source HEAD `39963ad2`**. Later Structure lens/recovery changes are **source-only, not yet Windows verified**. See `CONTINUE.md`.
+Study 30 remains the primary visual/interaction design; Study 29 is supporting prototype interaction evidence.
+
+## Implemented on real Infrastructure surface
+
+- The existing `GET /api/v1/infrastructure/tree?limit=200` remains the **sole owner** of explorer rows, their identities, source parent reference, pagination and snapshots.
+- Real `InfrastructureWorkspace` now has a `Structure` trigger and a native accessible modal. The modal has Study 29's **Full structure**, **Site → Cloud**, and **Direct to Network Element** quick views.
+- Customer is pinned first, Network Element pinned last **in the presentation-path guide**. The four currently available intermediate owner node kinds are Cloud Deployment, Site, Room, and Rack. The backend explorer does **not** return a full Customer ancestry tree or a separate Cloud Type row. **Never invent customer nodes, Cloud Types or cross-page parentage** to fill the picture.
+- Intermediate levels support hide/reveal and reorder using **keyboard/pointer arrow controls** and optional pointer drag. Cancel, Close and Escape discard edits. **Apply view** commits only a `StructureView` presentation order/visibility choice.
+- `projectStructureRows` produces a stable display permutation of the **currently fetched bounded owner page**: it uses the same row objects, preserves parent IDs, retains both NE and containment-context owner rows, and never changes the authoritative cursor or any domain relationship.
+- The visible Structure-path is labeled an **example display projection**, not the historical/physical lineage of any specific Network Element. Actual physical placement, Cloud assignments and containment remain separately owned facts.
+- Applied display state survives browser Back/Forward as a strictly validated, frozen `infrastructureStructure` **interaction intent** (order/visible arrays, no domain DTO/cache). Missing/foreign/duplicate keys are rejected by `NavigationHistory.remember`.
+- Structure modal uses native `<dialog>.showModal()`, Escape/Cancellation handling, explicit trigger refocus after Apply/Cancel/Escape, and a fixed-max-height grid with a **scrollable central body and reachable fixed footer**. It is intended to work at 200% browser zoom without losing Apply controls or keyboard focus.
+
+## Tests added (source only)
+
+- `src/web/tests/infrastructure-structure.test.mjs`: 5 Node unit tests for presets, projections/source parent identity, hide/reorder/reveal, closed/bounded shape, immutable Back/Forward intent, and drag semantics.
+- `src/web/browser-tests/infrastructure-structure-v2.spec.mjs`: 7 Edge cases for Apply/actual bounded explorer, Direct/Full, checkbox/arrow reordering, Cancel/Escape, zoom 200% and Tab focus containment, Back/Forward/current owner refetch, and pointer drag.
+- Regression suite must include the preceding **48 owner Infrastructure+Ticket Edge scenarios**, because this changes the same Infrastructure explorer and ReturnState router.
+- Expected next operator targets after this addition: frontend **65 Node tests**, focused Edge **55 cases across 13 specs**; strict production build, exact `tools/verify_ui_build.py`, and optional LLD-08 focused Python. **Do not claim these green before operator's logs.**
+
+## Known limitation and next design boundary
+
+This is the authorized **Structure interaction and presentational projection**, not a complete parent-linked navigable domain tree: the current LLD-08 explorer returns up to 200 flattened typed rows per source-ordered owner page, not a complete ancestry DTO. A true cross-page Customer → Cloud → Site → Room → Rack → Network Element grouping hierarchy would require an explicit read-only owner contract with trustworthy parent/scope evidence and bounded paging; it **must not** be simulated with guessed parent nodes, merged SQL projections or UI-produced domain revisions.
+
+No Infrastructure mutation endpoint, database model, security policy, migration, audit record, frozen UI asset or physical placement was changed here. Continue using one draft PR #80, no full CI/merge before complete UI acceptance.
+
+## Follow-up hardening — zoom, session and current-page navigation (2026-10-10)
+
+- **Real defect reproduced in headless Chromium, independent of the actual Beta runtime:** with document-root CSS `zoom:200%`, the original `100dvh` native Structure modal was visually 1,340px tall in a 690px viewport; Apply sat below the screen. The same problem occurred at 390px width. This was not a hypothetical layout concern. Test fixture measured the actual modal and Apply `getBoundingClientRect()` before changing source. Fix `bcd11741` measures `window.visualViewport` (fallback `innerWidth/innerHeight`) and effective `getComputedStyle(document.documentElement).zoom`, then clamps modal's inline max width/height in **unzoomed layout pixels**, recalculating on window/visual-viewport resize. Isolated Chromium geometry check after the fix put modal and Apply inside the visible 840×690 and 390×844/620 viewports at 200%. **This is NOT yet a green real Beta browser/spec run.** The compact styling in `225829f1` reduces fixed header/footer crowding at high zoom.
+- Session preference `currentSessionStructure/applySessionStructure` in `infrastructure-structure.ts` stores only a validated, frozen array pair **in module memory for this document session**, not `localStorage`, a Setting or any backend mutation. Ordinary SPA workspace changes retain the applied view; fresh document reload starts with Full; browser Back restores the earlier bounded return intent and synchronizes current document-session choice. No owner DTO is ever stored there.
+- **Hidden-only owner page**: a Direct-to-NE view may hide every row on the current 200-record owner page while real NEs appear on later pages. The UI now clearly distinguishes `all rows hidden on this page` from `no owner records` and continues to show the unchanged backend next-page cursor. No fake cross-page grouping or synthetic NE instances.
+- **Current-page Structure shortcuts**: display level buttons select and focus actual visible, typed owner rows already on the current page. They do not fabricate clickable Customer identities, jump to unfetched owner pages, open a record on behalf of the operator, or reinterpret the row's `parent_context_id`. A new selector displays per-level only when a real node of that kind is present. This provides a useful navigable projected grouping while waiting for any fully authoritative cross-page hierarchy contract.
+- Extended tests to **six** Structure Node cases (including separate immutable session preference), and **eleven** Structure Edge cases (the original seven, plus ordinary SPA route session retention, hidden-only cursor continuation, dynamic viewport resizing at 200%, and shortcut selection/focus). New aggregate operator target after the earlier 48 Infrastructure/Ticket cases: **66 frontend Node tests and 59 Edge cases across 13 specs**, not yet executed or certified.
+- Existing limitations remain: no full Customer ancestor DTO and no composite cross-page navigable tree; Study 30 is primary visual authority. The historical Study 29 standalone prototype green results are not proof of Beta's runtime, accessibility, native packaging or backend acceptance.
+
+
+## Windows operator acceptance and current-page escape — 2026-10-11
+
+- Windows operator's source-matched Vite production bundle passed **all 11 Study29 Structure Edge tests**, and the complete 13-spec Infrastructure regression passed **59/59** on prior source HEAD `39963ad2`. Checks included modal Apply, keyboard focus restoration, 200% zoom, viewport shrinking, Back refetch, current-page owner row shortcuts, and unchanged owner parentage. These establish automated browser acceptance on that exact source, not native-host release/real-data visual certification.
+- Following that verification, a **source-only** usability refinement lets the operator explicitly press `Show hidden Structure levels` on a current owner page where the active projection hid every available row. It calls the existing document-session `applySessionStructure(FULL_STRUCTURE)` and changes no owner data or query. Added a **12th** Study29 Edge test verifying the same owner rows are revealed without another owner request and without opening a detail.
+- Study29 remains an *owner-page display view*, not a true cross-page structural hierarchy. The new LLD08 exact Customer/Site/kind/lifecycle filters and Site owner-backed drill-down also use original owner query keys, not invented Customer/Cloud ancestor rows. Full Room/Cloud current-detail and multi-page ancestry remain future explicit LLD08 read contracts; do not interpret the prototype as authority to fabricate them.
+- Updated consolidated operator gate in `CONTINUE.md`. All post-`39963ad2` source requires a new Windows frontend test/build/asset verification and Edge regression; **latest source not yet certified**.
+
+## Approved separation — 2026-10-11
+
+The operator approved two independent but connected relationship views: **physical**
+Customer → Site → Room → Rack → Network Element; **logical** Site-scoped Cloud
+Deployment assignments and Network Element containment. Cloud Type remains a
+different reusable reference. The Study29 Customer→Cloud→Site display path is
+a configurable **example order**, not a claim that Cloud owns Sites.
+
+On the real Infrastructure page, the separately labelled Physical structure
+vs Cloud and containment owner-page lenses make that distinction explicit.
+These filters preserve original row identities, the authoritative next-page
+cursor, and the presentation-only Structure controls. New browser Back
+intent carries only the closed three-value lens; both Structure and lens
+preferences remain document-session-only. Accepted NE relationship links
+open Site, Rack occupancy, Cloud history or containment-parent NE owner reads
+**only on explicit action**, and Rack owner occupancy can open a validated
+occupant NE point. Full Room/Cloud point DTOs and lazy children query owners
+require normative LLD-08 design approval before implementation:
+`INFRASTRUCTURE_RELATIONSHIP_PLAN.md`.
+
+Current overall 83 Node/80 Edge test targets are NOT yet verified on Windows.

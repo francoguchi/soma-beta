@@ -1,0 +1,40 @@
+# Infrastructure physical and logical relationship plan — 2026-10-11
+
+Status: **operator accepted D1–D4 read-only clarification on 2026-10-11; additive runtime queries and Room/Cloud UI workbenches now implemented in SOURCE, not yet operator-tested.** Historic pinned design-branch LLD-08 still lacks the new normative leaves: formal promotion remains separately pending. Keep Study30 primary and Study29 as interaction support.
+
+## Accepted choices
+
+- Two distinct but linked relationship views: physical **Customer → Site → Room → Rack → Network Element**; logical **Site-scoped Cloud Deployment assignment** and **Network Element containment**. Cloud Type is a reusable reference identity, not a Site parent. Explicitly unracked Network Elements still belong to a Site.
+- Comprehensive Room and Cloud Deployment workbenches, delivered incrementally after authoritative point-read contracts exist.
+- Expand hierarchy with **lazy, parent-filtered, cursor-paginated owner queries**, never by fetching all descendants or guessing from the flat owner explorer.
+- Keep Structure Apply and current-page physical/logical lens as **document-session presentation preferences**, not persisted Settings or domain changes.
+
+## Current implementation authority
+
+Pinned LLD-08 `ui/workspace-state.json` distinguishes Rack placement, Cloud assignment and containment. `schema/site-placement.json` owns Site, Room, Rack and NE physical identity; `schema/relationships.json` owns Cloud Type, Site-scoped Cloud Deployment, Cloud assignments and containment. `queries/v2/explorer.json` is a flat, cursor-paginated contextual projection with exact Customer/Site/kind/lifecycle filters. Existing point reads: Site details, Rack occupancy, Network Element details. **No normative current Room/Cloud Deployment detail GET currently exists.** Historical events must not be presented as current entity metadata.
+
+## Historical proposed LLD-08 read contracts (superseded by accepted focused clarification below)
+
+**RoomDetailQuery**: exact Room UUID4; accepted Room ID/name/state/revision; parent Site ID and derived Customer ID; indexed current Rack count. Read in one stable snapshot, return owner not-found if target missing. Revisions and byte bounds from owning schema.
+
+**CloudDeploymentDetailQuery**: exact Deployment UUID4; accepted Deployment ID/name/state/revision, Cloud Type ID, Site ID and derived Customer ID; count of directly assigned Network Elements from `cloud_assignment_current`. Cloud is **not** a physical ancestor.
+
+**Parent-scoped children query family**: Customer → Sites, Site → Rooms and explicitly unracked NEs, Room → Racks, Rack → current placed NEs, Cloud Deployment → currently assigned NEs, NE → directly contained children. These are different owner relationships; no invented inheritance. Each proposed query requires exact parent UUID/kind, deterministic ordering with UUID tie-breaker, bounded page ≤200, exact query/filter-bound cursor and controlled snapshot consistency. Use already declared indexes where possible and inspect actual plans; do not create migrations without allocation authority. Return navigation stores only bounded identity and cursor intent, never owner DTO.
+
+Design authority work required before new routes: add accepted LLD-08 query/type/route leaves and module-map/provenance, review correctness and security, test stale/foreign cursors, dense parent collections, cross-Site guards, archived targets, missing IDs, unexpected order and performance. This proposal does **not** authorize transport changes or database writes.
+
+## Safe current UI delivery
+
+Real exact Site/Customer explorer filters; read-only NE → accepted Site point, Rack occupancy, Cloud history and containment parent NE; Rack occupancy → occupant NE; independent physical vs logical current-owner-page lens, Study29 presentation view and focus/return state. All target detail reads validate their own owner responses. A user may expand only pages actually fetched; empty current page does not prove globally empty membership.
+
+Do not claim native Windows certification for source changes after prior verified HEAD `39963ad2`. Draft PR #80 and protected implementation donor remain unchanged.
+
+
+## Detailed owner-read proposal prepared (2026-10-11)
+
+The review-ready **non-normative** machine-readable contract is [LLD08_ROOM_CLOUD_READ_CONTRACT_PROPOSAL.json](LLD08_ROOM_CLOUD_READ_CONTRACT_PROPOSAL.json), with [human rationale and decisions](LLD08_ROOM_CLOUD_READ_CONTRACT_PROPOSAL.md). It refines the older broad ideas above into **two proposed exact point reads plus one four-edge children read**, deliberately **reusing** the current filtered Explorer for Customer→Sites, Site→Rooms/Cloud/NE and the existing RackOccupancyQuery rather than creating duplicated owner queries. The draft identifies exact proposed DTOs/route families, cursor binding, density/index gates, owner choices D1–D4 and design promotion checklist. **None** of these proposed endpoints exists until accepted in the pinned normative design; the implemented Room/Cloud UI continues to show explicitly marked historical context only. Focused Windows tests on `b26a04e` and its frozen-assets-only successor `7c263a80` are green; they do not certify candidate future owner GETs.
+
+
+## Owner approval and additive implementation authority (2026-10-11)
+
+The operator expressly approved the narrow D1–D4 default choices of the detailed Room/Cloud read proposal. The accepted focused clarification is `docs/reconciliation/LLD08_ROOM_CLOUD_READS_ACCEPTED_V1.md` and the versioned additive runtime query/route/types registry is `src/soma/infrastructure/contracts/room_cloud_reads_v1.json`. This acceptance does **not** magically change the separate pinned design-branch SHA or permit migrations or mutations. New owner handlers must still pass runtime, pagination, security and dense-parent gates before UI point reads are promoted as supported.

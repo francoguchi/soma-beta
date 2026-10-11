@@ -1,0 +1,71 @@
+{
+  "schema": "SOMA-LOCAL-SQLCIPHER-DEVELOPMENT-V1",
+  "release_certification": false,
+  "python": "CPython 3.14 Windows x64",
+  "compiler": "MSVC v143 19.44.35229",
+  "windows_sdk": "10.0.26100.0",
+  "generated": {
+    "sqlite3.c": "6cefa3b1fa91b90bff07f3d7b1911d81b7c2616aa7d89e7092716a40a14e8545",
+    "sqlite3.h": "b43f231e215c77500c10a11e61eaef8d75629f4c51dd021e862136d9bcf95c26",
+    "sqlite3ext.h": "a3ca6e430c8e97edf8cbd66867ac178ab179a41d85c04cad48889a8b84806dcd"
+  },
+  "binding_setup_sha256": "a3225f406071b9c77d79a2319333ca18c2651d99eaf301193439121e1bbf3edb",
+  "sources": {
+    "sqlcipher3": {
+      "commit": "14fc2632676b20011e0bba64fdda49763a2dd2ec",
+      "git_archive_sha256": "e0b33ba3d7c83fccb1c37e38c2ba49885cc4c2b3cdb859ff1d9fbd402f2e502e"
+    },
+    "sqlcipher": {
+      "commit": "810db22f575ee7cf94ea96a3e91622b5fcece3dc",
+      "git_archive_sha256": "fdfc597386d5baf35aea97a9edffdd7c95f12ccff5cc6c3c15b4d1c33612ef09"
+    },
+    "openssl": {
+      "commit": "c8bd5a57108599ac650bbae77fcabe3109dab2e8",
+      "git_archive_sha256": "44c7fe36c4a12821747e61eafa4d04eef1b73f2ae4f30236898e8add7fcac3db"
+    }
+  },
+  "openssl_build": {
+    "version": "3.6.5",
+    "tag": "openssl-3.6.5",
+    "commit": "c8bd5a57108599ac650bbae77fcabe3109dab2e8",
+    "repository": "https://github.com/openssl/openssl.git",
+    "static": true,
+    "libcrypto_sha256": "9b303f211706c435283f399fe7a0c4c60f672274319a3670a747be6f73e0edaf",
+    "configuration": {
+      "target": "VC-WIN64A",
+      "options": [
+        "no-shared",
+        "no-zlib",
+        "no-tests",
+        "no-unit-test",
+        "no-fips",
+        "no-md2",
+        "threads",
+        "--release",
+        "--libdir=lib"
+      ],
+      "runtime": "/MD for static library, applications and legacy DSO",
+      "runtime_adjustments": "Cached recipe runtime substitution in Configurations/10-main.conf plus explicit /MD in generated Makefile DSO_CFLAGS; only legacy-dso-legacyprov.obj invalidated/recompiled after initial DLL link failure. No cryptographic/binding/core source edits.",
+      "binding_options": "Unchanged captured setup.py macros and libraries; offline --no-deps --no-build-isolation via SOMA_LOCAL_CONAN_GRAPH pointing only to candidate install directory.",
+      "build_exit": 0,
+      "wheel_exit": 0,
+      "openssl_tests_executed": false
+    }
+  },
+  "wheel": {
+    "path": "dist/source-development/openssl-3.6.5/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl",
+    "sha256": "4e1a8b5a580b94a015b50c566092db6178a095d0d206371e133155e164517c3c",
+    "bytes": 2544358
+  },
+  "verification": {
+    "cipher_version": "4.17.0 community",
+    "canonical_core": "4.17.0",
+    "encrypted_migration_sequence": 19,
+    "cipher_profile": "4096/HMAC_SHA512/use_hmac=1/plaintext_header=0/memory_security=1/foreign_keys=1",
+    "wrong_key_rejected": true,
+    "crypto_provider": "OpenSSL 3.6.5 29 Sep 2026",
+    "candidate_evidence": "docs/implementation/lld12_native_security_candidate_2026-10-10.json"
+  },
+  "supersedes_for_source_setup": "docs/implementation/lld12_sqlcipher_development.json",
+  "scope": "Patched Windows CPython 3.14 source-development dependency; not installer/release certification. Previous artifact and historical evidence preserved."
+}

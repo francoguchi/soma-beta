@@ -26,7 +26,7 @@ class PasswordVerifierProvider:
         except (ValueError, UnicodeError):
             raise SomaError("AUTH_PASSWORD_POLICY", "password does not meet the accepted policy") from None
 
-    def hash(self, password, confirmation):
+    def setup_password_bytes(self, password, confirmation):
         value = self.password_bytes(password)
         try:
             confirmed = confirmation.encode("utf-8", errors="strict") if isinstance(confirmation, str) else None
@@ -34,6 +34,10 @@ class PasswordVerifierProvider:
             confirmed = None
         if confirmed != value:
             raise SomaError("AUTH_PASSWORD_POLICY", "password confirmation differs")
+        return value
+
+    def hash(self, password, confirmation):
+        value = self.setup_password_bytes(password, confirmation)
         return self.hasher.hash(value, salt=secrets.token_bytes(16))
 
     def verify(self, verifier, password):

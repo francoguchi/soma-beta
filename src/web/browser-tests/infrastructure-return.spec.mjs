@@ -12,6 +12,8 @@ const detail=warning=>({network_element_id:id,operational_name:'Synthetic return
 const component={installed_component_id:other,state:'removed',bom_code:'SYNTHETIC-BOM',manufacturer_serial:'SYNTHETIC-SECOND-PAGE',slot_label:null,
   condition:'removed',device_part_unit_id:null,physical_consequence_id:null};
 test('Infrastructure Back refetches the exact explorer/component/history pages and restores opened identity, tab, focus and scroll',async({page})=>{
+  // Use a viewport where the eight-column evidence table genuinely has horizontal overflow.
+  await page.setViewportSize({width:480,height:900});
   const reads={tree:[],components:[],history:[]};let changed=false;
   await page.route('**/api/v1/objectives?**',route=>route.fulfill({json:{items:[],exact_total:0,continuation:null,as_of_utc:Number(new URL(route.request().url()).searchParams.get('as_of_utc'))}}));
   await page.route('**/api/v1/infrastructure/**',route=>{

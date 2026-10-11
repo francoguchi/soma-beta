@@ -7,7 +7,9 @@ for (const fixture of manifest.fixtures) {
     const state = fixture['surface/state'];
     await page.setViewportSize({width: fixture.container_width_css_px, height: fixture.viewport_height_css_px});
     await page.emulateMedia({colorScheme:'light', reducedMotion:'reduce', forcedColors:'none'});
-    await page.clock.install({time: new Date(fixture.deterministic_clock)});
+    // pauseAt installs and freezes the virtual clock at the exact fixture instant.
+    // install({time:T}) followed by pauseAt(T) races against real-time drift and
+    // fails intermittently with "Cannot fast-forward to the past" on Windows CI.
     await page.clock.pauseAt(new Date(fixture.deterministic_clock));
     if (state === 'loading' || state === 'error') {
       await page.route('**/api/v1/tickets/service-requests/*', async route => {

@@ -201,7 +201,7 @@ def build_owner_route_adapter(service, *, actor_kind: str, actor_id: str | None)
     if actor_id is not None and (not isinstance(actor_id, str) or not actor_id):
         raise ValidationError("LLD-08 actor identity is invalid")
     from soma.infrastructure.queries.core import InfrastructureQueries
-    from soma.infrastructure.queries import candidates, details, explorer, history, workbooks as workbook_queries
+    from soma.infrastructure.queries import candidates, details, explorer, history, room_cloud, workbooks as workbook_queries
     from soma.infrastructure.services import (
         components, network_elements, placement, regularization, relationships,
         sites, workbooks as workbook_services,
@@ -212,7 +212,7 @@ def build_owner_route_adapter(service, *, actor_kind: str, actor_id: str | None)
         components, network_elements, placement, regularization, relationships,
         sites, workbook_services,
     )
-    query_owners = (candidates, details, explorer, history, workbook_queries)
+    query_owners = (candidates, details, explorer, history, room_cloud, workbook_queries)
     installed_commands = set().union(*(owner.COMMAND_NAMES for owner in command_owners))
     installed_queries = set().union(*(owner.QUERY_NAMES for owner in query_owners))
     queries = InfrastructureQueries(service)

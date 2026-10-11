@@ -1,8 +1,14 @@
 import {settingsIntent,type SettingsIntent} from './settings-intent.js';
 import {ticketNotesQuery} from './ticket-notes-intent.js';
+import {validStructure,type InfrastructureLens,type StructureView} from '../presentation/infrastructure-structure.js';
+import {readExplorerFilters} from '../presentation/infrastructure-explorer-filters.js';
+import {readComponentFilters} from '../presentation/infrastructure-component-filters.js';
+import {validInfrastructureContextHistory} from '../presentation/infrastructure-context-intent.js';
+import {validRoomCloudState,type RoomCloudState} from '../presentation/infrastructure-members.js';
+import type {OwnerPageHistory} from '../state/owner-page-history.js';
 export type ClientRoute = Readonly<{path: string; surface: string; owner: string; recordId: string | null}>;
 const routes = [
-  ['/overview','overview','LLD-11'], ['/tickets','ticket_list','LLD-03/04'], ['/tickets/history','ticket_history','LLD-03/04'],
+  ['/overview','overview','LLD-11'], ['/tickets','ticket_list','LLD-03/04'], ['/tickets/rfcs','rfc_list','LLD-03'], ['/tickets/history','ticket_history','LLD-03/04'], ['/tickets/imports','import_monitor','LLD-04'],
   ['/tickets/sr/{id}','sr_workbench','LLD-03'], ['/tickets/rfc/{id}','rfc_workbench','LLD-03'],
   ['/objectives','objectives','LLD-05'], ['/objectives/{id}','objective_detail','LLD-05'], ['/inventory','inventory','LLD-07'],
   ['/infrastructure','infrastructure','LLD-08'], ['/settings','settings','LLD-02/12'],
@@ -29,11 +35,12 @@ export function defaultOpen(recordType: string, id: string): ClientRoute | null 
 export type ReturnState = Readonly<{route: string; filterFingerprint: string; activeId: string | null; selectedId: string | null;
   memberIds: readonly string[]; scrollAnchor: string | null; focusToken: string | null; tab?: string; pane?: 'work' | 'communications';
   collectionQuery?:string;collectionOrder?:readonly string[];groupingQuery?:string|null;
-  inventoryQueries?:Readonly<{stock:string;attention:string}>;infrastructure?:InfrastructureIntent;settings?:SettingsIntent;ticketNotesQuery?:string}>;
+  inventoryQueries?:Readonly<{stock:string;attention:string}>;infrastructure?:InfrastructureIntent;infrastructureStructure?:StructureView;infrastructureLens?:InfrastructureLens;settings?:SettingsIntent;ticketNotesQuery?:string}>;
 export const infrastructureTabs=['Summary','Placement','Components','IP Addresses','Relationships','History','Workbook Activity'] as const;
 export type WorkbookIntent=Readonly<{history:string;run:string|null;proposalId:string|null;candidatePage:number}>;
-export type InfrastructureIntent=Readonly<{explorer:string;openedId:string|null;tab:typeof infrastructureTabs[number];
-  components:string|null;history:string|null;workbook:WorkbookIntent|null}>;
+export type InfrastructureIntent=Readonly<{explorer:string;openedId:string|null;openedKind?:'site'|'room'|'rack'|'cloud_deployment'|'network_element';tab:typeof infrastructureTabs[number];
+  components:string|null;history:string|null;workbook:WorkbookIntent|null;
+  contextHistory?:OwnerPageHistory|null;roomCloud?:RoomCloudState|null}>;
 type InfrastructureQuery='explorer'|'components'|'history'|'workbookHistory'|'workbookRun';
 const infraUuid=(value:unknown):value is string=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value);
 /** Only the implemented owner query intents, with the complete owner ordering tuple. */
@@ -43,8 +50,12 @@ export function infrastructureQuery(path:string,kind:InfrastructureQuery,id:stri
   const expected=kind==='explorer'?'/api/v1/infrastructure/tree':kind==='components'?`/api/v1/infrastructure/network-elements/${id}/components`:
     kind==='history'?'/api/v1/infrastructure/history':kind==='workbookHistory'?'/api/v1/infrastructure/workbooks/history':`/api/v1/infrastructure/workbooks/runs/${id}`;
   try {
-    const url=new URL(path,'http://127.0.0.1');const keys=kind==='history'?['limit','cursor','target_kind','target_id']:['limit','cursor'];
-    if(url.pathname!==expected||url.searchParams.get('limit')!==(kind==='history'?'5':'200')
+    const url=new URL(path,'http://127.0.0.1');const keys=kind==='history'?['limit','cursor','target_kind','target_id']:
+      kind==='explorer'?['limit','cursor','customer_org_id','site_id','node_kind','lifecycle']:
+      kind==='components'?['limit','cursor','state','bom_key','slot_match_key']:['limit','cursor'];
+    if(url.pathname!==expected||(kind==='explorer'&&readExplorerFilters(path)===null)
+      ||(kind==='components'&&readComponentFilters(path,id!)===null)
+      ||url.searchParams.get('limit')!==(kind==='history'?'5':'200')
       ||Array.from(url.searchParams.keys()).some(key=>!keys.includes(key))||keys.some(key=>url.searchParams.getAll(key).length>1)
       ||(kind==='history'&&(url.searchParams.get('target_kind')!=='network_element'||url.searchParams.get('target_id')!==id)))return null;
     const raw=url.searchParams.get('cursor');const cursor=raw===null?null:JSON.parse(raw);
@@ -67,9 +78,24 @@ export function infrastructureQuery(path:string,kind:InfrastructureQuery,id:stri
   }catch{return null;}
 }
 export function infrastructureIntent(value:InfrastructureIntent|undefined):InfrastructureIntent|null {
-  if(!value||Object.keys(value).length!==6||!infrastructureQuery(value.explorer,'explorer')||!infrastructureTabs.includes(value.tab)
+  if(!value||![6,7,8,9].includes(Object.keys(value).length)
+    ||Object.keys(value).some(key=>!['explorer','openedId','openedKind','tab','components','history','workbook','contextHistory','roomCloud'].includes(key))
+    ||(value.openedKind!==undefined&&!['site','room','rack','cloud_deployment','network_element'].includes(value.openedKind))
+    ||!infrastructureQuery(value.explorer,'explorer')||!infrastructureTabs.includes(value.tab)
     ||(value.openedId!==null&&!infraUuid(value.openedId)))return null;
-  if(value.openedId===null) return value.components===null&&value.history===null&&value.workbook===null&&value.tab==='Summary'?value:null;
+  const context=value.contextHistory,roomCloud=value.roomCloud;
+  if(value.openedId===null) return value.openedKind===undefined&&value.components===null&&value.history===null
+    &&value.workbook===null&&context==null&&roomCloud==null&&value.tab==='Summary'?value:null;
+  if(['site','room','rack','cloud_deployment'].includes(value.openedKind??'')) {
+    if(value.tab!=='Summary'||value.components!==null||value.history!==null||value.workbook!==null)return null;
+    if(value.openedKind==='room'||value.openedKind==='cloud_deployment') {
+      if(roomCloud!==undefined&&roomCloud!==null&&!validRoomCloudState(roomCloud,value.openedKind,value.openedId))return null;
+      return context===undefined?!Object.hasOwn(value,'contextHistory')?value:null:
+        validInfrastructureContextHistory(context,value.openedId,value.openedKind)?value:null;
+    }
+    return context==null&&roomCloud==null?value:null;
+  }
+  if(context!=null||roomCloud!=null)return null;
   if(typeof value.components!=='string'||!infrastructureQuery(value.components,'components',value.openedId)
     ||typeof value.history!=='string'||!infrastructureQuery(value.history,'history',value.openedId))return null;
   const work=value.workbook;
@@ -137,6 +163,10 @@ export class NavigationHistory {
       ||(state.ticketNotesQuery!==undefined&&ticketNotesQuery(state.ticketNotesQuery,state.route)===null)
       ||(state.settings!==undefined&&settingsIntent(state.settings,state.route)===null)
       ||(state.infrastructure!==undefined&&(state.route!=='/infrastructure'||infrastructureIntent(state.infrastructure)===null))
+      ||(state.infrastructureStructure!==undefined&&(state.route!=='/infrastructure'
+        ||state.infrastructure===undefined||!validStructure(state.infrastructureStructure)))
+      ||(state.infrastructureLens!==undefined&&(state.route!=='/infrastructure'
+        ||state.infrastructure===undefined||!['all','physical','logical'].includes(state.infrastructureLens)))
       ||(state.inventoryQueries!==undefined&&(state.route!=='/inventory'||inventoryCollectionQueries(state.inventoryQueries)===null))
       ||(state.groupingQuery!==undefined&&(state.route!=='/objectives'
         ||(state.groupingQuery!==null&&groupingCollectionQuery(state.groupingQuery)===null)))
@@ -146,8 +176,21 @@ export class NavigationHistory {
     const token = crypto.randomUUID(); this.entries.set(token, Object.freeze({...state, memberIds: Object.freeze([...state.memberIds]),
       ...(state.settings===undefined?{}:{settings:Object.freeze({...state.settings,queries:Object.freeze({...state.settings.queries}),opened:Object.freeze({...state.settings.opened})})}),
       ...(state.inventoryQueries===undefined?{}:{inventoryQueries:Object.freeze({...state.inventoryQueries})}),
+      ...(state.infrastructureStructure===undefined?{}:{infrastructureStructure:Object.freeze({
+        order:Object.freeze([...state.infrastructureStructure.order]),
+        visible:Object.freeze([...state.infrastructureStructure.visible])})}),
       ...(state.infrastructure===undefined?{}:{infrastructure:Object.freeze({...state.infrastructure,
-        workbook:state.infrastructure.workbook===null?null:Object.freeze({...state.infrastructure.workbook})})}),
+        workbook:state.infrastructure.workbook===null?null:Object.freeze({...state.infrastructure.workbook}),
+        ...(state.infrastructure.contextHistory===undefined?{}:{contextHistory:state.infrastructure.contextHistory===null?null:Object.freeze({
+          ...state.infrastructure.contextHistory,paths:Object.freeze([...state.infrastructure.contextHistory.paths]),
+        })}),
+        ...(state.infrastructure.roomCloud===undefined?{}:{roomCloud:state.infrastructure.roomCloud===null?null:Object.freeze({
+          section:state.infrastructure.roomCloud.section,
+          members:state.infrastructure.roomCloud.members===null?null:Object.freeze({
+            ...state.infrastructure.roomCloud.members,
+            paths:Object.freeze([...state.infrastructure.roomCloud.members.paths]),
+          }),
+        })})})}),
       ...(state.collectionOrder===undefined?{}:{collectionOrder:Object.freeze([...state.collectionOrder])})}));
     while (this.entries.size > 50) { const oldest = this.entries.keys().next().value; if (oldest) this.entries.delete(oldest); }
     return token;
@@ -206,7 +249,8 @@ export class RouteNavigation {
   constructor(start: string, private readonly port: HistoryPort, private readonly dirty: () => boolean,
     private readonly capture: () => ReturnState | null,
     private readonly changed: (path: string, restored: ReturnState | null) => void,
-    private readonly ask: (path: string | null) => void) {
+    private readonly ask: (path: string | null) => void,
+    private readonly preservesWorkingCopy?: (from: string, to: string) => boolean) {
     this.path = start === '/' ? '/overview' : start; this.port.replace(this.state(), this.path);
   }
   private state() {return {soma_ui_navigation: {session: this.session, index: this.index}};}
@@ -217,7 +261,7 @@ export class RouteNavigation {
   }
   navigate(path: string): void {
     if (!resolveRoute(path) || path === this.path || this.restoring || this.pending) return;
-    if (this.dirty()) {this.pending = {path, index: null}; this.ask(path); return;}
+    if (this.dirty() && !this.preservesWorkingCopy?.(this.path, path)) {this.pending = {path, index: null}; this.ask(path); return;}
     this.push(path);
   }
   private push(path: string): void {
@@ -237,7 +281,7 @@ export class RouteNavigation {
       this.approved = null; this.arrive(path, target); return;
     }
     if (path === this.path && target === this.index) return;
-    if (this.dirty()) {
+    if (this.dirty() && !this.preservesWorkingCopy?.(this.path, path)) {
       this.pending = {path, index: target};
       if (target !== null && target !== this.index) {this.restoring = true; this.port.go(this.index - target);}
       else {this.port.push(this.state(), this.path); this.ask(path);}

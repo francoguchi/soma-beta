@@ -13,6 +13,8 @@ from soma.reference.api.routes_reference import ReferenceRouteAdapter, REFERENCE
 from soma.reference.queries.references import ReferenceQueries
 from soma.reference.application.profile_service import LocalUserProfileService
 from soma.ui.composition import build_ui_runtime
+from soma.tickets.api.routes_ui_read import TicketReadRouteAdapter
+from soma.ticket_import.http.routes import TicketImportQueryRouteAdapter
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,9 @@ class DomainRoutes:
     def __init__(self, factory, security):
         self.factory, self.security = factory, security
         self.ui = build_ui_runtime(factory, revision_reader=UncomposedRevisionReader(), session_security=security)
+        self.tickets = TicketReadRouteAdapter(factory)
+        # Existing LLD-04 accepted query owners; browser command routes stay uncomposed.
+        self.import_reads = TicketImportQueryRouteAdapter(factory)
         queries = InfrastructureQueries(InfrastructureService(factory))
         from soma.infrastructure.queries import candidates, details, explorer, history, workbooks
         names = set().union(*(owner.QUERY_NAMES for owner in (candidates, details, explorer, history, workbooks)))
@@ -92,14 +97,72 @@ class DomainRoutes:
         from soma.inventory.queries.stock_needs import InventoryNeedsQueryService
         from soma.inventory.queries.attention_history import InventoryAttentionHistoryQuery
         from soma.inventory.queries.requests_rma import InventoryRequestsRmaQueryService
+        from soma.inventory.queries.task_context import TaskInventoryContextQuery
+        from soma.inventory.queries.fault_tags import InventoryFaultTagQueryService
         from soma.inventory.api.routes_inventory import build_route_adapter
+        from soma.inventory.api.routes_fault_tags import build_route_adapter as build_fault_tag_route_adapter
         stock = InventoryNeedsQueryService(factory)
         attention = InventoryAttentionHistoryQuery(factory)
         requests = InventoryRequestsRmaQueryService(factory)
+        task_inventory_context = TaskInventoryContextQuery(factory)
+        def inventory_history_query(route, values):
+            # The path alone owns the Inventory target identity. A query may
+            # supply only the existing owner's bounded paging parameters.
+            # Reject unknown/path-colliding fields as ValidationError rather
+            # than leaking a Python TypeError through direct route dispatch.
+            if set(values) - {"cursor", "limit"}:
+                raise ValidationError("Inventory history query fields are invalid")
+            return attention.history(
+                target_kind=route.path_parameters["target_kind"],
+                target_id=route.path_parameters["target_id"],
+                **values,
+            )
+
         self.inventory = build_route_adapter({
             "StockEligibilityQuery": lambda route, values: asdict(stock.stock_eligibility(**values)),
             "InventoryAttentionQuery": lambda route, values: attention.attention(**values),
+            "InventoryNeedsQuery": lambda route, values: stock.list_needs(**values),
+            "TaskInventoryContextQuery": lambda route, values: (
+                task_inventory_context.get(route.path_parameters["task_id"])
+                if not values else self._bad_query()
+            ),
+            "InventoryHistoryQuery": inventory_history_query,
             "SpareRequestListQuery": lambda route, values: requests.list_requests(**values),
+            "SpareRequestDetailQuery": lambda route, values: (
+                requests.request_detail(route.path_parameters["request_id"])
+                if not values else self._bad_query()
+            ),
+            "RmaDetailQuery": lambda route, values: (
+                requests.rma_detail(route.path_parameters["rma_id"])
+                if not values else self._bad_query()
+            ),
+        })
+        # The Fault Tag route registry is distinct from the general Inventory
+        # routes. Compose only existing LLD-07 query owners, never its declared
+        # mutation authority.
+        fault_tags = InventoryFaultTagQueryService(factory)
+        def eligible_fault_tag_memberships_query(route, values):
+            if set(values) - {"after_rma_id", "limit"}:
+                raise ValidationError("Eligible Fault Tag query fields are invalid")
+            return fault_tags.eligible_memberships(**values)
+
+        def warehouse_queue_query(route, values):
+            if set(values) - {"after_membership_id", "limit"}:
+                raise ValidationError("Warehouse queue query fields are invalid")
+            return fault_tags.warehouse_queue(**values)
+
+        self.fault_tags = build_fault_tag_route_adapter({
+            "FaultTagListQuery": lambda route, values: fault_tags.list_query(dict(values)),
+            "FaultTagDetailQuery": lambda route, values: (
+                fault_tags.detail(route.path_parameters["fault_tag_id"])
+                if not values else self._bad_query()
+            ),
+            "EligibleFaultTagMembershipQuery": eligible_fault_tag_memberships_query,
+            "WarehouseQueueQuery": warehouse_queue_query,
+            "FaultTagLineageQuery": lambda route, values: (
+                fault_tags.lineage(route.path_parameters["fault_tag_id"])
+                if not values else self._bad_query()
+            ),
         })
         from soma.product_line_sla.queries.catalog import ProductLineSlaCatalogQueryService
         from soma.product_line_sla.queries.classification import ProductLineSlaClassificationQueryService
@@ -154,7 +217,7 @@ class DomainRoutes:
             return self.ui.routes.dispatch(method, path, request=request, decoded=values)
         context = self.security.validate_request(request, mutation=method != "GET")
         communications = self.communications.routes(actor_kind="local_user", actor_id=context.actor_id)
-        for adapter in (self.infrastructure, self.reference, self.inventory, self.sla, self.objective_routes, communications):
+        for adapter in (self.tickets, self.import_reads, self.infrastructure, self.reference, self.inventory, self.fault_tags, self.sla, self.objective_routes, communications):
             try:
                 result = adapter.dispatch(method, path, values)
             except TypeError:

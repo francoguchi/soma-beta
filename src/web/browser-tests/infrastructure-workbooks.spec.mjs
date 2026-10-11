@@ -61,14 +61,19 @@ test('Workbook owner history/run/proposal reads retain scope, warnings, complete
   await expect(page.getByRole('region',{name:'Workbook proposal detail'})).toContainText('No candidate is automatically selected');
   await runView.getByRole('button',{name:'Next page',exact:true}).click();
   await expect(runView).toContainText('No workbook proposals in this page');
+  // The current owner page is read only on activation. The selected tab is
+  // unmounted on exit, so reopening it MUST refetch both history and the
+  // retained run cursor, rather than display an old hidden-tab projection.
+  // The proposal was cleared by run pagination and must not be refetched.
+  expect([historyReads,runReads,proposalReads]).toEqual([1,2,1]);
   await page.getByRole('tab',{name:'Summary',exact:true}).click();
   await page.getByRole('tab',{name:'Workbook Activity',exact:true}).click();
   await expect(runView).toContainText('No workbook proposals in this page');
-  expect([historyReads,runReads,proposalReads]).toEqual([1,2,1]);
+  expect([historyReads,runReads,proposalReads]).toEqual([2,3,1]);
   await activity.getByRole('button',{name:'Next page',exact:true}).click();
   await expect(activity).toContainText('SYNTHETIC-export.xlsx');await expect(runView).toHaveCount(0);
   await expect(activity.getByRole('button',{name:/Open run/})).toHaveCount(0);
-  expect(historyReads).toBe(2);
+  expect(historyReads).toBe(3);
 });
 test('Workbook proposal candidates obey the 200-row DOM bound without automatically choosing an identity',async({page})=>{
   const ids=Array.from({length:500},(_,index)=>`${(index+1).toString(16).padStart(8,'0')}-aaaa-4aaa-8aaa-aaaaaaaaaaaa`);

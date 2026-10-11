@@ -3,6 +3,7 @@ import {useSettingsNavigation,useSettingsQuery} from './SettingsWorkspace';
 import {nextSettingsQuery,settingsIdentity,type SettingsSlot} from './settings-intent';
 import {OwnerProjection} from '../components/OwnerProjection';
 import {BoundedCollection} from '../components/BoundedCollection';
+import {formatOwnerLocalTime} from '../presentation/owner-time';
 
 type Page<T>=Readonly<{items:readonly T[];next_cursor:unknown|null}>;
 type Source=Readonly<{source_scope_id:string;revision:number;display_name:string;health_state:string;processing_enabled:boolean;
@@ -15,7 +16,7 @@ type Job=Readonly<{job_id:string;source_scope_id:string;job_kind:string;state:st
   counters:Readonly<Record<typeof counters[number],number>&{estimated_total:number|null}>;diagnostic_code:string|null}>;
 type Orphan=Readonly<{communication_id:string;state:'ORPHAN_PENDING_PURGE'|'PURGED';purge_due_utc:number|null;reason_code:string;protected_dependency_count:number}>;
 function count(value:number):number {if(!Number.isSafeInteger(value)||value<0)throw new Error('Invalid owner count');return value;}
-function instant(value:number|null):string {if(value===null)return 'Unknown';return new Date(count(value)*1000).toISOString();}
+function instant(value:number|null):string {if(value===null)return 'Unknown';return formatOwnerLocalTime(count(value));}
 function Paged<T>({label,path,slot,limit=100,row}:{label:string;path:string;slot:SettingsSlot;limit?:number;row:(item:T)=>Readonly<{id:string;cells:readonly ReactNode[]}>}) {
   const [query,setQuery]=useSettingsQuery(slot,path+`?limit=${limit}`);
   return <section aria-label={label}><h2>{label}</h2><OwnerProjection<Page<T>> path={query} render={page=>{
@@ -85,7 +86,7 @@ export function CommunicationSettings() {
     }}/>
     <Paged<Orphan> label="Communication Housekeeping" slot="housekeeping" path="/api/v1/communications/housekeeping" row={item=>{
       if(!['ORPHAN_PENDING_PURGE','PURGED'].includes(item.state)||typeof item.reason_code!=='string'||!item.reason_code)throw new Error('Invalid owner retention state');
-      return {id:item.communication_id,cells:[item.communication_id,`Retention state: ${item.state}`,`Purge due (UTC): ${instant(item.purge_due_utc)}`,
+      return {id:item.communication_id,cells:[item.communication_id,`Retention state: ${item.state}`,`Purge due (local time): ${instant(item.purge_due_utc)}`,
         `Reason: ${item.reason_code}`,`Observed protected dependencies: ${count(item.protected_dependency_count)}`,
         item.state==='PURGED'?'Message content is unavailable':'Dependency status is observational; the owner revalidates before purge']};
     }}/></>;

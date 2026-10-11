@@ -362,3 +362,65 @@ test('Infrastructure return intent fences complete owner cursors, opened identit
   assert.equal(history.restore(token).infrastructure.explorer,explorer);assert.notEqual(history.restore(token).infrastructure.workbook.run,'changed');
   assert.throws(()=>history.remember({...history.restore(token),route:'/inventory'}));
 });
+
+test('Infrastructure Site return intent remains closed, explicit and independent of Network Element panels',()=>{
+  const id='11111111-1111-4111-8111-111111111111';
+  const site={explorer:'/api/v1/infrastructure/tree?limit=200',openedId:id,openedKind:'site',
+    tab:'Summary',components:null,history:null,workbook:null};
+  assert.equal(infrastructureIntent(site),site);
+  const history=new NavigationHistory();
+  const state={route:'/infrastructure',filterFingerprint:'a'.repeat(64),
+    activeId:'site:'+id,selectedId:'site:'+id,memberIds:[],scrollAnchor:null,focusToken:'row:site:'+id,
+    infrastructure:site};
+  const token=history.remember(state);
+  assert.deepEqual(history.restore(token).infrastructure,site);
+  for(const invalid of [
+    {...site,openedKind:'network_element'}, {...site,tab:'History'},
+    {...site,components:'/api/v1/infrastructure/network-elements/'+id+'/components?limit=200'},
+    {...site,history:'/api/v1/infrastructure/history?target_kind=network_element&target_id='+id+'&limit=5'},
+    {...site,workbook:{history:'/api/v1/infrastructure/workbooks/history?limit=200',run:null,proposalId:null,candidatePage:0}},
+    {...site,openedId:null},{...site,openedId:'not-an-id'},
+    {...site,ownerDto:{name:'copied-site'}},
+  ])assert.equal(infrastructureIntent(invalid),null);
+  assert.equal(infrastructureIntent({...site,openedKind:'invalid'}),null);
+});
+
+test('Infrastructure Rack occupancy has closed identity-only return intent without cached owner DTO',()=>{
+  const id='11111111-1111-4111-8111-111111111111';
+  const rack={explorer:'/api/v1/infrastructure/tree?limit=200',openedId:id,openedKind:'rack',
+    tab:'Summary',components:null,history:null,workbook:null};
+  assert.equal(infrastructureIntent(rack),rack);
+  const history=new NavigationHistory();const token=history.remember({
+    route:'/infrastructure',filterFingerprint:'a'.repeat(64),activeId:'rack:'+id,
+    selectedId:'rack:'+id,memberIds:[],scrollAnchor:null,focusToken:'row:rack:'+id,infrastructure:rack});
+  assert.deepEqual(history.restore(token).infrastructure,rack);
+  for(const invalid of [
+    {...rack,openedId:null},{...rack,openedId:'invalid'}, {...rack,tab:'Placement'},
+    {...rack,openedKind:'network_element'},
+    {...rack,components:'/api/v1/infrastructure/network-elements/'+id+'/components?limit=200'},
+    {...rack,history:'/api/v1/infrastructure/history?target_kind=network_element&target_id='+id+'&limit=5'},
+    {...rack,workbook:{history:'/api/v1/infrastructure/workbooks/history?limit=200',run:null,proposalId:null,candidatePage:0}},
+    {...rack,openedKind:'invented'}, {...rack,cache:{occupants:[1,2,3]}},
+  ])assert.equal(infrastructureIntent(invalid),null);
+});
+
+test('Room and Cloud explorer return retains closed identities without caching owner DTOs',()=>{
+  const id='11111111-1111-4111-8111-111111111111';
+  const root={explorer:'/api/v1/infrastructure/tree?limit=200',openedId:id,
+    tab:'Summary',components:null,history:null,workbook:null};
+  for(const kind of ['room','cloud_deployment']){
+    const opened={...root,openedKind:kind};
+    assert.equal(infrastructureIntent(opened),opened);
+    const nav=new NavigationHistory();
+    const token=nav.remember({route:'/infrastructure',filterFingerprint:'a'.repeat(64),
+      activeId:kind+':'+id,selectedId:kind+':'+id,memberIds:[],scrollAnchor:null,
+      focusToken:'row:'+kind+':'+id,infrastructure:opened});
+    assert.deepEqual(nav.restore(token).infrastructure,opened);
+    for(const bad of [{...opened,openedId:null},{...opened,tab:'History'},
+      {...opened,history:'/api/v1/infrastructure/history?target_kind='+kind+'&target_id='+id+'&limit=5'},
+      {...opened,components:'/api/v1/infrastructure/network-elements/'+id+'/components?limit=200'},
+      {...opened,ownerResponse:{name:'forbidden cache'}},{...opened,openedKind:'unrelated'}]){
+      assert.equal(infrastructureIntent(bad),null);
+    }
+  }
+});

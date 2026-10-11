@@ -50,10 +50,19 @@ test('Terminal owner panel is readable at narrow width without body navigation',
 });
 test('Panel transport failure keeps the independent operational owner workbench usable',async({page})=>{
   await owners(page);await page.route('**/api/v1/communications/**',route=>route.fulfill({status:401,json:{code:'AUTH_SESSION_INVALID'}}));
+  await page.route('**/api/v1/tickets/service_request/'+id+'/devices?*',route=>route.fulfill({json:{
+    items:[{device_reference_id:message,operational_name:'Independent device evidence',revision:1,registered_network_element_id:null}],
+    continuation:null,
+  }}));
   await page.goto(`http://127.0.0.1:4174/tickets/sr/${id}`);
   await expect(page.getByRole('heading',{name:'Service Request C0000001'})).toBeVisible();
   const panel=page.getByRole('region',{name:'Canonical communication evidence'});
   await expect(panel.getByRole('alert')).toContainText('Communication evidence is unavailable');
   await expect(panel.getByRole('button',{name:'Retry communications'})).toBeVisible();
-  await page.getByRole('tab',{name:'Devices',exact:true}).click();await expect(page.getByRole('heading',{name:'Devices',exact:true})).toBeVisible();
+  await page.getByRole('tab',{name:'Devices',exact:true}).click();
+  const devices=page.getByRole('region',{name:'SR Device References'});
+  await expect(devices.getByRole('button',{name:'Independent device evidence'})).toBeVisible();
+  await devices.getByRole('button',{name:'Independent device evidence'}).click();
+  await expect(devices.getByRole('complementary',{name:'Selected Device Reference'})).toBeVisible();
+  await expect(panel.getByRole('alert')).toContainText('Communication evidence is unavailable');
 });

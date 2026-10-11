@@ -61,5 +61,5 @@ test('RFC Back refetches accepted terminal reversal without retaining a source e
 test('RFC lifecycle query failure keeps the independent RFC detail and tabs available',async({page})=>{
   await setup(page,lifecycle(),{fail:true});await expect(page.getByRole('heading',{name:'RFC NC00000000000001'})).toBeVisible();
   await expect(page.getByRole('region',{name:'RFC accepted source and lifecycle'}).getByRole('alert')).toContainText('owning query is unavailable');
-  await page.getByRole('tab',{name:'Related RFCs',exact:true}).click();await expect(page.getByRole('heading',{name:'Related RFCs',exact:true})).toBeVisible();
+  await page.getByRole('tab',{name:'Related RFCs',exact:true}).click();await expect(page.getByRole('region',{name:'RFC related branch'})).toBeVisible();
 });

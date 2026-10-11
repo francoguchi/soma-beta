@@ -7,6 +7,9 @@ test('LLD10-T016 T017 T048 F011 reflow and pane/tab changes preserve unsaved int
   await expect(page.getByRole('tab')).toHaveText(['Overview','Devices','Spare Parts','RFCs','Tasks','Notes']);
   await page.getByRole('tab', {name: 'Notes', exact: true}).click();
   await page.getByRole('textbox', {name: 'Unsaved note'}).fill('Synthetic unsaved text');
+  await page.getByRole('tab', {name: 'Devices', exact: true}).click();
+  await page.getByRole('tab', {name: 'Notes', exact: true}).click();
+  await expect(page.getByRole('textbox', {name: 'Unsaved note'})).toHaveValue('Synthetic unsaved text');
   await page.setViewportSize({width: 480, height: 900});
   await page.getByRole('button', {name: 'Communications', exact: true}).click();
   await expect(page.getByRole('alert')).toContainText('provider unavailable');

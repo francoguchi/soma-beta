@@ -11,9 +11,10 @@ test('Settings preserves reusable Product Line versus customer Contract and curr
     if(url.pathname==='/api/v1/contract-product-lines')items=[{...state,contract_product_line_id:cpl,contract_id:contract,product_line_id:product,
       customer_org_id:'synthetic-customer',contract_reference:'SYNTHETIC-CT',product_line_name:'Synthetic Reusable Product',current_policy_revision_id:'synthetic-policy-2',
       policy_name:'Synthetic Current Policy',policy_revision_ordinal:2}];
-    return route.fulfill({json:{items,continuation:url.pathname==='/api/v1/product-lines'&&!url.searchParams.has('cursor')?{version:1,query_id:'ListProductLines',sort_registry_id:'PRODUCT_LINE_PRESENTATION_ASC_V1',last_key_tuple:['name',product],filter_fingerprint:'a'.repeat(64),null_order:'none'}:null}});
+    return route.fulfill({json:{items,exact_count:items.length,next_cursor:url.pathname==='/api/v1/product-lines'&&!url.searchParams.has('cursor')?{version:1,query_id:'ListProductLines',sort_registry_id:'PRODUCT_LINE_PRESENTATION_ASC_V1',last_key_tuple:['name',product],filter_fingerprint:'a'.repeat(64),null_order:'none'}:null}});
   });
   await page.setViewportSize({width:480,height:900});await page.goto('http://127.0.0.1:4174/settings');
+  await page.getByRole('button',{name:'Open Reference Manager'}).click();
   const products=page.getByRole('region',{name:'Product Lines',exact:true});const cpls=page.getByRole('region',{name:'Contract Product Lines',exact:true});
   await expect(products.getByText('Synthetic Reusable Product',{exact:true})).toBeAttached();
   await expect(cpls.getByText('Current policy:',{exact:false})).toContainText('Synthetic Current Policy / synthetic-policy-2; ordinal 2');
@@ -28,9 +29,10 @@ test('Settings rejects missing current-policy facts and unknown collection ident
     const url=new URL(route.request().url());const state={lifecycle_state:'active',revision:1};
     const items=url.pathname==='/api/v1/contract-product-lines'?[{...state,contract_product_line_id:cpl,product_line_name:'Synthetic Missing Policy'}]
       :url.pathname==='/api/v1/product-lines'?[{...state,name:'Synthetic Missing Identity'}]:[];
-    return route.fulfill({json:{items,continuation:null}});
+    return route.fulfill({json:{items,exact_count:items.length,next_cursor:null}});
   });
   await page.goto('http://127.0.0.1:4174/settings');
+  await page.getByRole('button',{name:'Open Reference Manager'}).click();
   for(const name of ['Product Lines','Contract Product Lines']) {
     await expect(page.getByRole('region',{name,exact:true}).getByRole('alert')).toContainText('owner projection could not be rendered');
   }

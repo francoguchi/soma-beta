@@ -10,14 +10,17 @@ type Contract=Base&Readonly<{contract_id:string;customer_org_id:string;name:stri
 type Cpl=Base&Readonly<{contract_product_line_id:string;contract_id:string;product_line_id:string;customer_org_id:string;
   contract_reference:string;product_line_name:string;current_policy_revision_id:string|null;policy_revision_ordinal:number|null;policy_name:string|null}>;
 type Mapping=Readonly<{mapping_id:string;mapping_key_type:string;normalized_key:string;customer_org_id:string;contract_product_line_id:string;active:boolean;revision:number}>;
-type CatalogPage<T>=Readonly<{items:readonly T[];continuation:unknown|null}>;
+type CatalogPage<T>=Readonly<{items:readonly T[];next_cursor:unknown|null;exact_count:number}>;
 function Catalog<T>({label,path,slot,row}:{label:string;path:string;slot:SettingsSlot;row:(item:T)=>Readonly<{id:string;cells:readonly ReactNode[]}>}) {
   const [query,setQuery]=useSettingsQuery(slot,path+'?limit=200');
   return <section aria-label={label}><h2>{label}</h2><OwnerProjection<CatalogPage<T>> path={query} render={page=>{
-    if(!Array.isArray(page.items)||page.items.length>200||!Object.hasOwn(page,'continuation'))throw new Error('Invalid owner catalog page');
-    const next=nextSettingsQuery(query,slot,page.continuation);
-    return <><p>{page.items.length} owner catalog records on this page. This page does not represent the complete catalog.</p>
-      <BoundedCollection caption={`${label} owner projections`} rows={page.items.map(row)} next={page.continuation!==null}
+    if(!page||!Array.isArray(page.items)||page.items.length>200||!Object.hasOwn(page,'next_cursor')
+      ||!Number.isSafeInteger(page.exact_count)||page.exact_count<page.items.length)
+      throw new Error('Invalid owner catalog page');
+    const next=nextSettingsQuery(query,slot,page.next_cursor);
+    return <><p>{page.exact_count} accepted records at read · {page.items.length} on this page.</p>
+      {page.exact_count===0&&<p role="status">No {label.toLowerCase()} have been registered yet.</p>}
+      <BoundedCollection caption={`${label} owner projections`} rows={page.items.map(row)} next={page.next_cursor!==null}
         returnScrollToken={slot} nextFocusToken={'settings:'+slot+':next'} onNext={()=>setQuery(next)}/></>;
   }}/></section>;
 }

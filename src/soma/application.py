@@ -27,6 +27,7 @@ from soma.security.runtime.installation import SourceInstallationSecurity, prepa
 from soma.security.runtime.windows import process_identity
 from soma.security.services.auth import AuthenticationService
 from soma.ui.assets import UiAssets
+from soma.ui.auth_shell import render_auth_shell
 
 
 def json_value(value):
@@ -46,7 +47,7 @@ def verify_static_assets():
         raise SecurityNotReady("web asset manifest is invalid")
     for name, entry in manifest["files"].items():
         path = static / name
-        if path.resolve().parent not in (static.resolve(), (static / "assets").resolve()) or path.is_symlink():
+        if path.resolve().parent not in (static.resolve(), (static / "assets").resolve(), (static / "brand").resolve()) or path.is_symlink():
             raise SecurityNotReady("web asset path is invalid")
         data = path.read_bytes()
         if len(data) != entry["bytes"] or hashlib.sha256(data).hexdigest() != entry["sha256"]:
@@ -93,13 +94,14 @@ class SourceApplication:
             if request.url.query and path.startswith("/api/v1/runtime/"):
                 raise ValidationError("runtime control has no query parameters")
             if path.startswith("/api/"):
-                body = b""
+                body = bytearray()
+                body_limit = 4096 if path.startswith(("/api/v1/runtime/", "/api/v1/auth/")) else 262144
                 async for chunk in request.stream():
-                    body += chunk
                     # Domain-specific owners apply their stricter accepted bound.
-                    if len(body) > (4096 if path.startswith(("/api/v1/runtime/", "/api/v1/auth/")) else 262144):
+                    if len(body) + len(chunk) > body_limit:
                         raise ValidationError("request exceeds its byte bound")
-                decoded = loads_strict_bytes(body, max_bytes=len(body)) if body else {}
+                    body.extend(chunk)
+                decoded = loads_strict_bytes(bytes(body), max_bytes=body_limit) if body else {}
                 if request.method not in {"GET", "HEAD"} and body and request.headers.get("content-type", "").split(";", 1)[0] != "application/json":
                     raise ValidationError("request requires JSON content type")
                 if path in {"/api/v1/runtime/health", "/api/v1/runtime/shutdown"}:
@@ -162,19 +164,15 @@ class SourceApplication:
 
     def auth_shell(self):
         nonce = secrets.token_urlsafe(24)
-        # Startup-only composition shell; the existing LLD-10 application is served unchanged after login.
-        html = '''<!doctype html><html><head><meta charset="utf-8"><title>SOMA — sign in</title></head>
-<body><main><h1>SOMA</h1><p id="state">Checking local authentication…</p>
-<form id="auth"><label>Password <input id="password" type="password" autocomplete="current-password" required></label>
-<label id="confirmation-label" hidden>Confirm password <input id="confirmation" type="password" autocomplete="new-password"></label>
-<button type="submit" id="submit" disabled>Sign in</button></form><p id="error" role="alert"></p></main>
-<script nonce="NONCE">let configured=false; const form=document.getElementById('auth');
-fetch('/api/v1/auth/status',{credentials:'same-origin',redirect:'error'}).then(r=>r.json()).then(s=>{configured=s.configured;
-document.getElementById('state').textContent=configured?'Sign in with your SOMA password.':'First run: create a SOMA password (at least 12 characters).';
-document.getElementById('confirmation-label').hidden=configured;document.getElementById('submit').disabled=false;});
-form.addEventListener('submit',async e=>{e.preventDefault();const password=document.getElementById('password');const confirmation=document.getElementById('confirmation');
-const body=configured?{password:password.value}:{command_id:crypto.randomUUID(),password:password.value,password_confirmation:confirmation.value};
-try{const r=await fetch('/api/v1/auth/'+(configured?'login':'setup'),{method:'POST',credentials:'same-origin',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-const result=await r.json();if(!r.ok){document.getElementById('error').textContent=result.code;return;}password.value='';confirmation.value='';location.replace('/');}
-catch{document.getElementById('error').textContent='The local host could not complete authentication.';}});</script></body></html>'''.replace("NONCE", nonce)
-        return HTMLResponse(html, headers={"Cache-Control": "no-store", "Content-Security-Policy": f"default-src 'none'; script-src 'nonce-{nonce}'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'", "X-Content-Type-Options": "nosniff"})
+        # This remains Beta's server-generated, pre-authentication HTML.
+        # Credential/session authority is unchanged and never moved into React.
+        html = render_auth_shell(nonce)
+        return HTMLResponse(html, headers={
+            "Cache-Control": "no-store",
+            "Content-Security-Policy": (
+                f"default-src 'none'; script-src 'nonce-{nonce}'; style-src 'nonce-{nonce}'; "
+                "img-src 'self'; connect-src 'self'; form-action 'self'; "
+                "base-uri 'none'; frame-ancestors 'none'"
+            ),
+            "X-Content-Type-Options": "nosniff",
+        })

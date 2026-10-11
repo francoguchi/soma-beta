@@ -669,6 +669,14 @@ class HostRuntime:
                 )
                 retain_ownership = True
 
+        # Executor completion is not proof that a keyed connection closed.
+        # A leaked handle or failed driver close must retain run security and
+        # canonical ownership; a later cleanup attempt can recheck fresh metrics.
+        metrics = self._factory.metrics.snapshot()
+        if metrics.open_authoritative_connections or metrics.active_transactions:
+            failures.append(("persistence.drain", TimeoutError("keyed connections remain unclosed")))
+            retain_ownership = True
+
         if (
             not retain_ownership
             and self._security_started

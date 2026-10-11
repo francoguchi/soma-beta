@@ -22,6 +22,8 @@ test('compiled appearance reads owner defaults and system changes while unrelate
   await expect(page.getByLabel('Color mode')).toHaveValue('system');
   await expect(page.getByLabel('Color mode')).toBeDisabled();
   await page.emulateMedia({colorScheme:'dark'}); await expect(page.locator('html')).toHaveAttribute('data-mode','dark');
+  // Modal backdrop correctly prevents background dock interaction.
+  await page.getByRole('button',{name:'Close settings'}).click();
   await page.getByRole('link', {name:'Tickets',exact:true}).click();
   await page.emulateMedia({colorScheme:'light'}); await expect(page.locator('html')).toHaveAttribute('data-mode','light');
 });

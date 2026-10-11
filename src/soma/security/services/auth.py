@@ -7,12 +7,13 @@ from threading import Lock
 from soma.foundation.application.command_boundary import CommandBoundary, CommandEnvelope, PreparedMutation
 from soma.foundation.audit.registry import AuditActionContract, AuditRegistry
 from soma.foundation.audit.writer import AuditEventInput, AuditResultRef, AuditWriter
-from soma.foundation.errors import SomaError, SecurityNotReady, ValidationError
+from soma.foundation.errors import IdempotencyConflict, SomaError, SecurityNotReady, ValidationError
 from soma.foundation.identifiers import new_uuid4, require_uuid4, utc_epoch_seconds
 from soma.foundation.persistence.uow import ReadSnapshot
 from soma.foundation.strict_json import ObjectContract
 from soma.reference.application.profile_service import LocalUserProfileService
 from soma.security.auth.passwords import AuthenticationThrottle, PasswordVerifierProvider
+from soma.security.crypto.auth_fingerprint import AUTH_FINGERPRINT_PROFILE
 from soma.security.runtime.control import publish_owned_file, read_owned_file
 
 
@@ -71,30 +72,58 @@ class AuthenticationService:
             raise ValidationError("setup fields are invalid")
         command_id = require_uuid4(body["command_id"])
         # Expensive preparation and protected-file I/O stay outside the writer UoW.
-        verifier = self.passwords.hash(body["password"], body["password_confirmation"])
-        semantic_hash = hashlib.sha256(b"SOMA-SETUP-PASSWORD-V1\0" + self.passwords.password_bytes(body["password"])).hexdigest()
-        envelope = CommandEnvelope(command_id, "SetupLocalAdmin", "security_configuration", self.security.installation_id,
-            {"password_sha256": semantic_hash, "confirmation_sha256": semantic_hash})
+        password_bytes = self.passwords.setup_password_bytes(body["password"], body["password_confirmation"])
         with self.setup_lock:
+            provider = self.security.auth_fingerprint
+            if provider is None:
+                raise SecurityNotReady("authentication fingerprint provider is not prepared")
+            secret = provider.load()
+            if secret is None:
+                # No key exists on an unchanged V1 installation. Only an exact
+                # historical replay may succeed here. A V2 receipt cannot match
+                # V1, so key loss fails closed before any key generation/KDF.
+                replay = self.boundary.lookup_replay(self._legacy_setup_envelope(command_id, password_bytes))
+                if replay is not None:
+                    return self._session(replay.response["actor_id"], replay.response["display_name"])
+                if self._credential() is not None:
+                    raise SomaError("AUTH_ALREADY_CONFIGURED", "administrator is already configured")
+                if self.boundary.has_committed_command_target(command_type="SetupLocalAdmin",
+                        target_type="security_configuration", target_id=self.security.installation_id):
+                    raise SecurityNotReady("authentication fingerprint key is missing for committed setup history")
+                secret = provider.prepare_new_setup()
+            envelope = self._setup_envelope(command_id, password_bytes, secret)
+            del secret
+            try:
+                replay = self.boundary.lookup_replay(envelope)
+            except IdempotencyConflict:
+                # Compatibility is read-only. This envelope is never executed,
+                # and Foundation validates type/target/hash and immutable result.
+                replay = self.boundary.lookup_replay(self._legacy_setup_envelope(command_id, password_bytes))
+            if replay is not None:
+                return self._session(replay.response["actor_id"], replay.response["display_name"])
+            if self._credential() is not None:
+                raise SomaError("AUTH_ALREADY_CONFIGURED", "administrator is already configured")
+            # Fingerprinting and credential preparation consume one validated
+            # capture, even if a caller-owned DTO changes during protected I/O.
+            captured_password = password_bytes.decode("utf-8")
+            verifier = self.passwords.hash(captured_password, captured_password)
             path = self.security.root / "security" / "admin-reset.dpapi"
             protected = None
-            reset_digest = None
-            if self._credential() is None:
-                if not self.security.ownership():
-                    raise SecurityNotReady("setup requires canonical host ownership")
-                if path.exists():
-                    # An orphan is non-authoritative; validate ownership before replacement.
-                    orphan = read_owned_file(path, self.security.file_security)
-                    if not self.security.file_security.remove_exact_file(path, orphan):
-                        raise SecurityNotReady("administrator reset orphan changed during reconciliation")
-                reset_secret = secrets.token_bytes(32)
-                reset_digest = hashlib.sha256(reset_secret).digest()
-                protected = self.security.dpapi.protect_current_user(reset_secret, "admin_password_reset", self.security.installation_id)
-                publish_owned_file(path, protected, self.security.file_security)
-                if not hmac.compare_digest(reset_secret, self.security.dpapi.unprotect_current_user(
-                    read_owned_file(path, self.security.file_security), "admin_password_reset", self.security.installation_id)):
-                    raise SecurityNotReady("administrator reset envelope did not verify")
-                del reset_secret
+            if not self.security.ownership():
+                raise SecurityNotReady("setup requires canonical host ownership")
+            if path.exists():
+                # An orphan is non-authoritative; validate ownership before replacement.
+                orphan = read_owned_file(path, self.security.file_security)
+                if not self.security.file_security.remove_exact_file(path, orphan):
+                    raise SecurityNotReady("administrator reset orphan changed during reconciliation")
+            reset_secret = secrets.token_bytes(32)
+            reset_digest = hashlib.sha256(reset_secret).digest()
+            protected = self.security.dpapi.protect_current_user(reset_secret, "admin_password_reset", self.security.installation_id)
+            publish_owned_file(path, protected, self.security.file_security)
+            if not hmac.compare_digest(reset_secret, self.security.dpapi.unprotect_current_user(
+                read_owned_file(path, self.security.file_security), "admin_password_reset", self.security.installation_id)):
+                raise SecurityNotReady("administrator reset envelope did not verify")
+            del reset_secret
 
             def prepare(uow):
                 if uow.connection.execute("SELECT 1 FROM security_auth_credentials WHERE singleton_guard=1").fetchone() is not None:
@@ -131,3 +160,13 @@ class AuthenticationService:
                         pass  # Exact-owned orphan cleanup is best-effort, never authority.
                 raise
             return self._session(result.response["actor_id"], result.response["display_name"])
+
+    def _setup_envelope(self, command_id, password_bytes, secret):
+        digest = self.security.auth_fingerprint.setup_digest(secret, password_bytes)
+        return CommandEnvelope(command_id, "SetupLocalAdmin", "security_configuration", self.security.installation_id,
+            {"fingerprint_profile": AUTH_FINGERPRINT_PROFILE, "password_hmac_sha256": digest})
+
+    def _legacy_setup_envelope(self, command_id, password_bytes):
+        digest = hashlib.sha256(b"SOMA-SETUP-PASSWORD-V1\0" + password_bytes).hexdigest()
+        return CommandEnvelope(command_id, "SetupLocalAdmin", "security_configuration", self.security.installation_id,
+            {"password_sha256": digest, "confirmation_sha256": digest})

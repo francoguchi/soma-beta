@@ -1,5 +1,29 @@
 # Trusted source launchers: local development handoff
 
+## Source dependency security update, 2026-10-10
+
+Current source setup uses
+`docs/implementation/lld12_sqlcipher_development_2026-10-10.json` and the separate
+`dist/source-development/openssl-3.6.5/sqlcipher3-0.6.2-cp314-cp314-win_amd64.whl`.
+The binding remains 0.6.2 and official SQLCipher core remains 4.17.0. Only the
+statically linked OpenSSL patch level changes to 3.6.5. Setup verifies the exact
+new wheel hash, and runtime prerequisites verify the keyed crypto provider
+version, so the earlier 3.6.0 wheel cannot silently satisfy the current setup.
+The original wheel and historical JSON evidence are preserved. This is a Windows
+CPython 3.14 source-development update, not an installer/release certification.
+Build provenance and candidate limitations are recorded in
+`lld12_native_security_candidate_2026-10-10.json`; final execution evidence is in
+`execution_audit_2026-10-10.json` and its accompanying report.
+
+The accepted V2 authentication refinement protects future setup receipts using a
+separate CurrentUser-DPAPI authentication fingerprint key. Existing V1 receipts
+and passwords are preserved; the earlier receipts retain their documented
+decrypted-database guessing exposure. See
+`docs/reconciliation/LLD12_AUTH_REQUEST_FINGERPRINT_PROPOSAL_V2.md` for exact
+accepted behavior, compatibility, key-loss and historical-risk policy.
+
+## Historical 2026-10-02 handoff
+
 Date: 2026-10-02. Local working-tree work only; no commit, push, branch, PR,
 merge, tag or publication. Development evidence, not release certification.
 
@@ -38,18 +62,46 @@ state, database creation or plaintext fallback.
 
 soma_run_console.bat verifies environment, starts the real Foundation host in the
 foreground, migrates/opens the encrypted DB, prints READY origin/schema, and serves
-the actual frozen LLD-10 app after first setup/login. Ctrl+C performs graceful
+the actual frozen LLD-10 app after first setup/login. It opens the browser only
+after fresh authenticated READY verification, reuses/waits for an existing or
+concurrently starting verified host, and keeps console failures visible.
+Ctrl+C performs graceful
 owned shutdown. cmd.exe can then show its standard batch termination prompt.
 
 soma_run.bat freshly verifies an existing instance and opens its origin, or starts
 a detached real host with an owner-only startup log and waits up to 30 seconds
 for authenticated READY before opening the verified origin. Concurrent invocations
 use Foundation's existing lock; the losing launcher waits for the winning host.
+Background host creation uses CREATE_NO_WINDOW with a new process group, and
+captured prerequisite probes use CREATE_NO_WINDOW too. This avoids blank or
+flashing consoles created by the Windows virtual-environment redirector; only
+the foreground Console button intentionally retains a host console.
 
 soma_stop.bat freshly verifies the complete trusted instance, posts exact-run
 authenticated Foundation shutdown, retains/revalidates a native process handle,
 and waits within the 10-second graceful budget. Missing registry is successful/
 idempotent. Timeout performs no forced termination. Unknown artifacts are preserved.
+An explicit Stop can now clean a known dead run after proving process absence or
+termination, exclusive instance ownership, protected credential purpose/installation
+binding, and matching encrypted database identity. Live/reused PIDs, unsafe ACLs,
+tampered credentials and foreign database IDs still fail closed.
+
+soma_reset_dev.bat is an explicitly requested source-development maintenance
+button. It displays the exact canonical instance and requires literal RESET
+before stopping anything. It gracefully stops the verified host, acquires the
+existing Foundation lock, builds/verifies a fresh encrypted schema from the
+unchanged migration manifest, preserves an encrypted snapshot of the previous
+database, checkpoints both files and atomically replaces only the database.
+It leaves SOMA stopped with first-run administrator setup required. Existing
+installation/live-key files, backups, diagnostics and unknown artifacts remain.
+Cancellation/EOF does not stop the host or change data. This is not password
+reset, portable backup, production restore, or an HTTP/product command.
+
+Ordinary soma_setup.bat continues to verify the frozen frontend without Node.
+Explicit `soma_setup.bat --build-ui` uses CI-pinned Node 24.21.0 and locked
+`npm ci --ignore-scripts --no-audit --no-fund`, then the branch's typecheck/build
+and asset-manifest generation. Stop SOMA first. Runtime/reset actions never
+install dependencies, rebuild assets, or accept this setup-only option.
 
 Canonical root: Windows KnownFolder LocalAppData + SOMA/Beta/instance-v1.
 Directories/files enforce owner-only current-user/SYSTEM ACLs and reject reparse
@@ -110,8 +162,9 @@ integration remain outside scope. Password reset invocation is disabled pending
 LLD12_RUN_CONTROL_RESET_V1 closure. Python cannot promise native-quality secret
 memory zeroization; raw secrets are never intentionally persisted/logged.
 
-Malformed, stale, PID-reused, foreign or unauthentic runtime state fails closed
-and is preserved for manual review. No automatic stale-registry recovery or
+Malformed, PID-reused, foreign or unauthentic runtime state fails closed
+and is preserved for manual review. Known dead-run cleanup requires explicit
+Stop and complete ownership/credential/database proof. No startup stale-registry recovery or
 forced kill. Hard startup crashes can leave protected non-authoritative orphans;
 unpublished credentials confer no control authority. Owner-only logs have no
 automatic pruning in this slice.
@@ -127,6 +180,29 @@ out of scope. Migration 19 includes their complete accepted schema because a
 reduced launcher schema was not authorized.
 
 ## Manual first live test
+
+For double-click startup, `soma_run.bat` and `soma_run_console.bat` pause on failure so the diagnostic
+remains visible, preserving the original exit code. Automation can use
+`soma_run.bat --no-pause` or `soma_run_console.bat --no-pause`. Missing SQLCipher, cipher-profile failures and frozen
+asset failures have separate prerequisite messages. Runtime actions still never
+install dependencies or recover stale registries automatically.
+
+`soma_stop.bat` and `soma_reset_dev.bat` also retain their final result window,
+including success, so double-click output remains readable. Both accept
+`--no-pause` for terminal automation; this never bypasses Reset's literal RESET
+confirmation. Stop ends the host process/listener; existing browser tabs remain
+open with their already-rendered content.
+
+For a deliberate development reset, run `soma_reset_dev.bat`, inspect its exact
+target, and type `RESET`. The previous database is retained under
+`data/dev-reset-<uuid>/previous.soma.db` with its existing installation/key files
+required to read it. Start again with `soma_run.bat` when ready. The reset was
+tested on isolated instances; integration work did not reset canonical user data.
+
+Current troubleshooting and dependency findings are recorded in
+`launcher_security_review_2026-10-10.md`.
+Reference-launcher adaptation and its verification are recorded in
+`launcher_integration_2026-10-10.md`.
 
 From a normal Windows terminal:
     cd /d D:\DEV\soma-beta
