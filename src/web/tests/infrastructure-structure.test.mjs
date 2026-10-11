@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {NavigationHistory} from '../.test-build/app/router.js';
 import {
  FULL_STRUCTURE,applySessionStructure,currentSessionStructure,structurePreset,structurePath,moveStructureLevel,dropStructureLevel,toggleStructureLevel,
- projectStructureRows,projectInfrastructureLens,validStructure,
+ projectStructureRows,projectInfrastructureLens,applySessionLens,currentSessionLens,validStructure,
 } from '../.test-build/presentation/infrastructure-structure.js';
 
 const owner=[
@@ -117,4 +117,23 @@ test('Physical and logical Infrastructure lenses partition only already proven o
  assert.equal(owner[5].parent_context_id,'other-ne');
  assert.throws(()=>projectInfrastructureLens(projected,'made-up'),/Invalid bounded/u);
  assert.throws(()=>projectInfrastructureLens(Array.from({length:201},()=>owner[0]),'all'),/Invalid bounded/u);
+});
+
+test('Physical/logical lens return intent remains closed, scoped and document-session only',()=>{
+ const base={route:'/infrastructure',filterFingerprint:'a'.repeat(64),
+   activeId:null,selectedId:null,memberIds:[],scrollAnchor:null,focusToken:null,
+   infrastructure:{explorer:'/api/v1/infrastructure/tree?limit=200',
+     openedId:null,tab:'Summary',components:null,history:null,workbook:null},
+   infrastructureLens:'logical'};
+ const history=new NavigationHistory(),token=history.remember(base);
+ assert.equal(history.restore(token).infrastructureLens,'logical');
+ assert.throws(()=>history.remember({...base,infrastructureLens:'graph'}),/Invalid bounded return context/u);
+ assert.throws(()=>history.remember({...base,route:'/inventory'}),/Invalid bounded return context/u);
+ assert.throws(()=>history.remember({...base,infrastructure:undefined}),/Invalid bounded return context/u);
+ try{
+   assert.equal(applySessionLens('logical'),'logical');
+   assert.equal(currentSessionLens(),'logical');
+   assert.throws(()=>applySessionLens('fake'),/Invalid Infrastructure lens/u);
+ }finally{applySessionLens('all');}
+ assert.equal(currentSessionLens(),'all');
 });
