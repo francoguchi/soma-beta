@@ -8,6 +8,7 @@ import {InfrastructureSiteDetails} from './InfrastructureSiteDetails';
 import {InfrastructureRackOccupancy} from './InfrastructureRackOccupancy';
 import {InfrastructureModelEvidence} from './InfrastructureModelEvidence';
 import {InfrastructureIpEvidence} from './InfrastructureIpEvidence';
+import {InfrastructureCandidateEvidence} from './InfrastructureCandidateEvidence';
 import {verifyNetworkElement} from '../presentation/infrastructure-element';
 import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
@@ -91,7 +92,9 @@ function NetworkElement({intent,onIntent}:{intent:InfrastructureIntent;onIntent:
               address={value.primary_ip} elementId={id}/>}</>:
           name==='Relationships'?<><h3>Containment</h3><p>Parent Network Element: {value.containment_parent?.id??'None'}. Child count: {value.containment_child_count}.</p>
             <h3>Cloud assignment</h3><p>Cloud Deployment: {value.cloud_deployment?.id??'Unassigned'}. Cloud is separate from physical placement.</p>
-            <h3>Model relation</h3><p>Model identity: {value.model?.id??'Unassigned'}.</p></>:
+            <h3>Model relation</h3><p>Model identity: {value.model?.id??'Unassigned'}.</p>
+            <InfrastructureCandidateEvidence key={id+':'+value.site.id+':'+(value.model?.id??'none')}
+              elementId={id} siteId={value.site.id} modelId={value.model?.id??null}/></>:
           name==='History'?<HistoryView id={id} path={intent.history!} onPath={history=>onIntent({...intent,history})}/>:intent.workbook?
             <InfrastructureWorkbookActivity intent={intent.workbook} onIntent={workbook=>onIntent({...intent,workbook})}/>:null}
         </div>)}</>;
