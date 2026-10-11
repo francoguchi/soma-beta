@@ -29,6 +29,7 @@ export function InfrastructureComponentFilters({id,path,onApply}:Props){
     setError(null);onApply(next);
   };
   const filtered=Object.values(applied).some(Boolean);
+  const continued=new URL(path,'http://127.0.0.1').searchParams.has('cursor');
   return <form className="soma-infra-owner-filters" aria-label="Installed Component owner filters"
     onSubmit={apply} noValidate>
     <p>Match the owner state or exact stored match keys. These are not fuzzy names,
@@ -51,6 +52,10 @@ export function InfrastructureComponentFilters({id,path,onApply}:Props){
     </div>
     <div className="soma-infra-owner-filter-actions">
       <button type="submit">Apply component filters</button>
+      {continued&&<button type="button" onClick={()=>{
+        const first=buildComponentQuery(id,applied);
+        if(first!==null)onApply(first);
+      }}>First component owner page</button>}
       <button type="button" disabled={!filtered&&Object.values(draft).every(value=>value==='')}
         onClick={()=>{setDraft(EMPTY_COMPONENT_FILTERS);setError(null);
           onApply(buildComponentQuery(id,EMPTY_COMPONENT_FILTERS)!);}}>Clear component filters</button>
