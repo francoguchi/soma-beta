@@ -76,3 +76,24 @@ test('Foreign context continuation or unordered evidence never creates a plausib
   await expect(panel).not.toContainText('room_moved');
   expect(calls).toHaveLength(1);
 });
+
+test('Room return restores only identity and refreshes current owner history after workspace navigation',async({page})=>{
+  const reads=[];let updated=false;
+  await fixtures(page,u=>{
+    reads.push(u);
+    return {events:[{...row('room',1,1700000000),
+      event_kind:updated?'room_owner_changed':'room_owner_original'}],next_cursor:null};
+  },[]);
+  await page.route('**/api/v1/objectives?*',route=>{
+    const asOf=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+    return route.fulfill({json:{items:[],continuation:null,exact_total:0,as_of_utc:asOf}});
+  });
+  const panel=await open(page,'Room R');
+  await expect(panel).toContainText('room_owner_original');
+  await page.getByRole('link',{name:'Objectives',exact:true}).click();
+  updated=true;
+  await page.goBack();
+  await expect(page.getByRole('region',{name:'Opened Infrastructure context'})).toContainText('room_owner_changed');
+  expect(reads.length).toBeGreaterThanOrEqual(2);
+  expect(reads.every(url=>url.searchParams.get('target_kind')==='room')).toBe(true);
+});
