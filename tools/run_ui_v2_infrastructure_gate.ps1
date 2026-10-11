@@ -66,9 +66,9 @@ try {
         if (-not $edge) { throw 'Microsoft Edge not found. Set SOMA_TEST_BROWSER explicitly.' }
         $env:SOMA_TEST_BROWSER = $edge
     }
-    Invoke-Checked 'FULL INFRASTRUCTURE / STUDY29 EDGE REGRESSION' $venvPython @(
+    Invoke-Checked 'FULL INFRASTRUCTURE / STUDY29 EDGE REGRESSION' $venvPython (@(
         'tools\run_ui_browser_tests.py'
-    ) + $specs
+    ) + $specs)
     Invoke-Checked 'FINAL LOCAL STATUS — GENERATED ASSETS ARE EXPECTED' 'git' @('status','-sb')
     Write-Host "`nALL SELECTED CHECKS PASSED. Review warnings and generated assets separately." -ForegroundColor Green
 }
