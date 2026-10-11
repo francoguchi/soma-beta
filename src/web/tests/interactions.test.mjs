@@ -404,7 +404,7 @@ test('Infrastructure Rack occupancy has closed identity-only return intent witho
   ])assert.equal(infrastructureIntent(invalid),null);
 });
 
-test('Room and Cloud explorer opens are closed contextual histories rather than invented detail DTOs',()=>{
+test('Room and Cloud explorer return retains closed identities without caching owner DTOs',()=>{
   const id='11111111-1111-4111-8111-111111111111';
   const root={explorer:'/api/v1/infrastructure/tree?limit=200',openedId:id,
     tab:'Summary',components:null,history:null,workbook:null};

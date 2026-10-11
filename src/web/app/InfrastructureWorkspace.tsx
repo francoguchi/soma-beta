@@ -127,7 +127,7 @@ function NetworkElement({intent,onIntent,onBrowseSite,onOpenRelated}:{intent:Inf
               <h3>Cloud assignment</h3>
               <p>Cloud Deployment: {value.cloud_deployment?.id??'Unassigned'}. Cloud is separate from physical placement.</p>
               {value.cloud_deployment&&<button type="button" onClick={()=>onOpenRelated('cloud_deployment',value.cloud_deployment!.id)}>
-                Inspect Cloud Deployment history
+                Inspect Cloud Deployment details
               </button>}
               <p>Cloud Type is a separate reusable identity, not a physical ancestor or the same record as a deployment.</p>
             </section>

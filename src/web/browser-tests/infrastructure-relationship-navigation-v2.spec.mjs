@@ -35,6 +35,12 @@ async function fixture(page,requests){
           u_start:1,u_span:1}],free_ranges:[{u_start:2,u_span:11}]}});
     if(url.pathname==='/api/v1/infrastructure/sites/'+site)
       return route.fulfill({json:sitePoint});
+    if(url.pathname==='/api/v1/infrastructure/cloud-deployments/'+cloud)
+      return route.fulfill({json:{
+        cloud_deployment_id:cloud,cloud_type_id:uuid(8),site_id:site,
+        customer_org_id:customer,name:'Accepted Cloud Deployment',
+        lifecycle:'active',revision:1,assigned_network_element_count:1,
+      }});
     if(url.pathname==='/api/v1/infrastructure/history')
       return route.fulfill({json:{events:[],next_cursor:null}});
     return route.fulfill({status:404,json:{code:'UNEXPECTED_TEST_OWNER'}});
@@ -73,10 +79,14 @@ test('Logical containment and Cloud context remain distinct from physical Site o
   await page.getByRole('listitem').first().press('Enter');
   await opened.getByRole('tab',{name:'Relationships',exact:true}).click();
   await opened.getByRole('region',{name:'Logical Infrastructure relationships'})
-    .getByRole('button',{name:'Inspect Cloud Deployment history'}).click();
+    .getByRole('button',{name:'Inspect Cloud Deployment details'}).click();
+  const current=page.getByRole('region',{name:'Opened Cloud Deployment'});
+  await expect(current).toContainText('Accepted Cloud Deployment');
+  expect(requests.filter(r=>r.path==='/api/v1/infrastructure/history')).toHaveLength(0);
+  await current.getByRole('tab',{name:'History',exact:true}).click();
   const context=page.getByRole('region',{name:'Opened Infrastructure context'});
   await expect(context).toContainText('Cloud Deployment context');
-  await expect(context).toContainText('not a full Room or Cloud Deployment detail response');
+  await expect(context).toContainText('current Room and Cloud Deployment properties come from separate');
   const history=requests.filter(r=>r.path==='/api/v1/infrastructure/history');
   expect(history).toHaveLength(1);
   const query=new URLSearchParams(history[0].search);
