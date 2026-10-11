@@ -14,11 +14,23 @@ type Cursor=Readonly<{version:1;query_id:'NetworkElementCandidateQuery';
 type Page=Readonly<{candidates:readonly Candidate[];next_cursor:Cursor|null;candidate_count:number}>;
 const start=(siteId:string,modelId:string|null)=>'/api/v1/infrastructure/network-elements/candidates?site_id='+
   encodeURIComponent(siteId)+(modelId===null?'':'&model_id='+encodeURIComponent(modelId))+'&limit=25';
-function validate(page:Page,fingerprint:string):void{
+function validate(page:Page,fingerprint:string,path:string):void{
   if(!page||!Array.isArray(page.candidates)||page.candidates.length>25
     ||!whole(page.candidate_count)||page.candidate_count<page.candidates.length
     ||!Object.hasOwn(page,'next_cursor'))
     throw new Error('Invalid Network Element candidate owner page');
+  const rawCursor=new URL(path,'http://127.0.0.1').searchParams.get('cursor');
+  let seek:readonly [number,string]|null=null;
+  if(rawCursor!==null){
+    const cursor=JSON.parse(rawCursor) as Cursor;
+    if(!cursor||cursor.version!==1||cursor.query_id!=='NetworkElementCandidateQuery'
+      ||cursor.sort_registry_id!=='NetworkElementCandidateQuery_ORDER_V1'
+      ||cursor.null_order!=='NOT_APPLICABLE'||cursor.filter_fingerprint!==fingerprint
+      ||!Array.isArray(cursor.last_key_tuple)||cursor.last_key_tuple.length!==2
+      ||!whole(cursor.last_key_tuple[0])||!uuid.test(cursor.last_key_tuple[1]))
+      throw new Error('Foreign requested candidate cursor');
+    seek=cursor.last_key_tuple;
+  }
   let prior:readonly [number,string]|null=null;
   const seen=new Set<string>();
   for(const item of page.candidates){
@@ -29,6 +41,8 @@ function validate(page:Page,fingerprint:string):void{
       ||item.evidence_codes.some(code=>!str(code))
       ||item.evidence_codes.some((code,i)=>i>0&&code<=item.evidence_codes[i-1]!)
       ||seen.has(item.network_element_id)
+      ||seek&&(item.evidence_rank>seek[0]||
+        item.evidence_rank===seek[0]&&item.network_element_id<=seek[1])
       ||prior&&(item.evidence_rank>prior[0]||
         item.evidence_rank===prior[0]&&item.network_element_id<=prior[1]))
       throw new Error('Invalid candidate ordering or evidence');
@@ -73,7 +87,7 @@ export function InfrastructureCandidateEvidence({siteId,modelId,elementId}:{
         duplicate, operational relationship, containment parent or physical installation.</p>
       {digest===null?<p role="status">Preparing candidate query identity.</p>:
         <OwnerProjection<Page> path={ownerPagePath(history)} render={page=>{
-          validate(page,digest);
+          validate(page,digest,ownerPagePath(history));
           return <>
             <p>Owner-reported candidate count: {page.candidate_count}; this page: {page.candidates.length}.</p>
             {page.candidates.length===0&&<p role="status">No matches on this candidate owner page.</p>}
