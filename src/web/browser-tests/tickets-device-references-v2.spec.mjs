@@ -60,3 +60,65 @@ test('invalid owner Device Reference pages fail closed without displaying rows',
   await expect(panel.getByText('The owner projection could not be rendered.',{exact:false})).toBeVisible();
   await expect(panel.getByText('BAD DEVICE')).toHaveCount(0);
 });
+
+test('Device Reference Infrastructure resolution is lazy after accepted ticket link selection',async({page})=>{
+  const reads=[];
+  await page.route('**/api/v1/tickets/service_request/'+sr+'/devices?*',route=>route.fulfill({json:{
+    items:[row(a,'Selected Device')],continuation:null,
+  }}));
+  await page.route('**/api/v1/infrastructure/device-references/'+a+'/resolution',route=>{
+    reads.push(route.request().url());
+    return route.fulfill({json:{device_reference_id:a,device_reference_revision:1,
+      current_network_element_id:null,resolution_revision:0,history_count:0}});
+  });
+  await page.goto('http://127.0.0.1:4174/tickets/sr/'+sr);
+  await page.getByRole('tab',{name:'Devices',exact:true}).click();
+  const devices=page.getByRole('region',{name:'SR Device References'});
+  expect(reads).toHaveLength(0);
+  await devices.getByRole('button',{name:'Selected Device'}).click();
+  const selected=devices.getByRole('complementary',{name:'Selected Device Reference'});
+  await expect(selected.getByRole('button',{name:'Inspect Infrastructure resolution'})).toBeVisible();
+  expect(reads).toHaveLength(0);
+  await selected.getByRole('button',{name:'Inspect Infrastructure resolution'}).click();
+  const projection=selected.getByRole('region',{name:'Infrastructure Device Reference resolution'});
+  await expect(projection).toContainText('Not resolved');
+  await expect(projection).toContainText('Historical resolution events');
+  expect(reads).toHaveLength(1);
+});
+test('An unrelated Device Reference resolution identity cannot be shown as selected evidence',async({page})=>{
+  await page.route('**/api/v1/tickets/service_request/'+sr+'/devices?*',route=>route.fulfill({json:{
+    items:[row(a,'Selected Device')],continuation:null,
+  }}));
+  await page.route('**/api/v1/infrastructure/device-references/'+a+'/resolution',route=>route.fulfill({json:{
+    device_reference_id:b,device_reference_revision:1,current_network_element_id:b,
+    resolution_revision:5,history_count:999,
+  }}));
+  await page.goto('http://127.0.0.1:4174/tickets/sr/'+sr);
+  await page.getByRole('tab',{name:'Devices',exact:true}).click();
+  const devices=page.getByRole('region',{name:'SR Device References'});
+  await devices.getByRole('button',{name:'Selected Device'}).click();
+  const selected=devices.getByRole('complementary',{name:'Selected Device Reference'});
+  await selected.getByRole('button',{name:'Inspect Infrastructure resolution'}).click();
+  const projection=selected.getByRole('region',{name:'Infrastructure Device Reference resolution'});
+  await expect(projection.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(projection).not.toContainText('999');
+});
+test('Ticket display and current Infrastructure resolution divergence is warned, never reconciled silently',async({page})=>{
+  await page.route('**/api/v1/tickets/service_request/'+sr+'/devices?*',route=>route.fulfill({json:{
+    items:[row(a,'Selected Device')],continuation:null,
+  }}));
+  await page.route('**/api/v1/infrastructure/device-references/'+a+'/resolution',route=>route.fulfill({json:{
+    device_reference_id:a,device_reference_revision:1,current_network_element_id:b,
+    resolution_revision:2,history_count:3,
+  }}));
+  await page.goto('http://127.0.0.1:4174/tickets/sr/'+sr);
+  await page.getByRole('tab',{name:'Devices',exact:true}).click();
+  const devices=page.getByRole('region',{name:'SR Device References'});
+  await devices.getByRole('button',{name:'Selected Device'}).click();
+  const selected=devices.getByRole('complementary',{name:'Selected Device Reference'});
+  await selected.getByRole('button',{name:'Inspect Infrastructure resolution'}).click();
+  const projection=selected.getByRole('region',{name:'Infrastructure Device Reference resolution'});
+  await expect(projection.getByRole('alert')).toContainText('currently disagree');
+  await expect(projection).toContainText(b);
+  await expect(projection).toContainText('not be treated as a reconciled identity');
+});
