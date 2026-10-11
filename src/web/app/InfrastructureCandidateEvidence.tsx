@@ -38,8 +38,8 @@ function validate(page:Page,fingerprint:string,path:string):void{
       ||!whole(item.evidence_rank)||item.evidence_rank===0
       ||!['active','archived'].includes(item.lifecycle)
       ||!Array.isArray(item.evidence_codes)||item.evidence_codes.length<1||item.evidence_codes.length>8
-      ||item.evidence_codes.some(code=>!str(code))
-      ||item.evidence_codes.some((code,i)=>i>0&&code<=item.evidence_codes[i-1]!)
+      ||item.evidence_codes.some((code:string)=>!str(code))
+      ||item.evidence_codes.some((code:string,i:number)=>i>0&&code<=item.evidence_codes[i-1]!)
       ||seen.has(item.network_element_id)
       ||seek&&(item.evidence_rank>seek[0]||
         item.evidence_rank===seek[0]&&item.network_element_id<=seek[1])
