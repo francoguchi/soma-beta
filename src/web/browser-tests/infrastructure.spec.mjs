@@ -44,3 +44,39 @@ test('Infrastructure oversized owner explorer is rejected with bounded error',as
   await page.goto('http://127.0.0.1:4174/infrastructure');await expect(page.getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(page.getByRole('listitem')).toHaveCount(0);
 });
+
+test('Malformed Network Element history changes fail closed rather than showing a plausible event',async({page})=>{
+ const ne='11111111-1111-4111-8111-111111111111';
+ const site='22222222-2222-4222-8222-222222222222';
+ await page.route('**/api/v1/infrastructure/**',route=>{
+  const url=new URL(route.request().url());
+  if(url.pathname.endsWith('/tree'))return route.fulfill({json:{nodes:[
+   {kind:'network_element',id:ne,label:'NE with corrupt history',parent_context_id:null,
+    lifecycle:'active',warning_codes:[]}],next_cursor:null}});
+  if(url.pathname.endsWith('/history'))return route.fulfill({json:{events:[{
+   event_id:site,event_kind:'corrupt_record',recorded_at_utc:1700000000,
+   effective_at_utc:null,command_id:ne,
+   summary:{reason_code:null,warning_codes:[],changes:[{
+    field:'rack_id',prior:{kind:'null',text_value:null,integer_value:null,
+      boolean_value:null,entity_ref:null},
+    new:{kind:'boolean',text_value:'forged-value',integer_value:null,
+      boolean_value:true,entity_ref:null},
+   }]},
+  }],next_cursor:null}});
+  if(url.pathname.endsWith('/'+ne))return route.fulfill({json:{
+   network_element_id:ne,operational_name:'NE with corrupt history',revision:1,lifecycle:'active',
+   site:{kind:'site',id:site},customer_org_id:site,
+   placement:{rack_id:null,u_start:null,u_span:null,revision:1,explicit_unracked:true},
+   model:null,cloud_deployment:null,primary_ip:null,ip_count:0,
+   containment_parent:null,containment_child_count:0,device_reference_count:0,
+   installed_component_count:0,warning_codes:[],
+  }});
+  return route.fulfill({status:404,json:{code:'UNEXPECTED_OWNER_READ'}});
+ });
+ await page.goto('http://127.0.0.1:4174/infrastructure');
+ await page.getByRole('listitem').first().press('Enter');
+ await page.getByRole('tab',{name:'History',exact:true}).click();
+ const tab=page.getByRole('tabpanel',{name:'History'});
+ await expect(tab.getByRole('alert')).toContainText('owner projection could not be rendered');
+ await expect(tab).not.toContainText('corrupt_record');
+});
