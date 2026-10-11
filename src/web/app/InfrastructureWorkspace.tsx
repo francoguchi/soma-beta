@@ -333,7 +333,7 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
           intent.openedKind==='rack'?<InfrastructureRackOccupancy key={'rack:'+intent.openedId} id={intent.openedId}
             onOpenElement={id=>{
               const next=openInfrastructureRelated(intent,'network_element',id);
-              if(next!==null)setIntent(next);
+              if(next!==null){store.dispatch({selection:emptySelection});setIntent(next);}
             }}/>:
           (intent.openedKind==='room'||intent.openedKind==='cloud_deployment')?
           <InfrastructureContextHistory key={intent.openedKind+':'+intent.openedId}
@@ -344,6 +344,6 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
               if(next!==null)applyOwnerFilters(next);
             }} onOpenRelated={(kind,id)=>{
               const next=openInfrastructureRelated(intent,kind,id);
-              if(next!==null)setIntent(next);
+              if(next!==null){store.dispatch({selection:emptySelection});setIntent(next);}
             }}/>):<section aria-label="Infrastructure detail"><h2>Select and open a Network Element</h2><p>A single click changes selection. Enter, double-click, or Open record opens its owner detail.</p></section>}</div></div>;
 }
