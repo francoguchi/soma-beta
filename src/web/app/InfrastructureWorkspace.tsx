@@ -14,7 +14,7 @@ import {InfrastructureContextHistory} from './InfrastructureContextHistory';
 import {InfrastructureStructureDialog} from './InfrastructureStructureDialog';
 import {InfrastructureExplorerFilters} from './InfrastructureExplorerFilters';
 import {buildExplorerQuery} from '../presentation/infrastructure-explorer-filters';
-import {LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
+import {FULL_STRUCTURE,LEVEL_NAMES,applySessionStructure,currentSessionStructure,projectStructureRows,structurePath,validStructure,type StructureView} from '../presentation/infrastructure-structure';
 import {formatOwnerLocalTime} from '../presentation/owner-time';
 import {infrastructureIntent,infrastructureQuery,infrastructureTabs as tabs,type InfrastructureIntent,type ReturnState} from './router';
 import {filterFingerprint} from '../data/query-controller';
@@ -243,6 +243,10 @@ export function InfrastructureWorkspace({restored=null,onReturnState}:{restored?
             {page.next_cursor!==null?' Continue to the next owner page to inspect additional records.':
               ' No further owner page was supplied.'}
           </p>}
+          {nodes.length===0&&page.nodes.length>0&&<button type="button"
+            onClick={()=>setStructureView(applySessionStructure(FULL_STRUCTURE))}>
+            Show hidden Structure levels
+          </button>}
           <SelectableCollection store={store} rows={nodes.map(node=>({id:`${node.kind}:${node.id}`,eligible:true,
             route:node.kind==='site'?{record_type:'INFRASTRUCTURE_SITE',record_id:node.id,revision_token:null}:
               node.kind==='rack'?{record_type:'INFRASTRUCTURE_RACK',record_id:node.id,revision_token:null}:
