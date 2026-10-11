@@ -88,3 +88,17 @@ test('Unassigned Model searches current Site only without inventing a Model rela
   expect(reads[0].searchParams.get('model_id')).toBeNull();
   expect(reads[0].searchParams.get('site_id')).toBe(site);
 });
+
+test('A candidate page repeating the previous rank/identity cursor is not a valid continuation',async({page})=>{
+  const reads=[];
+  await fixtures(page,url=>url.searchParams.has('cursor')
+    ?{candidates:[row(25)],next_cursor:null,candidate_count:26}
+    :{candidates:Array.from({length:25},(_,i)=>row(i+1)),
+      next_cursor:cursor(25),candidate_count:26},reads);
+  const panel=await open(page);
+  await panel.getByRole('button',{name:'Inspect related Network Element candidates'}).click();
+  const evidence=panel.getByRole('region',{name:'Related NE candidate evidence'});
+  await evidence.getByRole('button',{name:'Next page'}).click();
+  await expect(evidence.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(evidence.getByRole('table',{name:'Network Element owner candidates'})).toHaveCount(0);
+});
