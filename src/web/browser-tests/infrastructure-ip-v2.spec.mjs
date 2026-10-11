@@ -43,7 +43,7 @@ test('IP candidates read only after explicit opening beneath a current accepted 
   await expect(panel.getByRole('button',{name:'Inspect primary IP reuse evidence'})).toBeVisible();
   expect(reads).toHaveLength(0);
   await panel.getByRole('button',{name:'Inspect primary IP reuse evidence'}).click();
-  const evidence=panel.getByRole('region',{name:'IP reuse evidence'});
+  const evidence=panel.getByRole('region',{name:'IP reuse evidence',exact:true});
   await expect(evidence.getByRole('table',{name:'IP identity candidates'})).toContainText(ipid(1));
   await expect(evidence).toContainText('Owner-reported active address matches: 1');
   await expect(evidence).toContainText('No IP assignment, primary promotion');
@@ -57,7 +57,7 @@ test('IP owner candidates paginate by both Network Element and IP identity, with
     :{items:Array.from({length:25},(_,i)=>candidate(i+1)),next_cursor:cursor(25),exact_count:26},reads);
   const panel=await open(page);
   await panel.getByRole('button',{name:'Inspect primary IP reuse evidence'}).click();
-  const evidence=panel.getByRole('region',{name:'IP reuse evidence'});
+  const evidence=panel.getByRole('region',{name:'IP reuse evidence',exact:true});
   await expect(evidence).toContainText(ipid(25));
   await evidence.getByRole('button',{name:'Next page'}).click();
   await expect(evidence).toContainText(ipid(26));
@@ -72,7 +72,7 @@ test('False IP filter digest or duplicated identities invalidate the complete ow
   }));
   const panel=await open(page);
   await panel.getByRole('button',{name:'Inspect primary IP reuse evidence'}).click();
-  const evidence=panel.getByRole('region',{name:'IP reuse evidence'});
+  const evidence=panel.getByRole('region',{name:'IP reuse evidence',exact:true});
   await expect(evidence.getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(evidence).not.toContainText(ipid(1));
 });
@@ -90,7 +90,7 @@ test('A repeated IP candidate key across owner pages fails closed instead of reu
     :{items:Array.from({length:25},(_,i)=>candidate(i+1)),next_cursor:cursor(25),exact_count:26});
   const panel=await open(page);
   await panel.getByRole('button',{name:'Inspect primary IP reuse evidence'}).click();
-  const evidence=panel.getByRole('region',{name:'IP reuse evidence'});
+  const evidence=panel.getByRole('region',{name:'IP reuse evidence',exact:true});
   await evidence.getByRole('button',{name:'Next page'}).click();
   await expect(evidence.getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(evidence.getByRole('table',{name:'IP identity candidates'})).toHaveCount(0);
