@@ -78,3 +78,62 @@ test('Infrastructure chronology and workbook history both render browser-local t
   await expect(workbook).not.toContainText(new Date(at*1000).toISOString());
   expect(historyReads).toEqual(['events','workbooks']);
 });
+
+test('Inventory attention renders its authoritative as-of instant as browser-local time',async({page})=>{
+  let asOf=null;
+  await page.route('**/api/v1/inventory/stock?*',route=>route.fulfill({json:{
+    items:[],continuation:null,exact_total:0,
+  }}));
+  await page.route('**/api/v1/inventory/attention?*',route=>{
+    asOf=Number(new URL(route.request().url()).searchParams.get('as_of_utc'));
+    return route.fulfill({json:{items:[],continuation:null,exact_total:0,as_of_utc:asOf}});
+  });
+  await page.goto('http://127.0.0.1:4174/inventory');
+  const attention=page.getByRole('region',{name:'Inventory Needs Attention'});
+  await expect(attention).toContainText('Evaluated at');
+  expect(asOf).not.toBeNull();
+  await expect(attention).toContainText(await page.evaluate(s=>
+    new Date(s*1000).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}),asOf));
+  await expect(attention).not.toContainText(new Date(asOf*1000).toISOString());
+});
+test('RFC provider time evidence displays locally without changing source chronology',async({page})=>{
+  const ticket='44444444-4444-4444-8444-444444444444';
+  await page.route('**/api/v1/**',route=>{
+    const pathname=new URL(route.request().url()).pathname;
+    if(pathname.endsWith('/lifecycle')) {
+      const source={
+        status_text:'Synthetic provider status',status_class:'implement_eligible',
+        status_authority:'enhanced_rfc',status_evidence_id:'evidence-status',
+        revision:2,external_created_at_utc:at,
+        external_created_evidence_id:'evidence-created',
+        last_update_utc:at,last_update_evidence_id:'evidence-updated',
+      };
+      for(const [field,proof] of [
+        ['summary_text','summary_evidence_id'],['creator_text','creator_evidence_id'],
+        ['customer_account_number_text','customer_account_number_evidence_id'],
+        ['customer_account_name_text','customer_account_name_evidence_id'],
+        ['severity_text','severity_evidence_id'],
+        ['owner_external_id_text','owner_external_id_evidence_id'],
+        ['owner_name_text','owner_name_evidence_id'],
+        ['l1_handler_name_text','l1_handler_name_evidence_id'],
+        ['l2_handler_name_text','l2_handler_name_evidence_id'],
+      ]){source[field]=null;source[proof]=null;}
+      return route.fulfill({json:{
+        rfc_id:ticket,accepted_source_state:source,local_archive_state:'active',
+        terminal_epoch_id:null,warnings:[],
+      }});
+    }
+    if(pathname==='/api/v1/tickets/rfcs/'+ticket)return route.fulfill({json:{
+      rfc_id:ticket,rfc_no:'NC00000000000001',revision:1,hierarchy_role:'standalone',
+      customer_org_id:null,local_archive_state:'active',direct_service_request_count:0,
+      device_reference_count:0,subordinate_count:0,warnings:[],
+    }});
+    return route.fulfill({status:503,json:{code:'SYNTHETIC_UNAVAILABLE'}});
+  });
+  await page.goto('http://127.0.0.1:4174/tickets/rfc/'+ticket);
+  const panel=page.getByRole('region',{name:'RFC accepted source and lifecycle'});
+  await expect(panel).toContainText(await local(page));
+  await expect(panel).toContainText('External creation (local time)');
+  await expect(panel).toContainText('Last source update (local time)');
+  await expect(panel).not.toContainText(new Date(at*1000).toISOString());
+});
