@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {NavigationHistory} from '../.test-build/app/router.js';
 import {
  FULL_STRUCTURE,structurePreset,structurePath,moveStructureLevel,toggleStructureLevel,
  projectStructureRows,validStructure,
@@ -56,4 +57,26 @@ test('Structure view is bounded, closed and rejects fabricated intermediate leve
  assert.throws(()=>projectStructureRows(owner,{order:['site'],visible:[]}),/Invalid bounded/u);
  assert.throws(()=>projectStructureRows(Array.from({length:201},()=>owner[0]),FULL_STRUCTURE),/Invalid bounded/u);
  assert.deepEqual(projectStructureRows([],structurePreset('direct')),[]);
+});
+
+test('Structure view survives return by closed intent; historical projection never stores owner DTOs',()=>{
+ const view=structurePreset('site-cloud');
+ const state={
+  route:'/infrastructure',filterFingerprint:'a'.repeat(64),
+  activeId:null,selectedId:null,memberIds:[],scrollAnchor:null,focusToken:'infrastructure:structure',
+  infrastructure:{explorer:'/api/v1/infrastructure/tree?limit=200',
+    openedId:null,tab:'Summary',components:null,history:null,workbook:null},
+  infrastructureStructure:view,
+ };
+ const history=new NavigationHistory(),token=history.remember(state);
+ assert.deepEqual(history.restore(token)?.infrastructureStructure,view);
+ assert.equal(Object.isFrozen(history.restore(token)?.infrastructureStructure),true);
+ assert.equal(Object.isFrozen(history.restore(token)?.infrastructureStructure.order),true);
+ assert.throws(()=>history.remember({...state,infrastructureStructure:{
+  order:['site','rack','room','rack'],visible:['site'],
+ }}),/Invalid bounded return context/u);
+ assert.throws(()=>history.remember({...state,infrastructureStructure:{
+  ...view,ownerRows:[{fake:true}],
+ }}),/Invalid bounded return context/u);
+ assert.throws(()=>history.remember({...state,route:'/inventory'}),/Invalid bounded return context/u);
 });
