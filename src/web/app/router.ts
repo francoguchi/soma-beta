@@ -2,6 +2,7 @@ import {settingsIntent,type SettingsIntent} from './settings-intent.js';
 import {ticketNotesQuery} from './ticket-notes-intent.js';
 import {validStructure,type StructureView} from '../presentation/infrastructure-structure.js';
 import {readExplorerFilters} from '../presentation/infrastructure-explorer-filters.js';
+import {readComponentFilters} from '../presentation/infrastructure-component-filters.js';
 export type ClientRoute = Readonly<{path: string; surface: string; owner: string; recordId: string | null}>;
 const routes = [
   ['/overview','overview','LLD-11'], ['/tickets','ticket_list','LLD-03/04'], ['/tickets/rfcs','rfc_list','LLD-03'], ['/tickets/history','ticket_history','LLD-03/04'], ['/tickets/imports','import_monitor','LLD-04'],
@@ -46,8 +47,10 @@ export function infrastructureQuery(path:string,kind:InfrastructureQuery,id:stri
     kind==='history'?'/api/v1/infrastructure/history':kind==='workbookHistory'?'/api/v1/infrastructure/workbooks/history':`/api/v1/infrastructure/workbooks/runs/${id}`;
   try {
     const url=new URL(path,'http://127.0.0.1');const keys=kind==='history'?['limit','cursor','target_kind','target_id']:
-      kind==='explorer'?['limit','cursor','customer_org_id','site_id','node_kind','lifecycle']:['limit','cursor'];
+      kind==='explorer'?['limit','cursor','customer_org_id','site_id','node_kind','lifecycle']:
+      kind==='components'?['limit','cursor','state','bom_key','slot_match_key']:['limit','cursor'];
     if(url.pathname!==expected||(kind==='explorer'&&readExplorerFilters(path)===null)
+      ||(kind==='components'&&readComponentFilters(path,id!)===null)
       ||url.searchParams.get('limit')!==(kind==='history'?'5':'200')
       ||Array.from(url.searchParams.keys()).some(key=>!keys.includes(key))||keys.some(key=>url.searchParams.getAll(key).length>1)
       ||(kind==='history'&&(url.searchParams.get('target_kind')!=='network_element'||url.searchParams.get('target_id')!==id)))return null;
