@@ -3,6 +3,8 @@ import {OwnerProjection,OwnerReturnRefresh} from '../components/OwnerProjection'
 import {filterFingerprint} from '../data/query-controller';
 import {initialOwnerPage,nextOwnerPage,ownerPagePath,previousOwnerPage} from '../state/owner-page-history';
 import {InventoryHistoryToggle} from './InventoryHistory';
+import {InventoryRmaPhysicalEvidence,validateRmaPhysicalEvidence} from './InventoryRmaPhysicalEvidence';
+import type {RmaAssignment,RmaActualLogistics,RmaReturnObligation} from './InventoryRmaPhysicalEvidence';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const sha=/^[a-f0-9]{64}$/u;
@@ -35,10 +37,10 @@ type RmaDetail=Readonly<{rma_id:string;spare_request_id:string;promised_bom_code
   return_device_part_unit_id:string|null;return_spare_part_unit_id:string|null;
   return_obligation_open:boolean;active_fault_tag_membership_id:string|null;revision:number;
   c10_aliases:readonly {c10:string;alias_kind:string}[];
-  assignment_history:readonly {assignment_event_id:string;event_kind:string;recorded_at_utc:number}[];
-  return_obligation:{state:string;device_part_unit_id:string|null;spare_part_unit_id:string|null;physical_consequence_id:string|null;revision:number;last_event_id:string|null}|null;
+  assignment_history:readonly RmaAssignment[];
+  return_obligation:RmaReturnObligation|null;
   fault_tag_memberships:readonly {fault_tag_membership_id:string;fault_tag_id:string;state:string;active_submitted:boolean;revision:number}[];
-  actual_logistics:readonly {logistics_event_id:string;event_kind:string;recorded_at_utc:number}[]}>;
+  actual_logistics:readonly RmaActualLogistics[]}>;
 const nonnegative=(n:unknown)=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
 const positive=(n:unknown)=>nonnegative(n)&&Number(n)>=1;
 const label=(s:unknown)=>typeof s==='string'&&s.length>0&&new TextEncoder().encode(s).length<=512;
@@ -96,6 +98,7 @@ function RmaEvidence({row,requestId}:{row:RmaRow;requestId:string}){
           ||!optionalUuid(d.return_obligation.device_part_unit_id)
           ||!optionalUuid(d.return_obligation.spare_part_unit_id)))
         throw new Error('RMA point evidence disagrees with selected request');
+      validateRmaPhysicalEvidence(d);
       return <>
         <h4>RMA {row.current_c10}</h4>
         <div className="soma-v2-sr-details-grid">
@@ -111,6 +114,7 @@ function RmaEvidence({row,requestId}:{row:RmaRow;requestId:string}){
         </div>
         <p>An RMA authorization is not a physical receipt. Warehouse acceptance and return obligations remain separate owner evidence.</p>
         <InventoryHistoryToggle targetKind="rma" targetId={d.rma_id} label="RMA"/>
+        <InventoryRmaPhysicalEvidence key={d.rma_id} evidence={d}/>
       </>;
     }}/>
   </aside>;
