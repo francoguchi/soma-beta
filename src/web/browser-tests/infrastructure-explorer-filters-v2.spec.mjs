@@ -96,6 +96,13 @@ test('Filtered owner pagination preserves query scope; Back reloads exact owner 
  await expect(page.getByRole('listitem')).toContainText('CURRENT PAGE TWO');
  expect(reads.at(-1).search).toBe(last.search);
  await expect(filters(page).getByRole('textbox',{name:'Site UUID'})).toHaveValue(site);
+ await filters(page).getByRole('button',{name:'First owner page'}).click();
+ await expect(page.getByRole('listitem')).toHaveCount(200);
+ const restarted=reads.at(-1);
+ expect(restarted.searchParams.has('cursor')).toBe(false);
+ expect(restarted.searchParams.get('customer_org_id')).toBe(customer);
+ expect(restarted.searchParams.get('site_id')).toBe(site);
+ expect(restarted.searchParams.get('node_kind')).toBe('network_element');
 });
 
 test('Filtered explorer never keeps a previously opened Network Element outside the new scope',async({page})=>{
