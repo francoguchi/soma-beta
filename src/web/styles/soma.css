@@ -421,3 +421,25 @@ dialog.soma-structure-dialog::backdrop{background:rgba(0,0,0,.72)}
   .soma-structure-dialog-head{padding-block:6px}
   .soma-structure-dialog-footer{padding-block:6px}
 }
+
+/* CSS root zoom and genuine narrow viewports need a shorter non-scrollable
+ * header/footer so the dialog body, not Apply/Cancel, consumes overflow. */
+dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-dialog-head{
+  padding:6px 9px;gap:5px
+}
+dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-dialog-head h2{
+  font-size:12px;line-height:1.3
+}
+dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-dialog-head p{display:none}
+dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-dialog-footer{
+  padding:6px 9px
+}
+dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-dialog-footer small{display:none}
+dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-dialog-actions{
+  width:100%;justify-content:flex-end
+}
+dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-dialog-body{padding:8px}
+dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-level{padding:5px}
+dialog.soma-structure-dialog.soma-structure-zoom-compact .soma-structure-arrows button{
+  min-width:30px;min-height:32px;padding:3px 5px
+}
