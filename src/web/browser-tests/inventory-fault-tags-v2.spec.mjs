@@ -118,3 +118,72 @@ test('Fault Tag list-to-detail revision drift rejects untrusted member informati
   await expect(chosen.getByRole('alert')).toContainText('owner projection could not be rendered');
   await expect(chosen).not.toContainText('UNTRUSTED-C10');
 });
+
+const lineageId='66666666-6666-4666-8666-666666666666';
+const lineageEdge={
+  lineage_id:lineageId,relation_type:'replacement',predecessor_fault_tag_id:tagA,
+  successor_fault_tag_id:tagB,reason_code:'correction_link',recorded_at_utc:1720000000,
+};
+test('Fault Tag lineage reads only after selecting tag and deliberately expanding relationship evidence',async({page})=>{
+  await base(page);const calls=[];
+  await page.route('**/api/v1/inventory/fault-tags?*',route=>route.fulfill({json:{
+    items:[listRow(tagA)],continuation:null,exact_total:1,
+  }}));
+  await page.route('**/api/v1/inventory/fault-tags/'+tagA,route=>route.fulfill({json:{
+    ...detail,lineage:[lineageEdge],
+  }}));
+  await page.route('**/api/v1/inventory/fault-tags/'+tagA+'/lineage',route=>{
+    calls.push(route.request().url());
+    return route.fulfill({json:{fault_tag_id:tagA,edges:[lineageEdge]}});
+  });
+  const register=await openDesk(page);
+  expect(calls).toHaveLength(0);
+  await register.getByRole('button',{name:'Inspect Fault Tag '+tagA}).click();
+  const selected=register.getByRole('complementary',{name:'Selected Fault Tag'});
+  await expect(selected.getByRole('button',{name:'Inspect Fault Tag lineage'})).toBeVisible();
+  expect(calls).toHaveLength(0);
+  await selected.getByRole('button',{name:'Inspect Fault Tag lineage'}).click();
+  const lineage=selected.getByRole('region',{name:'Fault Tag lineage relationships'});
+  await expect(lineage).toContainText('replacement');
+  await expect(lineage).toContainText(tagB);
+  await expect(lineage).toContainText('correction_link');
+  expect(calls).toHaveLength(1);
+  await expect(page.getByRole('button',{name:'Approve replacement'})).toHaveCount(0);
+});
+test('Fault Tag lineage rejects an unrelated predecessor/successor relation',async({page})=>{
+  await base(page);
+  await page.route('**/api/v1/inventory/fault-tags?*',route=>route.fulfill({json:{
+    items:[listRow(tagA)],continuation:null,exact_total:1,
+  }}));
+  await page.route('**/api/v1/inventory/fault-tags/'+tagA,route=>route.fulfill({json:{
+    ...detail,lineage:[lineageEdge],
+  }}));
+  await page.route('**/api/v1/inventory/fault-tags/'+tagA+'/lineage',route=>route.fulfill({json:{
+    fault_tag_id:tagA,edges:[{...lineageEdge,predecessor_fault_tag_id:tagB,
+      successor_fault_tag_id:rma,reason_code:'UNTRUSTED-LINK'}],
+  }}));
+  const register=await openDesk(page);
+  await register.getByRole('button',{name:'Inspect Fault Tag '+tagA}).click();
+  const selected=register.getByRole('complementary',{name:'Selected Fault Tag'});
+  await selected.getByRole('button',{name:'Inspect Fault Tag lineage'}).click();
+  const lineage=selected.getByRole('region',{name:'Fault Tag lineage relationships'});
+  await expect(lineage.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(lineage).not.toContainText('UNTRUSTED-LINK');
+});
+test('Fault Tag lineage refuses stale count even with a valid-looking new relationship',async({page})=>{
+  await base(page);
+  await page.route('**/api/v1/inventory/fault-tags?*',route=>route.fulfill({json:{
+    items:[listRow(tagA)],continuation:null,exact_total:1,
+  }}));
+  await page.route('**/api/v1/inventory/fault-tags/'+tagA,route=>route.fulfill({json:detail}));
+  await page.route('**/api/v1/inventory/fault-tags/'+tagA+'/lineage',route=>route.fulfill({json:{
+    fault_tag_id:tagA,edges:[lineageEdge],
+  }}));
+  const register=await openDesk(page);
+  await register.getByRole('button',{name:'Inspect Fault Tag '+tagA}).click();
+  const selected=register.getByRole('complementary',{name:'Selected Fault Tag'});
+  await selected.getByRole('button',{name:'Inspect Fault Tag lineage'}).click();
+  const lineage=selected.getByRole('region',{name:'Fault Tag lineage relationships'});
+  await expect(lineage.getByRole('alert')).toContainText('owner projection could not be rendered');
+  await expect(lineage).not.toContainText('correction_link');
+});
