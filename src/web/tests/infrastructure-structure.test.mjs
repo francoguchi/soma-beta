@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {NavigationHistory} from '../.test-build/app/router.js';
 import {
- FULL_STRUCTURE,structurePreset,structurePath,moveStructureLevel,dropStructureLevel,toggleStructureLevel,
+ FULL_STRUCTURE,applySessionStructure,currentSessionStructure,structurePreset,structurePath,moveStructureLevel,dropStructureLevel,toggleStructureLevel,
  projectStructureRows,validStructure,
 } from '../.test-build/presentation/infrastructure-structure.js';
 
@@ -87,4 +87,19 @@ test('Drag/drop reorders intermediate Structure levels without moving pinned end
  assert.equal(structurePath(moved),'Customer → Cloud → Rack → Site → Room → Network Element');
  assert.deepEqual(dropStructureLevel(moved,'rack','rack'),moved);
  assert.equal(structurePath(FULL_STRUCTURE),'Customer → Cloud → Site → Room → Rack → Network Element');
+});
+
+test('Study29 session Apply persists only closed Structure choices; fresh default is recoverable',()=>{
+  try{
+    const applied=applySessionStructure(structurePreset('direct'));
+    assert.deepEqual(currentSessionStructure(),applied);
+    assert.equal(structurePath(currentSessionStructure()),'Customer → Network Element');
+    applied.order.push?.('invalid'); // detached copy does not mutate stored authority
+    assert.equal(validStructure(currentSessionStructure()),true);
+    assert.throws(()=>applySessionStructure({order:['site'],visible:[]}),/Invalid Structure session intent/u);
+    assert.deepEqual(currentSessionStructure(),structurePreset('direct'));
+  }finally{
+    applySessionStructure(FULL_STRUCTURE);
+  }
+  assert.deepEqual(currentSessionStructure(),FULL_STRUCTURE);
 });
