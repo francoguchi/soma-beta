@@ -1,4 +1,4 @@
-import {infrastructureIntent,type InfrastructureIntent} from '../app/router';
+import {infrastructureIntent,type InfrastructureIntent} from '../app/router.js';
 
 /** Navigate only to existing LLD-08 owner read surfaces. A selected
  * relationship from the accepted current owner is authority to request
