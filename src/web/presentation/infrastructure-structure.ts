@@ -32,6 +32,20 @@ export function validStructure(view:StructureView):boolean {
     &&new Set(view.visible).size===view.visible.length
     &&view.visible.every(level=>INTERMEDIATE_LEVELS.includes(level));
 }
+// Document-session-only view preference. No localStorage, database write,
+// user Setting, snapshot DTO or cross-tab persistence. A fresh page reload
+// begins with Full structure; route navigation within the SPA retains Apply.
+let sessionStructure:StructureView=FULL_STRUCTURE;
+export function currentSessionStructure():StructureView {
+  return {order:[...sessionStructure.order],visible:[...sessionStructure.visible]};
+}
+export function applySessionStructure(view:StructureView):StructureView {
+  if(!validStructure(view))throw new Error('Invalid Structure session intent');
+  sessionStructure=Object.freeze({
+    order:Object.freeze([...view.order]),visible:Object.freeze([...view.visible]),
+  });
+  return currentSessionStructure();
+}
 export function moveStructureLevel(view:StructureView,level:StructureLevel,direction:-1|1):StructureView {
   if(!validStructure(view))throw new Error('Invalid Structure view');
   const order=[...view.order];
